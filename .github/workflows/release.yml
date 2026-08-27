@@ -1,0 +1,193 @@
+---
+name: Release
+run-name: "Release"
+
+# Finalizes VERSION on development, promotes development -> main, tags the release (no `v`
+# prefix), force-moves the floating major tag, and publishes a GitHub Release. Consumers pin
+# `@1` (floating major on main) or `@development` (dev channel). `invoke sidecar.toolkit.release`
+# is just `gh workflow run release.yml -R fireballenterprise/fireball_sidecar_toolkit`.
+#
+# Auth: main and development are PR-required branches (public repo, ruleset enforced). The
+# org-wide fireball-actions-bot App (vars.BOT_APP_ID + secrets.BOT_PRIVATE_KEY) is a bypass
+# actor; GITHUB_TOKEN is not. Bot-token pushes re-trigger workflows -> [skip ci] on the bump.
+#
+# Same shape as fireball_sidecar_chat / fireball_sidecar_landing release.yml, minus every
+# AWS/deploy job. PyPI publishing (the `pypi` job) is disabled until release workflows are
+# usable for this account — after 2026-09-01 — then flip `if: false` and configure a PyPI
+# Trusted Publisher for this repo + workflow.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  # 🔢 Finalize VERSION (drop the build suffix)
+  version:
+    runs-on: ubuntu-latest
+    concurrency: version-bump-development
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - name: Generate bot token
+        id: bot-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Check Out Code
+        uses: actions/checkout@v7
+        with:
+          ref: development
+          token: ${{ steps.bot-token.outputs.token }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          python-version: "3.14"
+
+      - name: Install Dependencies
+        run: uv sync
+
+      - name: Finalize VERSION for release
+        id: bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          uv run --no-sync invoke ver.project_bump_release
+          new_version="$(cat VERSION)"
+          # Never reuse a tag — advance the patch until the candidate is free.
+          while git ls-remote --exit-code --tags origin "refs/tags/$new_version" >/dev/null 2>&1; do
+            major="$(cut -d. -f1 <<<"$new_version")"
+            minor="$(cut -d. -f2 <<<"$new_version")"
+            patch="$(( $(cut -d. -f3 <<<"$new_version") + 1 ))"
+            new_version="$major.$minor.$patch"
+          done
+          echo "$new_version" > VERSION
+          echo "version=$new_version" >> "$GITHUB_OUTPUT"
+          git add VERSION
+          if git diff --cached --quiet; then
+            echo "VERSION already finalized at $new_version — nothing to commit"
+          else
+            git commit -m "chore: release $new_version [skip ci]"
+            git push origin HEAD:development
+          fi
+
+      - name: Report version
+        run: echo "### Releasing ${{ steps.bump.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+
+  # 🔀 Promote development -> main
+  promote:
+    needs: version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Generate bot token
+        id: bot-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Check Out Code
+        uses: actions/checkout@v7
+        with:
+          ref: development
+          fetch-depth: 0  # full history so main/development share a discoverable common ancestor
+          token: ${{ steps.bot-token.outputs.token }}
+
+      - name: Merge development to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+          # -X theirs: development is the source of truth; on conflict its side wins
+          git merge origin/development --no-ff -X theirs -m "chore: release ${{ needs.version.outputs.version }} to main"
+          git push origin main
+
+  # 🏷️ Tag the release + move the floating major tag
+  tag:
+    needs: [version, promote]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Generate bot token
+        id: bot-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Check Out Code
+        uses: actions/checkout@v7
+        with:
+          ref: main  # tag the freshly promoted merge commit
+          token: ${{ steps.bot-token.outputs.token }}
+
+      - name: Tag ${{ needs.version.outputs.version }} and move the major tag
+        run: |
+          version="${{ needs.version.outputs.version }}"
+          major="${version%%.*}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --tags origin "refs/tags/$version" >/dev/null 2>&1; then
+            echo "Tag $version already exists — skipping" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git tag "$version"
+          git tag -f "$major"
+          git push origin "$version"
+          git push -f origin "$major"
+          echo "### Tagged $version (floating major: $major)" >> "$GITHUB_STEP_SUMMARY"
+
+  # 📦 Create the GitHub Release
+  publish_release:
+    needs: [version, tag]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # creating a Release needs write; the repo default GITHUB_TOKEN is read-only
+    steps:
+      - name: Check Out Code
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Create GitHub Release
+        run: >-
+          gh release create "${{ needs.version.outputs.version }}"
+          --target main
+          --title "${{ needs.version.outputs.version }}"
+          --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 🐍 Publish to PyPI — gated OFF until release workflows are usable for this account (after
+  # 2026-09-01). To enable: set repo variable `PYPI_ENABLED=true`, add a PyPI Trusted Publisher
+  # for this repo + `release.yml` + the `pypi` environment. `uv build` produces the dist/.
+  pypi:
+    needs: [version, tag]
+    if: ${{ vars.PYPI_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # OIDC — PyPI Trusted Publishing, no API token
+    steps:
+      - name: Check Out Code
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          python-version: "3.14"
+
+      - name: Build
+        run: uv build
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
