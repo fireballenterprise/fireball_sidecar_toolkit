@@ -1,8 +1,8 @@
-"""``devkit`` console entrypoint.
+"""``sidecar-toolkit`` console entrypoint.
 
 Thin argparse shell over the primitives so the toolkit works with **no dependency added** via
-``uvx --from git+https://github.com/levonbecker/ai_devkit devkit <cmd>`` (e.g. the day-job repo).
-The ``invoke devkit.*`` tasks in :mod:`tasks.devkit` are the in-repo equivalents.
+``uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit <cmd>`` (e.g. the day-job repo).
+The ``invoke sidecar.toolkit.*`` tasks in :mod:`tasks.sidecar.toolkit` are the in-repo equivalents.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from .check import check as _check
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="devkit", description="Shared AI-agent tooling sync.")
+    parser = argparse.ArgumentParser(prog="sidecar-toolkit", description="Shared AI-agent tooling sync.")
     parser.add_argument("--repo", type=Path, default=Path.cwd(), help="Consuming repo root (default: cwd)")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -26,7 +26,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_sync.add_argument("--yes", action="store_true", help="non-interactive: discard _shared/ edits")
 
     sub.add_parser("download", help="clobber _shared/ from the package, then render")
-    sub.add_parser("upload", help="open a PR against ai_devkit with local _shared/ changes")
+    sub.add_parser("upload", help="open a PR against fireball_sidecar_toolkit with local _shared/ changes")
     sub.add_parser("check", help="read-only drift gate")
     return parser
 

@@ -1,4 +1,4 @@
-"""``devkit check`` — read-only drift gate for ``invoke fix`` / ``invoke test`` and CI.
+"""``sidecar-toolkit check`` — read-only drift gate for ``invoke fix`` / ``invoke test`` and CI.
 
 Re-renders every provider view into memory and compares against what is on disk. Exits non-zero
 (raises :class:`DriftError`) on the first mismatch, naming the stale file and the command to fix

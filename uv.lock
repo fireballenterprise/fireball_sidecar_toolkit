@@ -9,41 +9,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6f/0b/3f29683dfbe94208fb5c3806806a6ef419972892e25c3c4f95198f68c978/actionlint_py-1.7.12.24.tar.gz", hash = "sha256:7571b0724fde79b2572b98b2b53792c470249d4db29951b57fc49b9cd3eaf11e", size = 12071, upload-time = "2026-03-31T06:21:35.015Z" }
 
 [[package]]
-name = "ai-devkit"
-version = "1.0.0"
-source = { editable = "." }
-dependencies = [
-    { name = "invoke" },
-    { name = "pyyaml" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "actionlint-py" },
-    { name = "pylint" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "yamllint" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "invoke", specifier = "~=3.0.3" },
-    { name = "pyyaml", specifier = "~=6.0.3" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "actionlint-py", specifier = "~=1.7.12.24" },
-    { name = "pylint", specifier = "~=4.0.6" },
-    { name = "pytest", specifier = "~=9.1.1" },
-    { name = "pytest-cov", specifier = "~=7.1.0" },
-    { name = "ruff", specifier = "~=0.16.0" },
-    { name = "yamllint", specifier = "~=1.38.0" },
-]
-
-[[package]]
 name = "astroid"
 version = "4.0.4"
 source = { registry = "https://pypi.org/simple" }
@@ -137,6 +102,41 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/81/e1/56027a71e31b02ddc53c7d65b01e68edf64dea2932122fe7746a516f75d5/dill-0.4.1.tar.gz", hash = "sha256:423092df4182177d4d8ba8290c8a5b640c66ab35ec7da59ccfa00f6fa3eea5fa", size = 187315, upload-time = "2026-01-19T02:36:56.85Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl", hash = "sha256:1e1ce33e978ae97fcfcff5638477032b801c46c7c65cf717f95fbc2248f79a9d", size = 120019, upload-time = "2026-01-19T02:36:55.663Z" },
+]
+
+[[package]]
+name = "fireball-sidecar-toolkit"
+version = "1.0.0"
+source = { editable = "." }
+dependencies = [
+    { name = "invoke" },
+    { name = "pyyaml" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "actionlint-py" },
+    { name = "pylint" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "yamllint" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "invoke", specifier = "~=3.0.3" },
+    { name = "pyyaml", specifier = "~=6.0.3" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "actionlint-py", specifier = "~=1.7.12.24" },
+    { name = "pylint", specifier = "~=4.0.6" },
+    { name = "pytest", specifier = "~=9.1.1" },
+    { name = "pytest-cov", specifier = "~=7.1.0" },
+    { name = "ruff", specifier = "~=0.16.0" },
+    { name = "yamllint", specifier = "~=1.38.0" },
 ]
 
 [[package]]

@@ -2,9 +2,9 @@
 
 import pytest
 
-from modules.devkit.content import load_bundle, packaged_content_root
+from modules.sidecar.toolkit.content import load_bundle, packaged_content_root
 
-pytestmark = pytest.mark.devkit
+pytestmark = pytest.mark.sidecar_toolkit
 
 
 def test_packaged_bundle_parses():
