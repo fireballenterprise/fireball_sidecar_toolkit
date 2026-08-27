@@ -42,11 +42,18 @@ tasks/
 ```
 
 ## Branch model & channels
-* **`development`** — integration branch; feature PRs merge here. Dev channel:
+Both `main` and `development` are **PR-required** (ruleset "PR to Main + Development": `deletion` +
+`non_fast_forward` blocked, `pull_request` required, 0 approvals; bypass actors = org admins and
+the `fireball-actions-bot` App, `always`). `development` is the default branch.
+
+* **`development`** — integration branch; feature PRs merge here. Every merge runs `version.yml`
+  → `invoke ver.project_bump_build` bumps `VERSION` (`X.Y.Z-NNN`). Dev channel:
   `fireball-sidecar-toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@development`
-* **`main`** — stable; only updated by promoting `development` (via `sidecar.toolkit.release`).
-  Default channel: pin the floating major tag `@1` (always the latest `1.x.x` on `main`; no `v`
-  prefix, starts at `1.0.0`).
+* **`main`** — stable; only updated by `release.yml` promoting `development` (via
+  `sidecar.toolkit.release`). Default channel: pin the floating major tag `@1` (always the latest
+  `1.x.x` on `main`; no `v` prefix, starts at `1.0.0`).
+* `VERSION` (`X.Y.Z[-NNN]`) is the release-process truth; `pyproject.toml`'s `version` stays at
+  the target `X.Y.Z` and is not auto-synced (git-installed, so it rarely matters).
 * **Tagged releases** cut from `main` by `.github/workflows/release.yml` (GitHub release now;
   PyPI later — workflows not usable until after 2026-09-01). Once on PyPI: `development` publishes
   dev releases (`X.Y.Z.devN`, install with `--prerelease=allow`), `main` tags publish finals.
