@@ -1,0 +1,27 @@
+---
+version: "0.2"
+ignorePaths: []
+dictionaryDefinitions: []
+dictionaries: []
+words:
+  - booleaness
+  - diffstat
+  - frontmatter
+  - fstring
+  - Levon
+  - levonbecker
+  - mccabe
+  - oneline
+  - pycache
+  - pylint
+  - pyproject
+  - pyyaml
+  - rcfile
+  - rufflint
+  - secho
+  - setuptools
+  - timespec
+  - tomlkit
+  - venv
+ignoreWords: []
+import: []

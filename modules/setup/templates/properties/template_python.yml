@@ -1,0 +1,12 @@
+---
+repos:
+  LevonBecker:
+    - template_python
+
+repo:
+  local: "$HOME/path/to/this/repo"
+  remote: "github.com/<your-username>/<your-repo-name>"
+
+template:
+  local: "$HOME/path/to/your/template/repo"
+  remote: "github.com/<your-username>/<your-template-repo>"
