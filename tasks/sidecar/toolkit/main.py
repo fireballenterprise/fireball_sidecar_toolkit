@@ -1,14 +1,14 @@
-"""Invoke wrappers over ``modules.sidecar.toolkit``. Logic lives in the module; these stay thin."""
+"""Invoke wrappers over ``fireball_sidecar_toolkit``. Logic lives in the module; these stay thin."""
 
 from pathlib import Path
 
 from invoke import task
 
-from modules.sidecar.toolkit import download as _download
-from modules.sidecar.toolkit import release as _release
-from modules.sidecar.toolkit import sync as _sync
-from modules.sidecar.toolkit import upload as _upload
-from modules.sidecar.toolkit.check import check as _check
+from fireball_sidecar_toolkit import download as _download
+from fireball_sidecar_toolkit import release as _release
+from fireball_sidecar_toolkit import sync as _sync
+from fireball_sidecar_toolkit import upload as _upload
+from fireball_sidecar_toolkit.check import check as _check
 
 
 @task
@@ -19,7 +19,7 @@ def check(context):  # noqa: ARG001
 
 @task
 def download(context):  # noqa: ARG001
-    """Clobber _shared/ from the installed fireball-sidecar-toolkit package, then regenerate every provider view."""
+    """Clobber _shared/ from the installed fireball_sidecar_toolkit package, then regenerate every provider view."""
     _download.download(Path.cwd())
 
 

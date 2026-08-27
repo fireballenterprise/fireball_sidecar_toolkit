@@ -2,7 +2,7 @@
 
 import pytest
 
-from modules.sidecar.toolkit.content import load_bundle, packaged_content_root
+from fireball_sidecar_toolkit.catalog import load_bundle, packaged_content_root
 
 pytestmark = pytest.mark.sidecar_toolkit
 

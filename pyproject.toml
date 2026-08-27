@@ -1,10 +1,19 @@
 [project]
-name = "fireball-sidecar-toolkit"
-version = "1.0.0"
-description = "Fireball Sidecar Toolkit — single source of truth for shared AI-agent tooling: canonical slash commands, agent instructions, and skills, plus the generator that renders them into every AI tool's native format."
+name = "fireball_sidecar_toolkit"
+dynamic = ["version"]  # read from the VERSION file (see [tool.setuptools.dynamic])
+description = "Single source of truth for Fireball's shared AI-agent tooling: canonical slash commands, agent instructions, and skills, plus the generator that renders them into every AI tool's native format."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Levon Becker" }]
+keywords = ["ai", "agents", "claude", "copilot", "slash-commands", "codegen", "devtools"]
 classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Code Generators",
+  "Topic :: Software Development :: Build Tools",
 ]
 requires-python = ">=3.14"
 dependencies = [
@@ -19,23 +28,29 @@ dev = [
     "pytest~=9.1.1",
     "pytest-cov~=7.1.0",
     "ruff~=0.16.0",
+    "twine~=6.2.0",
     "yamllint~=1.38.0",
 ]
 
 [project.scripts]
-sidecar-toolkit = "modules.sidecar.toolkit.cli:main"
+sidecar-toolkit = "fireball_sidecar_toolkit.cli:main"
 
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
 [tool.setuptools.packages.find]
-include = ["modules*"]
+# Only the distributable package ships. `modules/` (common/setup/versioning) and `tasks/` are
+# repo-local dev tooling and are deliberately excluded from the wheel + sdist.
+include = ["fireball_sidecar_toolkit*"]
 
 [tool.setuptools.package-data]
 # The canonical content trees live inside the package so they ship in the wheel and
 # `sidecar-toolkit download` can clobber a consuming repo's _shared/ straight from the install.
-"modules.sidecar.toolkit" = ["content/**/*"]
+fireball_sidecar_toolkit = ["content/**/*", "py.typed"]
 
 [project.urls]
 homepage = "https://github.com/fireballenterprise/fireball_sidecar_toolkit"
@@ -78,7 +93,7 @@ norecursedirs = ["tmp", ".venv", ".ruff_cache", "__pycache__"]
 markers = [
     "setup: modules/setup/ (properties.yml bootstrap) — tests/setup/",
     "style: Markdown/doc style checks — tests/style/",
-    "sidecar_toolkit: modules/sidecar/toolkit/ (content parse + render) — tests/sidecar_toolkit/",
+    "sidecar_toolkit: fireball_sidecar_toolkit/ (catalog parse + render) — tests/sidecar_toolkit/",
 ]
 
 [tool.pylint.main]

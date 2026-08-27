@@ -1,26 +1,33 @@
 ---
 name: Release
-run-name: "Release"
+run-name: "Release (${{ inputs.bump }})"
 
-# Finalizes VERSION on development, promotes development -> main, tags the release (no `v`
-# prefix), force-moves the floating major tag, and publishes a GitHub Release. Consumers pin
-# `@1` (floating major on main) or `@development` (dev channel). `invoke sidecar.toolkit.release`
-# is just `gh workflow run release.yml -R fireballenterprise/fireball_sidecar_toolkit`.
+# Bumps VERSION on development (minor by default; major for the official 1.0.0 launch), promotes
+# development -> main, tags the release (no `v` prefix), force-moves the floating major tag, and
+# publishes a GitHub Release. Consumers pin `@1` (floating major on main; `@0` during pre-1.0) or
+# `@development` (dev channel). `invoke sidecar.toolkit.release` = `gh workflow run release.yml`.
 #
-# Auth: main and development are PR-required branches (public repo, ruleset enforced). The
-# org-wide fireball-actions-bot App (vars.BOT_APP_ID + secrets.BOT_PRIVATE_KEY) is a bypass
-# actor; GITHUB_TOKEN is not. Bot-token pushes re-trigger workflows -> [skip ci] on the bump.
+# Auth: main + development are PR-required branches (public repo). The org-wide
+# fireball-actions-bot App (vars.BOT_APP_ID + secrets.BOT_PRIVATE_KEY) is the bypass actor.
 #
-# Same shape as fireball_sidecar_chat / fireball_sidecar_landing release.yml, minus every
-# AWS/deploy job. PyPI publishing (the `pypi` job) is disabled until release workflows are
-# usable for this account — after 2026-09-01 — then flip `if: false` and configure a PyPI
-# Trusted Publisher for this repo + workflow.
+# PyPI publishing (the `pypi` job) is gated on the repo variable `PYPI_ENABLED`. To turn it on:
+# set `PYPI_ENABLED=true`, add a PyPI Trusted Publisher for this repo + `release.yml` + the
+# `pypi` environment (no API token needed). Until then, `main` tags publish only a GitHub Release.
 
 on:
   workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump for this release"
+        type: choice
+        default: minor
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
-  # 🔢 Finalize VERSION (drop the build suffix)
+  # 🔢 Bump VERSION for the release
   version:
     runs-on: ubuntu-latest
     concurrency: version-bump-development
@@ -50,12 +57,12 @@ jobs:
       - name: Install Dependencies
         run: uv sync
 
-      - name: Finalize VERSION for release
+      - name: Bump VERSION (${{ inputs.bump }})
         id: bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          uv run --no-sync invoke ver.project_bump_release
+          uv run --no-sync invoke "ver.project_bump_${{ inputs.bump }}"
           new_version="$(cat VERSION)"
           # Never reuse a tag — advance the patch until the candidate is free.
           while git ls-remote --exit-code --tags origin "refs/tags/$new_version" >/dev/null 2>&1; do
@@ -68,7 +75,7 @@ jobs:
           echo "version=$new_version" >> "$GITHUB_OUTPUT"
           git add VERSION
           if git diff --cached --quiet; then
-            echo "VERSION already finalized at $new_version — nothing to commit"
+            echo "VERSION already at $new_version — nothing to commit"
           else
             git commit -m "chore: release $new_version [skip ci]"
             git push origin HEAD:development
@@ -105,7 +112,8 @@ jobs:
           git fetch origin main
           git checkout main
           # -X theirs: development is the source of truth; on conflict its side wins
-          git merge origin/development --no-ff -X theirs -m "chore: release ${{ needs.version.outputs.version }} to main"
+          git merge origin/development --no-ff -X theirs \
+            -m "chore: release ${{ needs.version.outputs.version }} to main"
           git push origin main
 
   # 🏷️ Tag the release + move the floating major tag
@@ -125,7 +133,7 @@ jobs:
       - name: Check Out Code
         uses: actions/checkout@v7
         with:
-          ref: main  # tag the freshly promoted merge commit
+          ref: main
           token: ${{ steps.bot-token.outputs.token }}
 
       - name: Tag ${{ needs.version.outputs.version }} and move the major tag
@@ -165,16 +173,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 🐍 Publish to PyPI — gated OFF until release workflows are usable for this account (after
-  # 2026-09-01). To enable: set repo variable `PYPI_ENABLED=true`, add a PyPI Trusted Publisher
-  # for this repo + `release.yml` + the `pypi` environment. `uv build` produces the dist/.
+  # 🐍 Publish to PyPI — gated on repo variable PYPI_ENABLED. Trusted Publishing (OIDC), no token.
   pypi:
     needs: [version, tag]
     if: ${{ vars.PYPI_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      id-token: write  # OIDC — PyPI Trusted Publishing, no API token
+      id-token: write
     steps:
       - name: Check Out Code
         uses: actions/checkout@v7
@@ -186,8 +192,10 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Build
+      - name: Build sdist + wheel
         run: uv build
 
-      - name: Publish
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true

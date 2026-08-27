@@ -3,7 +3,7 @@
 
 Single source of truth for the shared AI-agent tooling. Canonical slash commands, agent
 instructions, and skills live here as tool-neutral markdown under
-`modules/sidecar/toolkit/content/`; a generator renders them into every AI tool's native format
+`fireball_sidecar_toolkit/content/`; a generator renders them into every AI tool's native format
 (`.claude/`, `.github/prompts/`, `.github/instructions/`, `.clinerules/`, `.opencode/`,
 `.sidecar/`, `AGENTS.md`) inside each consuming repo.
 
@@ -11,9 +11,9 @@ See [DESIGN.md](DESIGN.md) for the architecture, branch model, and open question
 
 ## Use it in a repo
 ```toml
-# pyproject.toml — stable channel (floating major tag on main)
+# pyproject.toml — stable channel (floating major tag on main; @0 pre-1.0, @1 after launch)
 [dependency-groups]
-dev = ["fireball-sidecar-toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@1"]
+dev = ["fireball_sidecar_toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@0"]
 # dev channel: ...@development
 ```
 ```sh
@@ -36,7 +36,7 @@ running `sidecar.toolkit.upload` to open a PR.
 
 ## Branch model
 `development` (integration, PRs merge here) → promoted to `main` (stable) via
-`sidecar.toolkit.release`, which tags a release. Consumers pin `@1` (stable) or `@development`
+`sidecar.toolkit.release`, which tags a release. Consumers pin `@0` (stable, pre-1.0) → `@1` after launch or `@development`
 (nightly). PyPI publishing lands once release workflows are usable (after 2026-09-01).
 
 ## Development

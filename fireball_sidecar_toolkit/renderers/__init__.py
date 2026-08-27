@@ -1,8 +1,8 @@
-"""Per-tool renderers: each turns a :class:`~modules.sidecar.toolkit.content.ContentBundle` into the files
+"""Per-tool renderers: each turns a :class:`~fireball_sidecar_toolkit.catalog.ContentBundle` into the files
 one AI tool expects inside a consuming repo.
 
 A renderer is a callable ``render(bundle, repo_root) -> list[Path]`` that writes its outputs and
-returns the paths it wrote (so :mod:`modules.sidecar.toolkit.render` and the drift check can diff them).
+returns the paths it wrote (so :mod:`fireball_sidecar_toolkit.render` and the drift check can diff them).
 Every output file carries a ``DO NOT EDIT`` header — the canonical source is ``content/`` +
 ``_local/``.
 """
@@ -12,7 +12,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from ..content import ContentBundle
+from ..catalog import ContentBundle
 from . import agents, claude, cline, copilot, opencode, prompts, sidecar
 
 Renderer = Callable[[ContentBundle, Path], list[Path]]
