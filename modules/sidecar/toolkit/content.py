@@ -114,8 +114,8 @@ def _collect(root: Path, subdir: str, suffix: str = ".md") -> list[Path]:
 
 
 def packaged_content_root() -> Path:
-    """Absolute path to the ``content/`` tree bundled with the installed package."""
-    return (Path(__file__).resolve().parents[2] / "content").resolve()
+    """Absolute path to the ``content/`` tree bundled inside this package."""
+    return (Path(__file__).resolve().parent / "content").resolve()
 
 
 def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None = None) -> ContentBundle:

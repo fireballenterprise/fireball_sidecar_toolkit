@@ -1,7 +1,7 @@
 [project]
-name = "ai-devkit"
+name = "fireball-sidecar-toolkit"
 version = "1.0.0"
-description = "Single source of truth for Levon's shared AI-agent tooling — canonical slash commands, agent instructions, and skills, plus the generator that renders them into every AI tool's native format."
+description = "Fireball Sidecar Toolkit — single source of truth for shared AI-agent tooling: canonical slash commands, agent instructions, and skills, plus the generator that renders them into every AI tool's native format."
 readme = "README.md"
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -23,23 +23,23 @@ dev = [
 ]
 
 [project.scripts]
-devkit = "modules.devkit.cli:main"
+sidecar-toolkit = "modules.sidecar.toolkit.cli:main"
 
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["modules"]
+[tool.setuptools.packages.find]
+include = ["modules*"]
 
 [tool.setuptools.package-data]
-# The canonical content trees ship inside the wheel so `devkit download` can
-# clobber a consuming repo's _shared/ straight from the installed package.
-modules = ["../content/**/*"]
+# The canonical content trees live inside the package so they ship in the wheel and
+# `sidecar-toolkit download` can clobber a consuming repo's _shared/ straight from the install.
+"modules.sidecar.toolkit" = ["content/**/*"]
 
 [project.urls]
-homepage = "https://github.com/LevonBecker/ai_devkit"
-repository = "https://github.com/LevonBecker/ai_devkit"
+homepage = "https://github.com/fireballenterprise/fireball_sidecar_toolkit"
+repository = "https://github.com/fireballenterprise/fireball_sidecar_toolkit"
 
 [tool.ruff]
 line-length = 120
@@ -78,7 +78,7 @@ norecursedirs = ["tmp", ".venv", ".ruff_cache", "__pycache__"]
 markers = [
     "setup: modules/setup/ (properties.yml bootstrap) — tests/setup/",
     "style: Markdown/doc style checks — tests/style/",
-    "devkit: modules/devkit/ (content parse + render) — tests/devkit/",
+    "sidecar_toolkit: modules/sidecar/toolkit/ (content parse + render) — tests/sidecar_toolkit/",
 ]
 
 [tool.pylint.main]

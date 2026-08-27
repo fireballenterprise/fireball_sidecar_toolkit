@@ -1,0 +1,1 @@
+"""Fireball Sidecar — Python packages."""
