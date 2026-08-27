@@ -1,0 +1,65 @@
+---
+name: Version
+run-name: "Version (development)"
+
+# Every merge to development bumps the VERSION build number (Major.Minor.Patch-Build), so each
+# dev-channel install (`...@development`) has a distinct version. release.yml owns the final
+# Major.Minor.Patch on main. Same Major.Minor.Patch[-Build] scheme as fireball_orchestrator /
+# fireball_sidecar_chat — done here with `invoke ver.project_bump_build` since this repo has uv.
+#
+# Auth: development is a PR-required branch (public repo, ruleset enforced). The default
+# GITHUB_TOKEN cannot push to it; the org-wide fireball-actions-bot App is a bypass actor.
+# Bot-token pushes DO re-trigger workflows, so the bump commit carries [skip ci] and the trigger
+# ignores VERSION-only pushes as a second guard.
+
+on:
+  push:
+    branches:
+      - development
+    paths-ignore:
+      - VERSION
+
+concurrency: version-bump-development
+
+jobs:
+  bump_version:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # the push goes through the bot token, not GITHUB_TOKEN
+    steps:
+      - name: Generate bot token
+        id: bot-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Check Out Code
+        uses: actions/checkout@v7
+        with:
+          ref: development
+          token: ${{ steps.bot-token.outputs.token }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          python-version: "3.14"
+
+      - name: Install Dependencies
+        run: uv sync
+
+      - name: Bump VERSION build number
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          uv run --no-sync invoke ver.project_bump_build
+          new_version="$(cat VERSION)"
+          git add VERSION
+          if git diff --cached --quiet; then
+            echo "VERSION unchanged — nothing to commit"
+          else
+            git commit -m "chore: bump VERSION to $new_version [skip ci]"
+            git push origin HEAD:development
+          fi
+          echo "### development is now $new_version" >> "$GITHUB_STEP_SUMMARY"
