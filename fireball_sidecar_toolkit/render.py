@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from .content import ContentBundle, load_bundle, packaged_content_root
+from .catalog import ContentBundle, load_bundle, packaged_content_root
 from .renderers import ALL
 
 
