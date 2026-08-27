@@ -47,9 +47,24 @@ tasks/
 * **`main`** — stable; only updated by promoting `development` (via `sidecar.toolkit.release`).
   Default channel: pin the floating major tag `@1` (always the latest `1.x.x` on `main`; no `v`
   prefix, starts at `1.0.0`).
-* **Tagged releases** cut from `main` by a workflow (GitHub release now; PyPI later — workflows
-  are not usable until after 2026-09-01). Once on PyPI: `development` publishes dev releases
-  (`X.Y.Z.devN`, install with `--prerelease=allow`), `main` tags publish finals.
+* **Tagged releases** cut from `main` by `.github/workflows/release.yml` (GitHub release now;
+  PyPI later — workflows not usable until after 2026-09-01). Once on PyPI: `development` publishes
+  dev releases (`X.Y.Z.devN`, install with `--prerelease=allow`), `main` tags publish finals.
+
+### release.yml (dispatch-triggered; `sidecar.toolkit.release` = `gh workflow run release.yml`)
+Adapted from `fireball_sidecar_landing/release.yml` + `workflows_shopify/publish_release.yml`.
+Auth: `main` is protected (require PR); the org-wide **`fireball-actions-bot`** App
+(`vars.BOT_APP_ID` + `secrets.BOT_PRIVATE_KEY`, via `actions/create-github-app-token@v3`) is the
+bypass actor for the promote push. `development` stays open, so its bumps use plain `GITHUB_TOKEN`.
+Jobs:
+1. **version** — `invoke ver.project_bump_release` drops the `-NNN` build suffix; commit
+   `chore: release X.Y.Z [skip ci]`; push `development`.
+2. **promote** — `git merge origin/development --no-ff -X theirs` onto `main`; push (bot token).
+3. **tag** — `git tag X.Y.Z` + `git tag -f X` (floating major); push both. **No `v` prefix.**
+   Guard on `git ls-remote --tags` so re-runs are safe.
+4. **publish_release** — `gh release create X.Y.Z --target main --generate-notes`.
+5. **pypi** (after 2026-09-01) — PyPI Trusted Publishing / OIDC: `id-token: write` +
+   `pypa/gh-action-pypi-publish`, no secret; pending publisher configured on PyPI.
 
 ## Distribution
 Each consuming repo adds a dev dependency (default = stable):
