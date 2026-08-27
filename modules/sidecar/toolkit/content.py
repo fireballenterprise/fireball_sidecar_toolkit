@@ -1,11 +1,11 @@
-"""Parse canonical content trees (and a consuming repo's ``_local/``) into structured records.
+"""Parse the canonical content tree (and a consuming repo's ``_local/``) into structured records.
 
 Two content roots feed every renderer:
 
-* the packaged canonical tree — ``content/`` in this repo, shipped as package data
-* an optional per-repo overlay — ``_local/`` in the consuming repo
+* ``_shared`` — the packaged canonical tree (``content/`` in this repo, shipped as package data)
+* ``_local`` — an optional per-repo overlay in the consuming repo
 
-``load_bundle()`` merges them (``_local/`` wins on a name collision) and returns a
+``load_bundle()`` merges them (``_local`` wins on a slug collision) and returns a
 :class:`ContentBundle` the renderers consume. Nothing here writes files or knows about any
 specific AI tool — that is the renderers' job.
 """
@@ -17,6 +17,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
+
+# Content layers, lowest-priority first. A slug defined in a later layer overrides the earlier one.
+# `_shared` is the packaged canonical tree; `_local` is the consuming repo's overlay.
+LAYERS = ("_shared", "_local")
 
 _EXEC_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
 
@@ -94,16 +98,21 @@ class Skill:
 
 @dataclass(frozen=True)
 class ContentBundle:
-    """Everything the renderers need: merged canonical + ``_local/`` content."""
+    """Everything the renderers need: the merged ``_shared`` + ``_vault`` + ``_local`` content."""
 
     commands: list[Command] = field(default_factory=list)
     instructions: list[Instruction] = field(default_factory=list)
     skills: list[Skill] = field(default_factory=list)
-    local_slugs: frozenset[str] = frozenset()
+    # slug -> layer name it was resolved from (e.g. "_shared", "_vault", "_local")
+    origin: dict[str, str] = field(default_factory=dict)
+
+    def layer_of(self, slug: str) -> str | None:
+        """Which layer a slug was resolved from, or ``None`` if unknown."""
+        return self.origin.get(slug)
 
     def is_local(self, slug: str) -> bool:
-        """True when ``slug`` came from the consuming repo's ``_local/`` overlay."""
-        return slug in self.local_slugs
+        """True when ``slug`` was resolved from the consuming repo's ``_local/`` overlay."""
+        return self.origin.get(slug) == "_local"
 
 
 def _collect(root: Path, subdir: str, suffix: str = ".md") -> list[Path]:
@@ -118,42 +127,49 @@ def packaged_content_root() -> Path:
     return (Path(__file__).resolve().parent / "content").resolve()
 
 
+def _skill_dirs(root: Path) -> list[Path]:
+    skills_root = root / "skills"
+    if not skills_root.is_dir():
+        return []
+    return sorted(p for p in skills_root.glob("*/") if p.is_dir())
+
+
 def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None = None) -> ContentBundle:
-    """Merge the canonical tree with an optional ``_local/`` overlay into a :class:`ContentBundle`.
+    """Merge the content layers into a :class:`ContentBundle`.
+
+    Layers apply lowest-priority first: ``canonical_root`` (``_shared``, defaults to the packaged
+    tree) → ``local_root`` (``_local``). A slug present in a later layer replaces the earlier one;
+    :attr:`ContentBundle.origin` records which layer won.
 
     Args:
-        canonical_root: ``content/`` root. Defaults to the packaged tree.
+        canonical_root: the toolkit ``content/`` root. Defaults to the packaged tree.
         local_root: consuming repo's ``_local/`` root. Optional.
     """
-    canonical_root = (canonical_root or packaged_content_root()).resolve()
+    layers: list[tuple[str, Path]] = [("_shared", (canonical_root or packaged_content_root()).resolve())]
+    if local_root is not None:
+        layers.append(("_local", local_root.resolve()))
 
     commands: dict[str, Command] = {}
     instructions: dict[str, Instruction] = {}
     skills: dict[str, Skill] = {}
-    local_slugs: set[str] = set()
+    origin: dict[str, str] = {}
 
-    for path in _collect(canonical_root, "commands"):
-        commands[path.stem] = Command.from_file(path)
-    for path in _collect(canonical_root, "instructions"):
-        instructions[path.stem] = Instruction.from_file(path)
-    for skill_dir in sorted((canonical_root / "skills").glob("*/")) if (canonical_root / "skills").is_dir() else []:
-        skills[skill_dir.name] = Skill(name=skill_dir.name, root=skill_dir)
-
-    if local_root and local_root.is_dir():
-        for path in _collect(local_root, "commands"):
+    for layer_name, root in layers:
+        if not root.is_dir():
+            continue
+        for path in _collect(root, "commands"):
             commands[path.stem] = Command.from_file(path)
-            local_slugs.add(path.stem)
-        for path in _collect(local_root, "instructions"):
+            origin[path.stem] = layer_name
+        for path in _collect(root, "instructions"):
             instructions[path.stem] = Instruction.from_file(path)
-            local_slugs.add(path.stem)
-        skills_root = local_root / "skills"
-        for skill_dir in sorted(skills_root.glob("*/")) if skills_root.is_dir() else []:
+            origin[path.stem] = layer_name
+        for skill_dir in _skill_dirs(root):
             skills[skill_dir.name] = Skill(name=skill_dir.name, root=skill_dir)
-            local_slugs.add(skill_dir.name)
+            origin[skill_dir.name] = layer_name
 
     return ContentBundle(
         commands=[commands[k] for k in sorted(commands)],
         instructions=[instructions[k] for k in sorted(instructions)],
         skills=[skills[k] for k in sorted(skills)],
-        local_slugs=frozenset(local_slugs),
+        origin=origin,
     )

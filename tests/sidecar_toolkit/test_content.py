@@ -12,7 +12,7 @@ def test_packaged_bundle_parses():
     assert bundle.commands, "expected canonical commands"
     assert bundle.instructions, "expected canonical instructions"
     assert all(c.slug for c in bundle.commands)
-    assert not bundle.local_slugs
+    assert all(origin == "_shared" for origin in bundle.origin.values())
 
 
 def test_command_exec_line_extracted():
@@ -38,3 +38,4 @@ def test_local_overlay_wins_and_is_flagged(tmp_path):
     assert push.description == "local override"
     assert bundle.is_local("push")
     assert bundle.is_local("mine")
+    assert bundle.layer_of("push") == "_local"
