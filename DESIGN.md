@@ -12,34 +12,37 @@ Full project plan and history: `ai_vault` repo →
 |-------|-------|
 | GitHub repo | `fireballenterprise/fireball_sidecar_toolkit` |
 | PyPI / dist name | `fireball-sidecar-toolkit` (unique, brand-scoped) |
-| import package | `modules.sidecar.toolkit` |
+| import package | `fireball_sidecar_toolkit` |
 | invoke namespace | `sidecar.toolkit.{download,upload,sync,check,release}` |
 | console script | `sidecar-toolkit` (for the `uvx`, no-dependency path) |
 | slash commands | `/toolkit_sync`, `/toolkit_download`, `/toolkit_upload` (naming TBC) |
 
 ## Repository layout
 ```
-modules/
-  sidecar/
-    toolkit/
-      content/
-        instructions/*.md   canonical agent rules (frontmatter: description, applyTo)
-        commands/*.md        canonical slash-command specs (name, description, argument-hint;
-                             body carries the !`...` exec line)
-        skills/<name>/SKILL.md
-      cli.py            `sidecar-toolkit` console entrypoint
-      content.py        parse content/ (+ a repo's _local/) -> ContentBundle
-      render.py         run every renderer over the bundle
-      renderers/        one per target: agents, claude, cline, copilot, opencode, prompts, sidecar
-      download.py       clobber _shared/ from the installed package, then render
-      upload.py         diff _shared/ vs canonical -> PR against this repo
-      sync.py           check _shared/ -> offer upload -> download -> render
-      check.py          read-only drift gate
-      release.py        promote development -> main, cut a tag
-  setup/, versioning/, common/   inherited from template_python
-tasks/
-  sidecar/toolkit/     invoke wrappers
+fireball_sidecar_toolkit/        <- THE distributable package (the only thing in the wheel)
+  content/                       <- canonical trees, shipped as package data
+    instructions/*.md            canonical agent rules (frontmatter: description, applyTo)
+    commands/*.md                canonical slash-command specs (name, description, argument-hint;
+                                 body carries the !`...` exec line)
+    skills/<name>/SKILL.md
+  __init__.py       exposes __version__ (from importlib.metadata)
+  cli.py            `sidecar-toolkit` console entrypoint
+  catalog.py        parse content/ (+ a repo's _local/) -> ContentBundle
+  render.py         run every renderer over the bundle
+  renderers/        one per target: agents, claude, cline, copilot, opencode, prompts, sidecar
+  download.py       clobber _shared/ from the installed package, then render
+  upload.py         diff _shared/ vs canonical -> PR against this repo
+  sync.py           check _shared/ -> offer upload -> download -> render
+  check.py          read-only drift gate
+  release.py        `gh workflow run release.yml`
+modules/            <- repo-local DEV tooling (NOT packaged): common/, setup/, versioning/
+tasks/              <- repo-local invoke tasks (NOT packaged): sidecar/toolkit/, common/, tests/
+VERSION             <- PEP 440 X.Y.Z; pyproject reads it via [tool.setuptools.dynamic]
+MANIFEST.in         <- keeps the sdist in sync with the wheel
 ```
+The parser module is `catalog.py`, not `content.py`, to avoid colliding with the `content/` data
+directory. `modules/` and `tasks/` are excluded from the build by
+`[tool.setuptools.packages.find] include = ["fireball_sidecar_toolkit*"]`.
 
 ## Branch model & channels
 Both `main` and `development` are **PR-required** (ruleset "PR to Main + Development": `deletion` +
@@ -47,37 +50,42 @@ Both `main` and `development` are **PR-required** (ruleset "PR to Main + Develop
 the `fireball-actions-bot` App, `always`). `development` is the default branch.
 
 * **`development`** — integration branch; feature PRs merge here. Every merge runs `version.yml`
-  → `invoke ver.project_bump_build` bumps `VERSION` (`X.Y.Z-NNN`). Dev channel:
+  → `invoke ver.project_bump_patch` (`0.2.0` → `0.2.1`). Dev channel:
   `fireball-sidecar-toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@development`
 * **`main`** — stable; only updated by `release.yml` promoting `development` (via
-  `sidecar.toolkit.release`). Default channel: pin the floating major tag `@1` (always the latest
-  `1.x.x` on `main`; no `v` prefix, starts at `1.0.0`).
-* `VERSION` (`X.Y.Z[-NNN]`) is the release-process truth; `pyproject.toml`'s `version` stays at
-  the target `X.Y.Z` and is not auto-synced (git-installed, so it rarely matters).
-* **Tagged releases** cut from `main` by `.github/workflows/release.yml` (GitHub release now;
-  PyPI later — workflows not usable until after 2026-09-01). Once on PyPI: `development` publishes
-  dev releases (`X.Y.Z.devN`, install with `--prerelease=allow`), `main` tags publish finals.
+  `sidecar.toolkit.release`). Default channel: pin the floating major tag — `@0` during pre-1.0,
+  `@1` after the official launch. No `v` prefix.
+* **Version scheme** (Levon: 0.x while pre-release, `1.0.0` = official launch):
+  * `VERSION` is the single source of truth — plain PEP 440 `X.Y.Z`. `pyproject.toml` reads it via
+    `[tool.setuptools.dynamic]` (`dynamic = ["version"]`), so there is nothing to keep in sync.
+  * PR merge to `development` → `ver.project_bump_patch` (`0.2.0` → `0.2.1`).
+  * Release → `ver.project_bump_minor` by default (`0.2.7` → `0.3.0`); the `release.yml` dispatch
+    takes a `bump` input (`patch`/`minor`/`major`) — the official launch is `bump: major`
+    (`0.x.y` → `1.0.0`).
+  * `ver.project_bump_build` (`X.Y.Z-NNN`) stays for manual feature-branch use; nothing published
+    ever carries a suffix.
 
-### release.yml (dispatch-triggered; `sidecar.toolkit.release` = `gh workflow run release.yml`)
-Adapted from `fireball_sidecar_landing/release.yml` + `workflows_shopify/publish_release.yml`.
-Auth: `main` is protected (require PR); the org-wide **`fireball-actions-bot`** App
-(`vars.BOT_APP_ID` + `secrets.BOT_PRIVATE_KEY`, via `actions/create-github-app-token@v3`) is the
-bypass actor for the promote push. `development` stays open, so its bumps use plain `GITHUB_TOKEN`.
+### release.yml (`workflow_dispatch` with a `bump` input; `sidecar.toolkit.release` = `gh workflow run release.yml`)
+Auth: `main` + `development` are PR-required (public repo, ruleset enforced). The org-wide
+**`fireball-actions-bot`** App (`vars.BOT_APP_ID` + `secrets.BOT_PRIVATE_KEY`, via
+`actions/create-github-app-token@v3`) is a bypass actor — every job that pushes uses its token.
 Jobs:
-1. **version** — `invoke ver.project_bump_release` drops the `-NNN` build suffix; commit
-   `chore: release X.Y.Z [skip ci]`; push `development`.
-2. **promote** — `git merge origin/development --no-ff -X theirs` onto `main`; push (bot token).
+1. **version** — `invoke ver.project_bump_${{ inputs.bump }}`; advance the patch if the candidate
+   tag is taken; commit `chore: release X.Y.Z [skip ci]`; push `development`.
+2. **promote** — `git merge origin/development --no-ff -X theirs` onto `main`; push.
 3. **tag** — `git tag X.Y.Z` + `git tag -f X` (floating major); push both. **No `v` prefix.**
-   Guard on `git ls-remote --tags` so re-runs are safe.
+   `git ls-remote --tags` guard so re-runs are safe.
 4. **publish_release** — `gh release create X.Y.Z --target main --generate-notes`.
-5. **pypi** (after 2026-09-01) — PyPI Trusted Publishing / OIDC: `id-token: write` +
-   `pypa/gh-action-pypi-publish`, no secret; pending publisher configured on PyPI.
+5. **pypi** — gated on repo variable `PYPI_ENABLED == 'true'`. `uv build` + `pypa/gh-action-pypi-
+   publish` via **Trusted Publishing / OIDC** (`id-token: write`, no API token). To enable: set
+   the variable, add a PyPI Trusted Publisher for this repo + `release.yml` + the `pypi`
+   environment.
 
 ## Distribution
 Each consuming repo adds a dev dependency (default = stable):
 ```toml
 [dependency-groups]
-dev = ["fireball-sidecar-toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@1"]
+dev = ["fireball-sidecar-toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@0"]
 ```
 `uv.lock` captures the exact commit; updates are deliberate
 (`uv lock --upgrade-package fireball-sidecar-toolkit`). The wheel bundles `content/` as package

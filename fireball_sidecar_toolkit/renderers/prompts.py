@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..content import ContentBundle
+from ..catalog import ContentBundle
 
 
 def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:  # noqa: ARG001

@@ -1,8 +1,8 @@
-"""`sidecar.toolkit` collection — the in-repo face of :mod:`modules.sidecar.toolkit`.
+"""`sidecar.toolkit` collection — the in-repo face of :mod:`fireball_sidecar_toolkit`.
 
 ``sidecar.toolkit.download`` / ``.upload`` / ``.sync`` / ``.check`` operate on the repo they are
 run from. ``sidecar.toolkit.release`` promotes ``development`` -> ``main`` and cuts a tag. The
-console script ``sidecar-toolkit`` (see ``modules/sidecar/toolkit/cli.py``) is the dependency-free
+console script ``sidecar-toolkit`` (see ``fireball_sidecar_toolkit/cli.py``) is the dependency-free
 equivalent for repos that only ``uvx`` the toolkit.
 """
 
