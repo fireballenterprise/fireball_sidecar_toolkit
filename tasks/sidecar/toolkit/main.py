@@ -19,7 +19,7 @@ def check(context):  # noqa: ARG001
 
 @task
 def download(context):  # noqa: ARG001
-    """Clobber _shared/ from the installed fireball-sidecar-toolkit package, then regenerate every provider view."""
+    """Clobber _shared/ from the installed fireball_sidecar_toolkit package, then regenerate every provider view."""
     _download.download(Path.cwd())
 
 
