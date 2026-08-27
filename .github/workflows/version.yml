@@ -2,15 +2,15 @@
 name: Version
 run-name: "Version (development)"
 
-# Every merge to development bumps the VERSION build number (Major.Minor.Patch-Build), so each
-# dev-channel install (`...@development`) has a distinct version. release.yml owns the final
-# Major.Minor.Patch on main. Same Major.Minor.Patch[-Build] scheme as fireball_orchestrator /
-# fireball_sidecar_chat — done here with `invoke ver.project_bump_build` since this repo has uv.
+# Every merge to development bumps the VERSION patch component (X.Y.Z -> X.Y.(Z+1)), so each
+# dev-channel install (`...@development`) has a distinct version. release.yml bumps the minor
+# (or major) on top of that. VERSION is plain PEP 440 X.Y.Z — pyproject reads it via
+# [tool.setuptools.dynamic]. Build suffixes (`-NNN`) are feature-branch-only and never land here.
 #
 # Auth: development is a PR-required branch (public repo, ruleset enforced). The default
 # GITHUB_TOKEN cannot push to it; the org-wide fireball-actions-bot App is a bypass actor.
 # Bot-token pushes DO re-trigger workflows, so the bump commit carries [skip ci] and the trigger
-# ignores VERSION-only pushes as a second guard.
+# also ignores VERSION-only pushes.
 
 on:
   push:
@@ -49,11 +49,11 @@ jobs:
       - name: Install Dependencies
         run: uv sync
 
-      - name: Bump VERSION build number
+      - name: Bump VERSION patch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          uv run --no-sync invoke ver.project_bump_build
+          uv run --no-sync invoke ver.project_bump_patch
           new_version="$(cat VERSION)"
           git add VERSION
           if git diff --cached --quiet; then

@@ -7,7 +7,7 @@ a toolkit release without cloning it.
 
 Branch model:
 * ``development`` — integration; feature PRs merge here. Dev channel: pin ``...@development``.
-* ``main`` — stable; only ever updated by this workflow promoting ``development``. Pin ``...@1``
+* ``main`` — stable; only ever updated by this workflow promoting ``development``. Pin ``...@0`` while pre-1.0 (``...@1`` after launch)
   (floating major tag, no ``v`` prefix — [[versioning-no-v-prefix]]).
 """
 
