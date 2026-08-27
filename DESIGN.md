@@ -11,7 +11,7 @@ Full project plan and history: `ai_vault` repo →
 | thing | value |
 |-------|-------|
 | GitHub repo | `fireballenterprise/fireball_sidecar_toolkit` |
-| PyPI / dist name | `fireball-sidecar-toolkit` (unique, brand-scoped) |
+| PyPI / dist name | `fireball_sidecar_toolkit` (unique, brand-scoped) |
 | import package | `fireball_sidecar_toolkit` |
 | invoke namespace | `sidecar.toolkit.{download,upload,sync,check,release}` |
 | console script | `sidecar-toolkit` (for the `uvx`, no-dependency path) |
@@ -51,7 +51,7 @@ the `fireball-actions-bot` App, `always`). `development` is the default branch.
 
 * **`development`** — integration branch; feature PRs merge here. Every merge runs `version.yml`
   → `invoke ver.project_bump_patch` (`0.2.0` → `0.2.1`). Dev channel:
-  `fireball-sidecar-toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@development`
+  `fireball_sidecar_toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@development`
 * **`main`** — stable; only updated by `release.yml` promoting `development` (via
   `sidecar.toolkit.release`). Default channel: pin the floating major tag — `@0` during pre-1.0,
   `@1` after the official launch. No `v` prefix.
@@ -77,18 +77,29 @@ Jobs:
    `git ls-remote --tags` guard so re-runs are safe.
 4. **publish_release** — `gh release create X.Y.Z --target main --generate-notes`.
 5. **pypi** — gated on repo variable `PYPI_ENABLED == 'true'`. `uv build` + `pypa/gh-action-pypi-
-   publish` via **Trusted Publishing / OIDC** (`id-token: write`, no API token). To enable: set
-   the variable, add a PyPI Trusted Publisher for this repo + `release.yml` + the `pypi`
-   environment.
+   publish` via **Trusted Publishing / OIDC** (`id-token: write`, no API token).
+
+### Two publish channels (mirrors the app repos' dev/prd deploy split)
+| channel | trigger | index | gate | environment |
+|---------|---------|-------|------|-------------|
+| **TestPyPI** | every merge to `development` (`version.yml` `publish_testpypi` job) | test.pypi.org | `vars.TESTPYPI_ENABLED` | `testpypi` |
+| **PyPI** | `release.yml` (main promotion) | pypi.org | `vars.PYPI_ENABLED` | `pypi` |
+
+TestPyPI is the practice loop — publish on every dev merge, then a consuming repo installs from it
+(`uv pip install --index-url https://test.pypi.org/simple/ fireball_sidecar_toolkit`, or a
+`[[tool.uv.index]]` entry) to exercise the full round trip before the real `1.0.0`. Each needs its
+own **Trusted Publisher** configured on the respective site (repo + workflow filename +
+environment name); the two are independent. Versions are immutable on both — `skip-existing: true`
+keeps re-runs safe.
 
 ## Distribution
 Each consuming repo adds a dev dependency (default = stable):
 ```toml
 [dependency-groups]
-dev = ["fireball-sidecar-toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@0"]
+dev = ["fireball_sidecar_toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@0"]
 ```
 `uv.lock` captures the exact commit; updates are deliberate
-(`uv lock --upgrade-package fireball-sidecar-toolkit`). The wheel bundles `content/` as package
+(`uv lock --upgrade-package fireball_sidecar_toolkit`). The wheel bundles `content/` as package
 data, so `download` clobbers `_shared/` straight from the install — no network, no Copier, no
 submodule. Non-Python / day-job repo:
 `uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit download`.

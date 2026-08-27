@@ -7,6 +7,11 @@ run-name: "Version (development)"
 # (or major) on top of that. VERSION is plain PEP 440 X.Y.Z — pyproject reads it via
 # [tool.setuptools.dynamic]. Build suffixes (`-NNN`) are feature-branch-only and never land here.
 #
+# Two channels, mirroring the deploy workflows on the app repos:
+#   * development  -> TestPyPI  (publish_testpypi job below; gated on vars.TESTPYPI_ENABLED)
+#   * release.yml  -> PyPI      (main promotion; gated on vars.PYPI_ENABLED)
+# TestPyPI lets us practice the full publish -> `uv add` round trip before the real 1.0.0.
+#
 # Auth: development is a PR-required branch (public repo, ruleset enforced). The default
 # GITHUB_TOKEN cannot push to it; the org-wide fireball-actions-bot App is a bypass actor.
 # Bot-token pushes DO re-trigger workflows, so the bump commit carries [skip ci] and the trigger
@@ -27,6 +32,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read  # the push goes through the bot token, not GITHUB_TOKEN
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
     steps:
       - name: Generate bot token
         id: bot-token
@@ -50,11 +57,13 @@ jobs:
         run: uv sync
 
       - name: Bump VERSION patch
+        id: bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           uv run --no-sync invoke ver.project_bump_patch
           new_version="$(cat VERSION)"
+          echo "version=$new_version" >> "$GITHUB_OUTPUT"
           git add VERSION
           if git diff --cached --quiet; then
             echo "VERSION unchanged — nothing to commit"
@@ -63,3 +72,34 @@ jobs:
             git push origin HEAD:development
           fi
           echo "### development is now $new_version" >> "$GITHUB_STEP_SUMMARY"
+
+  # 🧪 Publish the just-bumped development version to TestPyPI (practice channel).
+  # Gated on repo var TESTPYPI_ENABLED. Needs a TestPyPI Trusted Publisher for this repo +
+  # version.yml + the `testpypi` environment (configured at test.pypi.org, separate from PyPI).
+  publish_testpypi:
+    needs: bump_version
+    if: ${{ vars.TESTPYPI_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write  # OIDC — Trusted Publishing, no API token
+    steps:
+      - name: Check Out Code
+        uses: actions/checkout@v7
+        with:
+          ref: development  # has bump_version's commit by now
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          python-version: "3.14"
+
+      - name: Build sdist + wheel
+        run: uv build
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          # a re-run after a partial failure shouldn't blow up on an already-uploaded file
+          skip-existing: true

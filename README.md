@@ -13,7 +13,7 @@ See [DESIGN.md](DESIGN.md) for the architecture, branch model, and open question
 ```toml
 # pyproject.toml — stable channel (floating major tag on main; @0 pre-1.0, @1 after launch)
 [dependency-groups]
-dev = ["fireball-sidecar-toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@0"]
+dev = ["fireball_sidecar_toolkit @ git+https://github.com/fireballenterprise/fireball_sidecar_toolkit@0"]
 # dev channel: ...@development
 ```
 ```sh
