@@ -24,7 +24,10 @@ def render_repo(
     canonical_root: Path | None = None,
     only: list[str] | None = None,
 ) -> RenderResult:
-    """Regenerate every provider view in ``repo_root`` from canonical content + ``_local/``.
+    """Regenerate every provider view in ``repo_root`` from ``_shared`` + ``_local``.
+
+    ``_shared/`` comes from the packaged canonical tree (or ``canonical_root``); ``_local/`` is
+    read from ``repo_root`` when that directory exists.
 
     Args:
         repo_root: consuming repo root.
@@ -32,9 +35,10 @@ def render_repo(
         only: restrict to a subset of renderer names (``renderers.ALL`` keys).
     """
     repo_root = repo_root.resolve()
+    local_dir = repo_root / "_local"
     bundle: ContentBundle = load_bundle(
         canonical_root=canonical_root or packaged_content_root(),
-        local_root=repo_root / "_local",
+        local_root=local_dir if local_dir.is_dir() else None,
     )
 
     names = only or list(ALL)
