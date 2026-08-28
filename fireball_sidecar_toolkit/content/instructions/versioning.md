@@ -6,39 +6,33 @@ applyTo: "modules/versioning/**"
 
 ## Project VERSION Bumps (`project.py`)
 
-The root `VERSION` file tracks this repo's release version — what gets tagged as a GitHub
-Release, if this repo ships one. This is separate from `pyproject.toml`'s own `[project]
-version` field (Python package metadata, unrelated) and from this same directory's `libs.py`/
-`workflows.py` checks (dependency locks and GitHub Action ref pins against external sources — a
-different concern, see below).
+The root `VERSION` file is the **single source of truth** for this repo's version — plain
+`Major.Minor.Patch`, no build suffix, on `development` and `main`. `pyproject.toml` reads it via
+`[tool.setuptools.dynamic]` (`version = { file = "VERSION" }`); never hand-write a `version =` in
+`[project]`. This is separate from this directory's `libs.py`/`workflows.py` checks (dependency
+locks and Action ref pins — see below).
 
-Scheme: `Major.Minor.Patch[-Build]`
-- No build suffix (e.g. `1.0.0`) — a released version.
-- A build suffix (e.g. `1.1.0-003`) — build `003` toward `1.1.0`, in progress but not yet released.
-
-Two operations, one per `ver.project_bump_*` invoke task:
-- `ver.project_bump_build` — no build suffix yet -> bump the minor and start build `001`
-  (`1.0.0` -> `1.1.0-001`); build suffix present -> increment the build number only
-  (`1.1.0-001` -> `1.1.0-002`)
-- `ver.project_bump_release` — drop the build suffix (`1.1.0-003` -> `1.1.0`)
-
-See `modules/versioning/README.md` for full behavior/data-flow details.
+**Scheme (family-wide, 2026-08-28):**
+- **Every merge to `development`** → `ver.project_bump_patch` (`0.2.0` → `0.2.1`). In dev→`main`
+  repos with CI this is automatic (`version.yml`); elsewhere it's a manual step.
+- **A release** just **promotes `development` → `main` and tags the current `VERSION`** — no bump.
+  Force a milestone with the release workflow's `bump` input: `ver.project_bump_minor`
+  (`0.2.7` → `0.3.0`) or `ver.project_bump_major` (the eventual official `1.0.0`).
+- **Feature branches** may use `ver.project_bump_build` (`0.2.1` → `0.2.1-001` → `-002`) as a local
+  build counter. A build suffix is **never** merged to `development` or published.
 
 ```sh
-uv run --no-sync invoke ver.project_bump_build      # dev build: new minor's first build, or next build number
-uv run --no-sync invoke ver.project_bump_release    # release: drop the build suffix
+uv run --no-sync invoke ver.project_bump_patch      # every merge to development
+uv run --no-sync invoke ver.project_bump_minor      # milestone release (release workflow bump=minor)
+uv run --no-sync invoke ver.project_bump_major      # major release (release workflow bump=major)
+uv run --no-sync invoke ver.project_bump_build      # feature-branch build counter only, never published
 ```
-Both only rewrite `VERSION` — they don't commit, branch, or push, tag a release, or trigger any
-workflow. This repo has no `deploy.yml`/`release.yml` of its own; a project that adds one should
-wire it to call these tasks.
-
-`project.py` exposes `bump_build()`/`bump_release()` (public, no leading `_`) as the underlying
-functions, plus a `@click.command()` `main()` with a `--release` flag so the invoke tasks can
-invoke it via `python -m modules.versioning.project [--release]` — this module follows the
-subprocess-invocation convention used by `libs.py`/`python.py`/`workflows.py` in this repo (unlike
-the direct-import style used elsewhere), since `tasks/*.py` here never imports `modules` directly.
-Resolve the repo path via `modules.common.properties.get_repo_root()`, not `get_repo_local()` —
-these tasks may run in CI, where `get_repo_local()`'s hardcoded local-machine path doesn't exist.
+All four only rewrite `VERSION` — no commit, branch, push, tag, or workflow trigger. `project.py`
+exposes `bump_patch()`/`bump_minor()`/`bump_major()`/`bump_build()` and a `python -m
+modules.versioning.project [patch|minor|major|build]` CLI. It has its **own** `get_repo_root()`
+keyed on `pyproject.toml` + `VERSION` — not `modules.common.properties.get_repo_root()`, which
+searches for the git-ignored `properties.yml` and fails in CI where `version.yml`/`release.yml`
+runs these tasks.
 
 ## Dependency/Action Version Checks (`libs.py`, `python.py`, `workflows.py`)
 
