@@ -1,14 +1,14 @@
-"""Bump the repo's VERSION file (PEP 440 ``Major.Minor.Patch``).
+"""Bump the repo's VERSION file (``Major.Minor.Patch``).
 
 VERSION is the single source of truth — ``pyproject.toml`` reads it via
 ``[tool.setuptools.dynamic]``. It is always a plain ``X.Y.Z`` on ``development`` and ``main``:
 
-* every PR merge to ``development`` -> ``ver.project_bump_patch``  (``0.2.0`` -> ``0.2.1``)
-* each release -> ``ver.project_bump_minor`` (default) or ``_major`` for a milestone
-  (``0.2.7`` -> ``0.3.0``; the eventual official launch dispatches ``bump=major`` -> ``1.0.0``)
+* every merge to ``development`` -> ``ver.project_bump_patch``  (``0.2.0`` -> ``0.2.1``)
+* a release just **promotes + tags** whatever ``development`` is at — no bump. Force a milestone
+  with the release workflow's ``bump`` input (``ver.project_bump_minor`` / ``_major``).
 
-``ver.project_bump_build`` (``X.Y.Z`` -> ``X.Y.Z-001`` -> ``-002``) stays available for manual
-use on a feature branch; nothing published ever carries a build suffix.
+``ver.project_bump_build`` (``X.Y.Z`` -> ``X.Y.Z-001`` -> ``-002``) stays available for manual use
+on a feature branch; nothing merged or published ever carries a build suffix.
 
 Usage:
     uv run --no-sync invoke ver.project_bump_patch
@@ -65,21 +65,21 @@ def _write(repo_root: Path, version: str) -> str:
 
 
 def bump_patch() -> str:
-    """``X.Y.Z[-B]`` -> ``X.Y.(Z+1)``. Every PR merge to development."""
+    """``X.Y.Z[-B]`` -> ``X.Y.(Z+1)``. Every merge to development."""
     repo_root = get_repo_root()
     major, minor, patch, _ = _read(repo_root)
     return _write(repo_root, f"{major}.{minor}.{patch + 1}")
 
 
 def bump_minor() -> str:
-    """``X.Y.Z[-B]`` -> ``X.(Y+1).0``. The default release bump."""
+    """``X.Y.Z[-B]`` -> ``X.(Y+1).0``. A milestone release bump (release workflow ``bump=minor``)."""
     repo_root = get_repo_root()
     major, minor, _patch, _ = _read(repo_root)
     return _write(repo_root, f"{major}.{minor + 1}.0")
 
 
 def bump_major() -> str:
-    """``X.Y.Z[-B]`` -> ``(X+1).0.0``. Milestone releases (e.g. the official 1.0.0)."""
+    """``X.Y.Z[-B]`` -> ``(X+1).0.0``. A major release bump (release workflow ``bump=major``)."""
     repo_root = get_repo_root()
     major, _minor, _patch, _ = _read(repo_root)
     return _write(repo_root, f"{major + 1}.0.0")
@@ -93,5 +93,13 @@ def bump_build() -> str:
     return _write(repo_root, f"{major}.{minor}.{patch}-{next_build:0{_BUILD_WIDTH}d}")
 
 
+_BUMPS = {"patch": bump_patch, "minor": bump_minor, "major": bump_major, "build": bump_build}
+
+
 if __name__ == "__main__":
-    bump_patch()
+    import sys
+
+    _part = sys.argv[1] if len(sys.argv) > 1 else "patch"
+    if _part not in _BUMPS:
+        error(f"usage: python -m modules.versioning.project [{'|'.join(_BUMPS)}]  (got {_part!r})")
+    _BUMPS[_part]()
