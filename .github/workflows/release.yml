@@ -2,10 +2,13 @@
 name: Release
 run-name: "Release (${{ inputs.bump }})"
 
-# Bumps VERSION on development (minor by default; major for the official 1.0.0 launch), promotes
-# development -> main, tags the release (no `v` prefix), force-moves the floating major tag, and
-# publishes a GitHub Release. Consumers pin `@1` (floating major on main; `@0` during pre-1.0) or
-# `@development` (dev channel). `invoke sidecar.toolkit.release` = `gh workflow run release.yml`.
+# Promotes development -> main, tags the release (no `v` prefix), force-moves the floating major
+# tag, and publishes a GitHub Release. Family-wide scheme (see fireball_orchestrator's
+# versioning.instructions.md): the VERSION patch is bumped per merge to development (version.yml),
+# NOT here — a release just promotes + tags whatever development is at. The `bump` input forces a
+# minor/major milestone on development first (default: none; `major` = the official 1.0.0 launch).
+# Consumers pin `@1` (floating major on main; `@0` during pre-1.0) or `@development` (dev channel).
+# `invoke sidecar.toolkit.release` = `gh workflow run release.yml`.
 #
 # Auth: main + development are PR-required branches (public repo). The org-wide
 # fireball-actions-bot App (vars.BOT_APP_ID + secrets.BOT_PRIVATE_KEY) is the bypass actor.
@@ -18,10 +21,11 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: "Version bump for this release"
+        description: "Milestone bump on development before promoting (default: none)"
         type: choice
-        default: minor
+        default: none
         options:
+          - none
           - patch
           - minor
           - major
@@ -57,12 +61,14 @@ jobs:
       - name: Install Dependencies
         run: uv sync
 
-      - name: Bump VERSION (${{ inputs.bump }})
+      - name: Resolve VERSION (${{ inputs.bump }})
         id: bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          uv run --no-sync invoke "ver.project_bump_${{ inputs.bump }}"
+          if [ "${{ inputs.bump }}" != "none" ]; then
+            uv run --no-sync invoke "ver.project_bump_${{ inputs.bump }}"
+          fi
           new_version="$(cat VERSION)"
           # Never reuse a tag — advance the patch until the candidate is free.
           while git ls-remote --exit-code --tags origin "refs/tags/$new_version" >/dev/null 2>&1; do
@@ -75,9 +81,9 @@ jobs:
           echo "version=$new_version" >> "$GITHUB_OUTPUT"
           git add VERSION
           if git diff --cached --quiet; then
-            echo "VERSION already at $new_version — nothing to commit"
+            echo "VERSION unchanged at $new_version — promoting as-is"
           else
-            git commit -m "chore: release $new_version [skip ci]"
+            git commit -m "chore: bump VERSION to $new_version [skip ci]"
             git push origin HEAD:development
           fi
 
