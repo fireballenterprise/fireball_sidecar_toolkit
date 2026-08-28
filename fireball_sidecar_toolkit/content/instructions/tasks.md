@@ -66,8 +66,10 @@ see Upgrade Tasks above for that).
 | python | `uv run --no-sync invoke ver.python` | Check the pinned Python version against the latest release |
 | workflows | `uv run --no-sync invoke ver.workflows` | Check `.github/workflows/` action refs against latest versions |
 | upgrade | `uv run --no-sync invoke ver.upgrade` | Alias for `invoke upgrade.upgrade` (upgrade Python + all dependencies) |
-| project_bump_build | `uv run --no-sync invoke ver.project_bump_build` | Advance root `VERSION` for a dev build |
-| project_bump_release | `uv run --no-sync invoke ver.project_bump_release` | Finalize `VERSION` for release (drop build suffix) |
+| project_bump_patch | `uv run --no-sync invoke ver.project_bump_patch` | Bump root `VERSION` patch — every merge to development |
+| project_bump_minor | `uv run --no-sync invoke ver.project_bump_minor` | Bump `VERSION` minor — a milestone release |
+| project_bump_major | `uv run --no-sync invoke ver.project_bump_major` | Bump `VERSION` major — a major release |
+| project_bump_build | `uv run --no-sync invoke ver.project_bump_build` | `VERSION` build counter — feature-branch only, never published |
 
 ## Invoke vs Direct Python
 
