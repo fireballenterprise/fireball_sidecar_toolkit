@@ -1,6 +1,6 @@
 ---
-description: "Use when working with docs/change_logs/ entries or the properties.yml version/latest_changes keys that drive them."
-applyTo: "modules/docs/**,docs/change_logs/**"
+description: "Use when working with the properties.yml version/latest_changes keys that drive change logs, or the generated docs/change_logs/ entries."
+applyTo: "properties.yml,modules/docs/**,docs/change_logs/**"
 ---
 # Change Log Standards
 Per-entry markdown change logs at `docs/change_logs/<category>/<name>.md`, generated from
@@ -17,7 +17,7 @@ an entry worth logging; everything else in the module already supports it.
   <name>:
     version: 1.0.0
     latest_changes:
-      author: Levon Becker    # git config user.name — modules.common.properties.get_git_author()
+      author: Ada Lovelace    # git config user.name — modules.common.properties.get_git_author()
       date: 2026-08-11
       description: Initial Release    # comma-separate for multiple bullets: "Added X, Fixed Y"
 ```
@@ -29,7 +29,7 @@ Bumped by hand when the entry changes meaningfully — not automated. **A brand-
 From `modules/docs/lib/change_logs.py`'s `expected_entry_text()`:
 
 ```markdown
-## 1.0.0 - 2026-08-11 - Levon Becker
+## 1.0.0 - 2026-08-11 - Ada Lovelace
 * Initial Release
 ```
 
