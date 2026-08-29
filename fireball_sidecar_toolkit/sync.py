@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ._git import porcelain, tracked_diff
+from ._git import dirty_tracked, tracked_diff
 from .download import SHARED_DIRNAME, download
 from .render import RenderResult
 
@@ -27,7 +27,7 @@ class SyncPlan:
 def inspect(repo_root: Path) -> SyncPlan:
     """Report whether ``_shared/`` has uncommitted edits, without changing anything."""
     repo_root = repo_root.resolve()
-    status = porcelain(repo_root, SHARED_DIRNAME)
+    status = dirty_tracked(repo_root, SHARED_DIRNAME)
     if not status:
         return SyncPlan(
             dirty=False,
