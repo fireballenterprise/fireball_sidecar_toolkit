@@ -4,8 +4,8 @@ the files one AI tool expects inside a consuming repo.
 A renderer is a callable ``render(bundle, repo_root) -> list[Path]`` that writes its outputs and
 returns the paths it wrote (so :mod:`fireball_sidecar_toolkit.render` and the drift check can diff
 them). Every generated markdown file carries the :data:`~fireball_sidecar_toolkit.renderers._common.GENERATED_HEADER`
-``DO NOT EDIT`` comment and is a pointer stub — the canonical source is ``ai/shared/`` +
-``ai/local/`` (``content/`` in this repo).
+``DO NOT EDIT`` comment and is a pointer stub — the canonical source is ``.ai/shared/`` +
+``.ai/local/`` (``content/`` in this repo).
 """
 
 from __future__ import annotations
