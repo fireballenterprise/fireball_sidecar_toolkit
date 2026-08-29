@@ -1,4 +1,5 @@
 ---
+description: "Use when working in topics/ — topic structure, chat-vs-docs rules, the research workflow, and the templates.py change rule."
 applyTo: "topics/**"
 ---
 # Topics Instructions

@@ -1,7 +1,8 @@
 ---
-applyTo: ".claude/commands/**,.clinerules/workflows/**,.github/prompts/**,.sidecar/commands/**"
+description: "Use when authoring a canonical slash command or instruction file in content/ (or a repo's _local/) — the generator model, required frontmatter, and the thin-wrapper body."
+applyTo: ".claude/commands/**,.claude/skills/**,.clinerules/workflows/**,.github/prompts/**,.sidecar/commands/**"
 ---
-# AI Prompts Instructions
+# AI Commands Instructions
 
 Standards for the slash commands / custom prompts. **Commands are authored once** in
 `fireball_sidecar_toolkit`'s `content/commands/*.md` (or a consuming repo's `_local/commands/`) and
@@ -11,8 +12,9 @@ canonical content and re-run `invoke sidecar.toolkit.download`.
 ## Architecture
 
 Commands are the AI-facing entrypoint layer described in `logic.instructions.md` (Core Principle +
-The Stack) — thin wrappers only, no business logic. See that file for why prompts are the AI's
-decision-capture layer, and how this differs from `tasks.instructions.md`'s plain CLI automation.
+The Stack) — thin wrappers only, no business logic. See that file for why command bodies are the
+AI's decision-capture layer, and how this differs from `tasks.instructions.md`'s plain CLI
+automation.
 
 ## Canonical command file (`content/commands/<slug>.md`)
 
@@ -52,9 +54,18 @@ no `!` line is prose-only (the agent just follows the body).
 1. Python module — `modules/<module>/<verb>.py` (ALL logic here) + `modules/<module>/route.py`
    (argument dispatch only). See `modules.instructions.md` for the router template.
 2. `content/commands/<slug>.md` — the thin wrapper above.
-3. `content/skills/<slug>/SKILL.md` — the matching skill (see `skills.instructions.md`).
+3. `content/skills/<slug>/SKILL.md` — the matching skill (see `ai_skills.instructions.md`).
 4. `uv run --no-sync invoke sidecar.toolkit.download` to regenerate, then `invoke fix && invoke
    test` (must be 10/10 for `.py` changes).
+
+## Authoring instruction files (`content/instructions/<slug>.md`)
+
+- One file per concern — the generated `AGENTS.md` index lists them all, derived from the bundle
+- Always include a `description` in YAML frontmatter using the "Use when..." pattern
+- Use an `applyTo` glob only when the instruction is relevant to a specific file type or directory
+  (`**/*.py`, `**/*.csv`, `.github/workflows/**`); omit it (or `**`) for repo-wide rules
+- Keep instructions actionable and example-driven — prefer short code blocks over prose
+- No standalone `---` dividers in the body — see `markdown.instructions.md`
 
 ## uv --no-sync flag
 
