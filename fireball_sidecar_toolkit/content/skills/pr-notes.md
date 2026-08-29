@@ -4,7 +4,6 @@ description: Use for drafting Pull Request notes (Summary + Changes) for the cur
 ---
 
 # PR Notes Workflow
-
 Use this file as source of truth: `.ai/shared/commands/pr-notes.md`
 
 When the user asks to draft PR notes or a PR description, read that file and follow it.

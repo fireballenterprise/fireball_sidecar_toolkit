@@ -22,6 +22,7 @@ uv run --no-sync invoke sidecar.toolkit.sync      # check .ai/shared/ -> offer u
 uv run --no-sync invoke sidecar.toolkit.download  # clobber .ai/shared/ from the package, regenerate
 uv run --no-sync invoke sidecar.toolkit.upload    # open a PR here with local .ai/shared/ changes
 uv run --no-sync invoke sidecar.toolkit.check     # read-only drift gate (wire into invoke test / CI)
+uv run --no-sync invoke sidecar.toolkit.mdfix     # normalise *.md (no blank after header, no stray ---); --check to gate
 ```
 No dependency wanted (non-Python repo): `uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit download`.
 

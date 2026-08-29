@@ -4,7 +4,6 @@ description: Use for the screenshot workflow — configure the macOS capture loc
 ---
 
 # Screenshots Workflow
-
 Use this file as source of truth: `.ai/shared/commands/screenshots.md`
 
 When the user asks to configure / view / clean screenshots, read that file and follow it.

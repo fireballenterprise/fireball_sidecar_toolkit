@@ -6,11 +6,9 @@ agent: agent
 ---
 
 # upgrade - Upgrade Python and/or Dependencies
-
 Executes upgrades to Python and/or package dependencies after you've reviewed changes via `/update`.
 
 ## Usage
-
 Upgrade everything (interactive):
 !`uv run --no-sync invoke upgrade`
 
@@ -24,14 +22,12 @@ Sync dependencies without checking for updates:
 !`uv run --no-sync invoke upgrade.sync`
 
 ## Description
-
 The upgrade command performs actual installations and syncs:
 - Downloads and installs new Python versions (if updated)
 - Rebuilds virtual environment (if Python changed)
 - Runs `uv sync --upgrade` to install updated dependencies
 
 ## Workflow
-
 Best practice:
 1. Run `/update` to review and update config files
 2. Check `git diff` to see what changed
@@ -39,7 +35,6 @@ Best practice:
 4. If not satisfied, run `git restore` and adjust
 
 ## Examples
-
 ```bash
 # Full workflow
 /update                    # Review and update all configs
@@ -58,7 +53,6 @@ git diff                    # Review changes
 ```
 
 ## Exit Codes
-
 - 0: Success (upgrades completed or nothing needed)
 - 1: Error occurred
 - 2: Cancelled by user

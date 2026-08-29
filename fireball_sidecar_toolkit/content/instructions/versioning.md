@@ -3,9 +3,7 @@ description: "Use when working with the modules/versioning/ package — bumping 
 applyTo: "modules/versioning/**"
 ---
 # Versioning Instructions
-
 ## Project VERSION Bumps (`project.py`)
-
 The root `VERSION` file is the **single source of truth** for this repo's version — plain
 `Major.Minor.Patch`, no build suffix, on `development` and `main`. `pyproject.toml` reads it via
 `[tool.setuptools.dynamic]` (`version = { file = "VERSION" }`); never hand-write a `version =` in
@@ -35,7 +33,6 @@ searches for the git-ignored `properties.yml` and fails in CI where `version.yml
 runs these tasks.
 
 ## Dependency/Action Version Checks (`libs.py`, `python.py`, `workflows.py`)
-
 Three checks against external sources of truth, plus the installs that follow (`upgrade.py`):
 - `ver.libs` — compares `pyproject.toml`'s `[project.dependencies]` against the latest
   published package releases (via `uv pip list [--outdated]`), and rewrites just the version locks

@@ -2,7 +2,6 @@
 description: "Use when creating a git branch or drafting a Pull Request for this repo. Covers branch naming convention and PR description format."
 ---
 # Git & PR Instructions
-
 ## Branch Naming
 - All lowercase, `snake_case` (words separated by `_`)
 - 2-4 words describing the change — not a ticket number, not a filename

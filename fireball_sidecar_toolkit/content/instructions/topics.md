@@ -3,9 +3,7 @@ description: "Use when working in topics/ — topic structure, chat-vs-docs rule
 applyTo: "topics/**"
 ---
 # Topics Instructions
-
 ## Topic Structure
-
 Topics are organized as a two-level hierarchy under `topics/category/subtopic/`. Each leaf topic contains:
 
 ```
@@ -18,7 +16,6 @@ topics/<category>/<subtopic>/
 ```
 
 ## Research Document Workflow — CRITICAL
-
 **Default: Research stays in the chat file**
 - All research and conversation belongs in the active chat: `chats/YYYYMMDD_title.md`
 - **DO NOT automatically create separate research documents**
@@ -31,7 +28,6 @@ topics/<category>/<subtopic>/
 - User does NOT ask for a file → keep everything in the chat file
 
 ## File Default Location Rule
-
 **`docs/` = user-facing files of any type. `chats/` = AI conversation logs only.**
 
 Any file the user asks to create goes in `docs/` by default — `.md`, `.csv`, `.txt`, `.json`, `.yml`, or any other type:
@@ -42,14 +38,12 @@ Any file the user asks to create goes in `docs/` by default — `.md`, `.csv`, `
 - Exception: user explicitly specifies a different path → use that path
 
 ## File Management
-
 - Work from git-tracked paths only (`topics/`, `agents/`)
 - Use ISO 8601 date format: `YYYYMMDD_description.md` for chat files
 - Screenshots stored centrally at repo root `screenshots/` — NOT in topic folders
 - Never write files outside the repository root (`repo.local` in `properties.yml`) without explicit permission
 
 ## Instruction File Sync
-
 When updating topic instructions in a topic directory:
 - update `AGENTS.md` for topic-specific guidance
 - keep `CLAUDE.md` as a thin pointer to the partner `AGENTS.md` in the same directory
@@ -62,7 +56,6 @@ Topic-specific guidance should live in `AGENTS.md`.
 - If topic guidance changes, update `AGENTS.md` as the content source of truth and keep `CLAUDE.md` as a pointer
 
 ## templates.py Change Rule — CRITICAL
-
 `modules/topic/templates.py` is the single source of truth for each topic's generated
 `AGENTS.md`/`CLAUDE.md`. It drives what `/topic init` and `/topic update` produce.
 
@@ -74,6 +67,5 @@ Topic-specific guidance should live in `AGENTS.md`.
 This applies any time you touch `templates.py`, `init.py`, `update.py`, or any logic that affects what gets written to topic instruction files.
 
 ## Active State Files
-
 - `active.yml` — tracks active chat in a topic (managed by chat scripts, git-ignored)
 - `active_topic.yml` — tracks active topic at repo root (git-ignored)

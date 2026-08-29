@@ -14,7 +14,6 @@ hints:
 ---
 
 # Repos Trigger
-
 Use this file as source of truth: `.ai/shared/commands/repos.md`
 
 When the user says "related repos", "the repos", "other repos", "all of the repos", "pull all repos", or otherwise
