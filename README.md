@@ -4,8 +4,8 @@
 Single source of truth for the shared AI-agent tooling. Canonical slash commands, agent
 instructions, and skills live here as tool-neutral markdown under
 `fireball_sidecar_toolkit/content/`; a generator renders them into every AI tool's native format
-(`.claude/`, `.github/prompts/`, `.github/instructions/`, `.clinerules/`, `.opencode/`,
-`.sidecar/`, `AGENTS.md`) inside each consuming repo.
+(`.claude/`, `.github/prompts/`, `.github/instructions/`, `.clinerules/`, `.sidecar/`, `AGENTS.md`)
+inside each consuming repo.
 
 See [DESIGN.md](DESIGN.md) for the architecture, branch model, and open questions.
 
@@ -29,7 +29,7 @@ No dependency wanted (non-Python repo): `uvx --from git+https://github.com/fireb
 |------|------|
 | `_shared/` | clobbered copy of the toolkit's `content/` — never hand-edit |
 | `_local/` | this repo's own `instructions/ commands/ skills/` — never synced |
-| `.claude/`, `.github/{prompts,instructions,copilot-instructions.md}`, `.clinerules/`, `.opencode/`, `.sidecar/`, `AGENTS.md`, `CLAUDE.md` | generated — never hand-edit |
+| `.claude/`, `.github/{prompts,instructions,skills,copilot-instructions.md}`, `.clinerules/`, `.sidecar/`, `AGENTS.md`, `CLAUDE.md` | generated — never hand-edit |
 
 Fix shared behavior by editing `content/` here, or by editing `_shared/` in a consuming repo and
 running `sidecar.toolkit.upload` to open a PR.

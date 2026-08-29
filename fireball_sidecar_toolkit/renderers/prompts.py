@@ -1,8 +1,9 @@
-"""Render ``.github/prompts/*.prompt.md`` (GitHub.com prompt-file UI + legacy compatibility).
+"""Render ``.github/prompts/*.prompt.md`` — the GitHub.com prompt-file picker view.
 
-Frontmatter: ``name``, ``description``, ``argument-hint``, ``agent``. Body is the canonical body
-verbatim. This was the historical source of truth; it is now just another generated view kept for
-the github.com prompt picker.
+This is the in-repo *materialisation* of each canonical command: full frontmatter
+(``name``/``description``/``argument-hint``/``agent``) and the canonical body verbatim, inline
+``!`...``` exec line included. Every generated pointer file (``.claude/``, ``.sidecar/``,
+``.clinerules/``) refers back to the file this renderer writes.
 """
 
 from __future__ import annotations
@@ -10,7 +11,23 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..catalog import ContentBundle
+from ._common import clean_dir, write_doc
 
 
-def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:  # noqa: ARG001
-    raise NotImplementedError("prompts renderer — see DESIGN.md")
+def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
+    out_dir = repo_root / ".github" / "prompts"
+    written = [
+        write_doc(
+            out_dir / f"{command.slug}.prompt.md",
+            command.body,
+            frontmatter={
+                "name": command.slug,
+                "description": command.description,
+                "argument-hint": command.argument_hint,
+                "agent": command.agent,
+            },
+        )
+        for command in bundle.commands
+    ]
+    clean_dir(out_dir, written)
+    return written

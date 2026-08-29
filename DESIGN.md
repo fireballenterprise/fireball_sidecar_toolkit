@@ -29,7 +29,7 @@ fireball_sidecar_toolkit/        <- THE distributable package (the only thing in
   cli.py            `sidecar-toolkit` console entrypoint
   catalog.py        parse content/ (+ a repo's _local/) -> ContentBundle
   render.py         run every renderer over the bundle
-  renderers/        one per target: agents, claude, cline, copilot, opencode, prompts, sidecar
+  renderers/        one per target: agents, claude, cline, copilot, prompts, sidecar
   download.py       clobber _shared/ from the installed package, then render
   upload.py         diff _shared/ vs canonical -> PR against this repo
   sync.py           check _shared/ -> offer upload -> download -> render
@@ -108,8 +108,8 @@ submodule. Non-Python / day-job repo:
 ```
 _shared/    clobbered copy of the toolkit's content/ — NEVER hand-edited
 _local/     this repo's own instructions/ commands/ skills/ — never synced, never overwritten
-<generated> .claude/ .github/{prompts,instructions,copilot-instructions.md} .clinerules/
-            .opencode/ .sidecar/ AGENTS.md CLAUDE.md — NEVER hand-edited
+<generated> .claude/ .github/{prompts,instructions,skills,copilot-instructions.md} .clinerules/
+            .sidecar/ AGENTS.md CLAUDE.md — NEVER hand-edited
 ```
 - `sidecar.toolkit.download` — clobber `_shared/` to canonical, render every provider view (with
   `_local/` layered on top), run the drift check.
