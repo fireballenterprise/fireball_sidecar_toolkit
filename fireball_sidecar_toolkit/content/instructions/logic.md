@@ -1,4 +1,5 @@
 ---
+description: "Use when authoring slash commands / instruction files / Python modules, or adding a provider — the modules/CLI/AI stack and the generator-based provider architecture."
 applyTo: "**"
 ---
 # Logic Architecture Instructions
@@ -46,8 +47,8 @@ running a command — which options to pick, what to ask the user, when to stop,
 ambiguous input — is captured in the canonical command bodies (`fireball_sidecar_toolkit`'s
 `content/commands/`, rendered into `.github/prompts/` and the other provider dirs). Those bodies
 are the single source of truth every AI tool reads for command *behavior* (see
-`prompts.instructions.md` for authoring them). If a decision isn't written down in a command body
-or a standing rule in `.github/instructions/`, an AI enforcing it is not reproducible.
+`ai_commands.instructions.md` for authoring them). If a decision isn't written down in a command
+body or a standing rule in `.github/instructions/`, an AI enforcing it is not reproducible.
 
 **The reproducibility test.** Before letting an AI make a judgment call inside a command, ask:
 *could a human, or a CI script, make the same call by hand — reading the same `.prompt.md` file and
@@ -97,8 +98,11 @@ pointer file. The generator owns every provider dir.
 ## Documentation
 
 - `logic.instructions.md` — this file (stack + provider architecture)
-- `prompts.instructions.md` — canonical command authoring
+- `ai_commands.instructions.md` — canonical command / instruction authoring
+- `ai_skills.instructions.md` — SKILL.md conventions
 - `tasks.instructions.md` — invoke task runner (plain CLI automation, no AI)
 - `modules.instructions.md` — Python module architecture and layout conventions
 - `tests.instructions.md` — testing requirements and workflow
-- `index.instructions.md` — repository-wide operating rules
+
+Repo-specific instructions live in the consuming repo's `_local/instructions/` — the generated
+`AGENTS.md` indexes the full merged set.

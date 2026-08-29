@@ -1,4 +1,5 @@
 ---
+description: "Use after changing any .py/.yml/.yaml file — the 10/10 golden rule, the fix-then-test workflow, and the never-disable-warnings policy."
 applyTo: "**/*.py,**/*.yml,**/*.yaml"
 ---
 # Testing Instructions
