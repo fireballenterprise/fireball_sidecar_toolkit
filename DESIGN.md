@@ -27,12 +27,12 @@ fireball_sidecar_toolkit/        <- THE distributable package (the only thing in
     skills/*.md                  flat one-file-per-skill (name, description, hints)
   __init__.py       exposes __version__ (from importlib.metadata)
   cli.py            `sidecar-toolkit` console entrypoint
-  catalog.py        parse content/ (+ a repo's ai/local/) -> ContentBundle
+  catalog.py        parse content/ (+ a repo's .ai/local/) -> ContentBundle
   render.py         run every renderer over the bundle
   renderers/        one per target: agents, claude, cline, copilot, prompts, sidecar
-  download.py       clobber ai/shared/ from the installed package, then render
-  upload.py         diff ai/shared/ vs canonical -> PR against this repo
-  sync.py           check ai/shared/ -> offer upload -> download -> render
+  download.py       clobber .ai/shared/ from the installed package, then render
+  upload.py         diff .ai/shared/ vs canonical -> PR against this repo
+  sync.py           check .ai/shared/ -> offer upload -> download -> render
   check.py          read-only drift gate
   release.py        `gh workflow run release.yml`
 modules/            <- repo-local DEV tooling (NOT packaged): common/, setup/, versioning/
@@ -100,23 +100,23 @@ dev = ["fireball_sidecar_toolkit @ git+https://github.com/fireballenterprise/fir
 ```
 `uv.lock` captures the exact commit; updates are deliberate
 (`uv lock --upgrade-package fireball_sidecar_toolkit`). The wheel bundles `content/` as package
-data, so `download` clobbers `ai/shared/` straight from the install — no network, no Copier, no
+data, so `download` clobbers `.ai/shared/` straight from the install — no network, no Copier, no
 submodule. Non-Python / day-job repo:
 `uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit download`.
 
 ## Consuming-repo contract
 ```
-ai/shared/  clobbered copy of the toolkit's content/ — NEVER hand-edited
-ai/local/   this repo's own instructions/ commands/ skills/ — never synced, never overwritten
+.ai/shared/  clobbered copy of the toolkit's content/ — NEVER hand-edited
+.ai/local/   this repo's own instructions/ commands/ skills/ — never synced, never overwritten
 <generated> .claude/ .github/{prompts,instructions,skills,copilot-instructions.md} .clinerules/
             .sidecar/ AGENTS.md CLAUDE.md — NEVER hand-edited; each file is a pointer stub back
-            to ai/shared/ or ai/local/ (provider frontmatter + one "Source of truth:" line)
+            to .ai/shared/ or .ai/local/ (provider frontmatter + one "Source of truth:" line)
 ```
-- `sidecar.toolkit.download` — clobber `ai/shared/` to canonical, render every provider stub (with
-  `ai/local/` layered on top), run the drift check.
-- `sidecar.toolkit.upload` — diff `ai/shared/` vs canonical, open a PR against this repo (only
-  `ai/shared/` files; refuses `ai/local/` and generated output).
-- `sidecar.toolkit.sync` — check `ai/shared/` for uncommitted edits -> surface them and ask whether
+- `sidecar.toolkit.download` — clobber `.ai/shared/` to canonical, render every provider stub (with
+  `.ai/local/` layered on top), run the drift check.
+- `sidecar.toolkit.upload` — diff `.ai/shared/` vs canonical, open a PR against this repo (only
+  `.ai/shared/` files; refuses `.ai/local/` and generated output).
+- `sidecar.toolkit.sync` — check `.ai/shared/` for uncommitted edits -> surface them and ask whether
   to upload first -> then download -> render. What `/toolkit_sync` and the skill call.
 - `sidecar.toolkit.check` — read-only drift gate for `invoke fix` / `invoke test` and CI.
 - `sidecar.toolkit.release` — (toolkit repo, and a convenience wrapper elsewhere) promote
@@ -125,8 +125,8 @@ ai/local/   this repo's own instructions/ commands/ skills/ — never synced, ne
 ## Open design questions
 1. **Shared vs local content split.** The initial port copied *all* of ai_vault's
    `.github/instructions/` and `.github/prompts/`. See the plan's Shared-vs-Local table for the
-   agreed division. ai_vault-specific files move to `ai/local/` before the first real `download`.
-2. **`ai/local/` merge semantics** — additive-only, or per-file override of an `ai/shared/` file?
+   agreed division. ai_vault-specific files move to `.ai/local/` before the first real `download`.
+2. **`.ai/local/` merge semantics** — additive-only, or per-file override of an `.ai/shared/` file?
 3. **Circular dependency** — this repo is scaffolded from `template_python`; once `template_python`
    also consumes the toolkit, keep the toolkit free of its own dependency (it *is* the source) and
    render its own provider views from its own `content/`.

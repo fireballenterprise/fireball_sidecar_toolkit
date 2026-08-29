@@ -6,7 +6,7 @@ applyTo: "tasks/**"
 Invoke is the task runner for CI/CD-style automation (fix, test, upgrade, version checks). Tasks
 live in `tasks/` and run via `uv run --no-sync invoke <task>` (always `--no-sync`). Never put
 business logic in a task — that lives in `modules/`. Unlike command bodies (which capture AI/human
-judgment — see `ai/shared/instructions/logic.md`), invoke tasks are deterministic: no judgment calls, no
+judgment — see `.ai/shared/instructions/logic.md`), invoke tasks are deterministic: no judgment calls, no
 AI-specific behavior.
 
 ## Most-Used
@@ -35,12 +35,12 @@ by the package and mounted under `sidecar.toolkit.*`:
 
 | Task | Description |
 |---|---|
-| `download` | clobber `ai/shared/` from the package, regenerate every provider stub |
+| `download` | clobber `.ai/shared/` from the package, regenerate every provider stub |
 | `check` | read-only drift gate (runs inside `invoke test`) |
-| `sync` | inspect `ai/shared/` for local edits → offer upload → download |
-| `upload` | open a PR against the toolkit with local `ai/shared/` edits |
+| `sync` | inspect `.ai/shared/` for local edits → offer upload → download |
+| `upload` | open a PR against the toolkit with local `.ai/shared/` edits |
 
-Never hand-edit a generated provider file. See `ai/shared/instructions/ai_commands.md`.
+Never hand-edit a generated provider file. See `.ai/shared/instructions/ai_commands.md`.
 
 ## Conventions
 - Tasks within a file are ordered **alphabetically by function name** — not by date or grouping
