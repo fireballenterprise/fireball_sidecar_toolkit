@@ -23,6 +23,16 @@ import yaml
 LAYERS = ("_shared", "_local")
 
 _EXEC_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
+_H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
+
+
+def _as_list(value: object) -> list[str]:
+    """Normalise a frontmatter scalar/list into a list of stripped strings."""
+    if isinstance(value, (list, tuple)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if value in (None, ""):
+        return []
+    return [part.strip() for part in str(value).split(",") if part.strip()]
 
 
 def _split_frontmatter(text: str) -> tuple[dict, str]:
@@ -47,12 +57,19 @@ class Command:
     argument_hint: str
     body: str
     source: Path
+    agent: str = "agent"
+    allowed_tools: tuple[str, ...] = ()
+
+    @property
+    def exec_lines(self) -> list[str]:
+        """Every ``!`...``` execution line in the body, in order."""
+        return [match.group(1).strip() for match in _EXEC_RE.finditer(self.body)]
 
     @property
     def exec_line(self) -> str:
-        """The ``!`...``` execution line from the body, or ``""`` if the command has none."""
-        match = _EXEC_RE.search(self.body)
-        return match.group(1).strip() if match else ""
+        """The first ``!`...``` execution line from the body, or ``""`` if the command has none."""
+        lines = self.exec_lines
+        return lines[0] if lines else ""
 
     @classmethod
     def from_file(cls, path: Path) -> Command:
@@ -63,6 +80,8 @@ class Command:
             argument_hint=str(fm.get("argument-hint", "")),
             body=body,
             source=path,
+            agent=str(fm.get("agent", "agent")),
+            allowed_tools=tuple(_as_list(fm.get("allowed-tools"))),
         )
 
 
@@ -75,6 +94,7 @@ class Instruction:
     apply_to: str
     body: str
     source: Path
+    label: str = ""
 
     @classmethod
     def from_file(cls, path: Path) -> Instruction:
@@ -85,7 +105,16 @@ class Instruction:
             apply_to=str(fm.get("applyTo", "")),
             body=body,
             source=path,
+            label=str(fm.get("label", "")) or _derive_label(path.stem, body),
         )
+
+
+def _derive_label(slug: str, body: str) -> str:
+    """A human label for the AGENTS.md / copilot index: frontmatter ``label`` → body H1 → slug."""
+    match = _H1_RE.search(body)
+    if match:
+        return re.sub(r"\s+(Instructions|Workflow)$", "", match.group(1).strip())
+    return slug.replace("_", " ").replace("-", " ").title()
 
 
 @dataclass(frozen=True)
@@ -94,6 +123,14 @@ class Skill:
 
     name: str
     root: Path
+
+    @property
+    def skill_file(self) -> Path:
+        return self.root / "SKILL.md"
+
+    def read(self) -> tuple[dict, str]:
+        """``(frontmatter, body)`` of this skill's ``SKILL.md``."""
+        return _split_frontmatter(self.skill_file.read_text(encoding="utf-8"))
 
 
 @dataclass(frozen=True)
