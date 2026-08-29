@@ -1,41 +1,44 @@
 ---
-description: "Use when creating or editing a SKILL.md — the Claude Code skill mirror and the optional GitHub Copilot skills."
-applyTo: ".claude/skills/**,.github/skills/**,.sidecar/skills/**"
+description: "Use when creating or editing a canonical skill file — ai/shared|local/skills/<name>.md and the SKILL.md stubs the generator renders from it."
+applyTo: "ai/shared/skills/**,ai/local/skills/**,.claude/skills/**,.github/skills/**,.sidecar/skills/**"
 ---
 # AI Skills Instructions
 
-## Two Skill Locations
-| Location | Tool | Purpose | Mirror requirement |
-|---|---|---|---|
-| `.claude/skills/<name>/SKILL.md` | Claude Code | Auto-discovered skill for every command | Required 1:1 — the drift check |
-| `.github/skills/<name>/SKILL.md` | GitHub Copilot (VS Code) | Optional, on-demand skill with natural-language triggers | None — add only where useful |
+## Canonical skill file (`ai/shared/skills/<name>.md`)
+Flat, one file per skill (repo-specific ones in `ai/local/skills/<name>.md`). Frontmatter:
 
-Every canonical command in `fireball_sidecar_toolkit`'s `content/commands/` has a matching
-`content/skills/<slug>/SKILL.md`; the generator copies the skill dir into `.claude/skills/` and
-`.github/skills/` and renders a `.sidecar/skills/` pointer.
-
-## Claude Code Skills (`.claude/skills/*/SKILL.md`)
 ```yaml
 ---
 name: command_name
 description: Use for ... . Equivalent to /command_name.
+hints:            # optional — extra natural-language trigger phrases
+  - punch it
 ---
 ```
-One directory per command, named to match (`.claude/skills/push/SKILL.md` for `/push`). The body
-is a **pointer, not a mirror** — point at the `.github/prompts/*.prompt.md` source of truth and
-summarize the command, don't duplicate the prompt body. Required for every command (see
-`ai_commands.instructions.md`).
 
-Uses the Agent Skills open spec, but treat it as Claude Code-specific here until other targeted
-tools adopt it — hence `.claude/` rather than a vendor-neutral `.agents/`.
+Every canonical command (`ai/shared/commands/<slug>.md`) has a matching
+`ai/shared/skills/<slug>.md`. The body is a **short pointer, not a mirror** — point at
+`ai/shared/commands/<slug>.md` and summarize when the skill fires; never duplicate the command
+body.
 
-## GitHub Copilot Skills (`.github/skills/*/SKILL.md`)
-Same frontmatter shape; body is likewise a pointer at the `.github/prompts/*.prompt.md` file.
-**Not** required for every command — add one only when a command benefits from trigger phrases
-beyond its slash name (e.g. `ship-it` also responds to "punch it" / "ship it"). Every trigger
-phrase must be spelled out in `description` — that's Copilot's discovery surface — not just implied
-by the name.
+## Rendered stubs (generated — never hand-edit)
+| Location | Tool | Notes |
+|---|---|---|
+| `.claude/skills/<name>/SKILL.md` | Claude Code | rendered for every skill; body is a pointer at `ai/shared|local/skills/<name>.md` |
+| `.github/skills/<name>/SKILL.md` | GitHub Copilot (VS Code) | same shape; discovery is driven by `description` + `hints` |
+| `.sidecar/skills/<name>.md` | Fireball Sidecar | flat pointer stub |
+
+The `<name>/SKILL.md` directory shape is a *rendered artifact* Claude Code / Copilot require — the
+canonical source is always the flat `ai/…/skills/<name>.md`.
+
+## Trigger phrases
+Add a `hints:` entry (or spell the phrase out in `description`) for any trigger beyond the slash
+name — e.g. `ship-it` also responds to "punch it" / "ship it". That is Copilot's discovery
+surface; an implied phrase is not discovered.
+
+Uses the Agent Skills open spec, but treat it as Claude Code-specific until other targeted tools
+adopt it — hence `.claude/` rather than a vendor-neutral `.agents/`.
 
 ## Related
-- `ai_commands.instructions.md` — canonical command / instruction authoring
-- `logic.instructions.md` — overall AI/logic architecture
+- `ai/shared/instructions/ai_commands.md` — canonical command / instruction authoring
+- `ai/shared/instructions/logic.md` — overall AI/logic architecture

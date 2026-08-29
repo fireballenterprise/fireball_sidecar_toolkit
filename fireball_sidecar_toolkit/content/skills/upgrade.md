@@ -5,9 +5,9 @@ description: Use for upgrading the project's Python version and/or dependencies.
 
 # Upgrade Workflow
 
-Use this file as source of truth: `.github/prompts/upgrade.prompt.md`
+Use this file as source of truth: `ai/shared/commands/upgrade.md`
 
-When the user asks to upgrade Python or dependencies, read that prompt file and follow it. Prefer
+When the user asks to upgrade Python or dependencies, read that file and follow it. Prefer
 running `/update`-equivalent checks first (see the `update` skill) unless the user explicitly asks
 to upgrade directly.
 

@@ -32,13 +32,13 @@ steps:
       invoke tests.<check>
 ```
 The actual check logic lives in `tasks/tests/*.py`, never inline in the workflow — same
-thin-wrapper rule as everywhere else (`logic.instructions.md`).
+thin-wrapper rule as everywhere else (`ai/shared/instructions/logic.md`).
 
 ## Action-Ref Pinning
 `uses: owner/repo@vN` refs are pinned to a **major** tag (`actions/checkout@v7`). `invoke
 ver.workflows` compares each ref against the latest major tag on GitHub and rewrites the pin; run
-`invoke tests.actionlint` afterward. See `versioning.instructions.md`.
+`invoke tests.actionlint` afterward. See `ai/shared/instructions/versioning.md`.
 
 ## Before Committing
 `.yml` changes require `uv run --no-sync invoke fix` + `test` at 10/10 — `test` runs both
-`actionlint` and `yamllint` (`tests.instructions.md`).
+`actionlint` and `yamllint` (`ai/shared/instructions/tests.md`).

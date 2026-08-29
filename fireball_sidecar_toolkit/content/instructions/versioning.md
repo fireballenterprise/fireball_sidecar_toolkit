@@ -70,6 +70,6 @@ uv run --no-sync invoke ver.upgrade      # install the upgrades reviewed above (
 `libs.py`/`python.py`/`workflows.py` use `@click.command()` with `--dry-run`/`--yes` options.
 
 ## Module Conventions
-Same conventions as `.github/instructions/modules.instructions.md` and
-`.github/instructions/python.instructions.md` — `main()`-style entry points, subprocess/`print()`/
+Same conventions as `ai/shared/instructions/modules.md` and
+`ai/shared/instructions/python.md` — `main()`-style entry points, subprocess/`print()`/
 type-hint rules — not restated here.

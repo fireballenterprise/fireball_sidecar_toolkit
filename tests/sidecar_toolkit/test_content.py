@@ -1,4 +1,4 @@
-"""Parsing the canonical content trees and a _local/ overlay."""
+"""Parsing the canonical content trees and an ai/local/ overlay."""
 
 import pytest
 
@@ -12,7 +12,7 @@ def test_packaged_bundle_parses():
     assert bundle.commands, "expected canonical commands"
     assert bundle.instructions, "expected canonical instructions"
     assert all(c.slug for c in bundle.commands)
-    assert all(origin == "_shared" for origin in bundle.origin.values())
+    assert all(origin == "shared" for origin in bundle.origin.values())
 
 
 def test_command_exec_line_extracted():
@@ -28,7 +28,7 @@ def test_local_overlay_wins_and_is_flagged(tmp_path):
     (canonical / "instructions").mkdir(parents=True)
     (canonical / "commands" / "push.md").write_text("---\ndescription: canonical\n---\nbody\n")
 
-    local = tmp_path / "_local"
+    local = tmp_path / "ai" / "local"
     (local / "commands").mkdir(parents=True)
     (local / "commands" / "push.md").write_text("---\ndescription: local override\n---\nlocal body\n")
     (local / "commands" / "mine.md").write_text("---\ndescription: repo-only\n---\nx\n")
@@ -38,4 +38,4 @@ def test_local_overlay_wins_and_is_flagged(tmp_path):
     assert push.description == "local override"
     assert bundle.is_local("push")
     assert bundle.is_local("mine")
-    assert bundle.layer_of("push") == "_local"
+    assert bundle.layer_of("push") == "local"
