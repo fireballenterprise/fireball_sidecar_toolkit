@@ -119,18 +119,18 @@ def _derive_label(slug: str, body: str) -> str:
 
 @dataclass(frozen=True)
 class Skill:
-    """One canonical skill directory (``content/skills/<name>/``)."""
+    """One canonical skill file (``content/skills/<name>.md``).
+
+    Flat one-file-per-skill — the ``<name>/SKILL.md`` directory shape is a *rendered* artifact
+    (Claude / Copilot require it), never the canonical source.
+    """
 
     name: str
-    root: Path
-
-    @property
-    def skill_file(self) -> Path:
-        return self.root / "SKILL.md"
+    path: Path
 
     def read(self) -> tuple[dict, str]:
-        """``(frontmatter, body)`` of this skill's ``SKILL.md``."""
-        return _split_frontmatter(self.skill_file.read_text(encoding="utf-8"))
+        """``(frontmatter, body)`` of this skill's markdown file."""
+        return _split_frontmatter(self.path.read_text(encoding="utf-8"))
 
 
 @dataclass(frozen=True)
@@ -164,13 +164,6 @@ def packaged_content_root() -> Path:
     return (Path(__file__).resolve().parent / "content").resolve()
 
 
-def _skill_dirs(root: Path) -> list[Path]:
-    skills_root = root / "skills"
-    if not skills_root.is_dir():
-        return []
-    return sorted(p for p in skills_root.glob("*/") if p.is_dir())
-
-
 def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None = None) -> ContentBundle:
     """Merge the content layers into a :class:`ContentBundle`.
 
@@ -200,9 +193,9 @@ def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None =
         for path in _collect(root, "instructions"):
             instructions[path.stem] = Instruction.from_file(path)
             origin[path.stem] = layer_name
-        for skill_dir in _skill_dirs(root):
-            skills[skill_dir.name] = Skill(name=skill_dir.name, root=skill_dir)
-            origin[skill_dir.name] = layer_name
+        for path in _collect(root, "skills"):
+            skills[path.stem] = Skill(name=path.stem, path=path)
+            origin[path.stem] = layer_name
 
     return ContentBundle(
         commands=[commands[k] for k in sorted(commands)],

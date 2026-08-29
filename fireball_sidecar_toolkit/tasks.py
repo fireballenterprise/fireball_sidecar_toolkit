@@ -46,9 +46,16 @@ def sync(context, force=False):  # noqa: ARG001
 
 
 @task
-def upload(context, branch=None):  # noqa: ARG001
-    """Open a PR against fireball_sidecar_toolkit with this repo's _shared/ edits."""
-    print(_upload.upload(Path.cwd(), branch=branch))
+def upload(context, branch=None, toolkit_repo=None):  # noqa: ARG001
+    """Open a PR against fireball_sidecar_toolkit with this repo's _shared/ edits.
+
+    The toolkit checkout is found via --toolkit-repo, then $FIREBALL_SIDECAR_TOOLKIT_REPO,
+    then a sibling ../fireball_sidecar_toolkit dir.
+    """
+    kwargs = {"branch": branch}
+    if toolkit_repo:
+        kwargs["toolkit_repo"] = Path(toolkit_repo)
+    print(_upload.upload(Path.cwd(), **kwargs))
 
 
 @task
