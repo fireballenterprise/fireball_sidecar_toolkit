@@ -22,11 +22,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo", type=Path, default=Path.cwd(), help="Consuming repo root (default: cwd)")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_sync = sub.add_parser("sync", help="check _shared/ -> offer upload -> download -> render")
-    p_sync.add_argument("--yes", action="store_true", help="non-interactive: discard _shared/ edits")
+    p_sync = sub.add_parser("sync", help="check ai/shared/ -> offer upload -> download -> render")
+    p_sync.add_argument("--yes", action="store_true", help="non-interactive: discard ai/shared/ edits")
 
-    sub.add_parser("download", help="clobber _shared/ from the package, then render")
-    sub.add_parser("upload", help="open a PR against fireball_sidecar_toolkit with local _shared/ changes")
+    sub.add_parser("download", help="clobber ai/shared/ from the package, then render")
+    sub.add_parser("upload", help="open a PR against fireball_sidecar_toolkit with local ai/shared/ changes")
     sub.add_parser("check", help="read-only drift gate")
     return parser
 

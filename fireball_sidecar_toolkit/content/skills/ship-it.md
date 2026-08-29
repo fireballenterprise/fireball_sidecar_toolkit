@@ -11,10 +11,10 @@ hints:
 
 # Ship It Workflow
 
-Use this file as source of truth: `.github/prompts/ship-it.prompt.md`
+Use this file as source of truth: `ai/shared/commands/ship-it.md`
 
 When the user says "punch it", "punch it chewy", "ship it", or otherwise asks to ship a branch
-end-to-end, read that prompt file and follow it.
+end-to-end, read that file and follow it.
 
 It runs the push workflow, then drafts PR notes and opens a Pull Request. Stop and ask the user how
 to proceed if the push stage fails — do not continue to the PR steps.

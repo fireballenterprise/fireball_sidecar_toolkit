@@ -1,11 +1,12 @@
-"""Parse the canonical content tree (and a consuming repo's ``_local/``) into structured records.
+"""Parse the canonical content tree (and a consuming repo's ``ai/local/``) into structured records.
 
 Two content roots feed every renderer:
 
-* ``_shared`` — the packaged canonical tree (``content/`` in this repo, shipped as package data)
-* ``_local`` — an optional per-repo overlay in the consuming repo
+* ``shared`` — the packaged canonical tree (``content/`` in this repo, shipped as package data;
+  mirrored into a consuming repo as ``ai/shared/``)
+* ``local`` — an optional per-repo overlay in the consuming repo (``ai/local/``)
 
-``load_bundle()`` merges them (``_local`` wins on a slug collision) and returns a
+``load_bundle()`` merges them (``local`` wins on a slug collision) and returns a
 :class:`ContentBundle` the renderers consume. Nothing here writes files or knows about any
 specific AI tool — that is the renderers' job.
 """
@@ -19,8 +20,9 @@ from pathlib import Path
 import yaml
 
 # Content layers, lowest-priority first. A slug defined in a later layer overrides the earlier one.
-# `_shared` is the packaged canonical tree; `_local` is the consuming repo's overlay.
-LAYERS = ("_shared", "_local")
+# `shared` is the packaged canonical tree (rendered as `ai/shared/`); `local` is the consuming
+# repo's `ai/local/` overlay.
+LAYERS = ("shared", "local")
 
 _EXEC_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
 _H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
@@ -135,12 +137,12 @@ class Skill:
 
 @dataclass(frozen=True)
 class ContentBundle:
-    """Everything the renderers need: the merged ``_shared`` + ``_vault`` + ``_local`` content."""
+    """Everything the renderers need: the merged ``shared`` + ``local`` content."""
 
     commands: list[Command] = field(default_factory=list)
     instructions: list[Instruction] = field(default_factory=list)
     skills: list[Skill] = field(default_factory=list)
-    # slug -> layer name it was resolved from (e.g. "_shared", "_vault", "_local")
+    # slug -> layer name it was resolved from ("shared" or "local")
     origin: dict[str, str] = field(default_factory=dict)
 
     def layer_of(self, slug: str) -> str | None:
@@ -148,8 +150,8 @@ class ContentBundle:
         return self.origin.get(slug)
 
     def is_local(self, slug: str) -> bool:
-        """True when ``slug`` was resolved from the consuming repo's ``_local/`` overlay."""
-        return self.origin.get(slug) == "_local"
+        """True when ``slug`` was resolved from the consuming repo's ``ai/local/`` overlay."""
+        return self.origin.get(slug) == "local"
 
 
 def _collect(root: Path, subdir: str, suffix: str = ".md") -> list[Path]:
@@ -167,17 +169,17 @@ def packaged_content_root() -> Path:
 def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None = None) -> ContentBundle:
     """Merge the content layers into a :class:`ContentBundle`.
 
-    Layers apply lowest-priority first: ``canonical_root`` (``_shared``, defaults to the packaged
-    tree) → ``local_root`` (``_local``). A slug present in a later layer replaces the earlier one;
+    Layers apply lowest-priority first: ``canonical_root`` (``shared``, defaults to the packaged
+    tree) → ``local_root`` (``local``). A slug present in a later layer replaces the earlier one;
     :attr:`ContentBundle.origin` records which layer won.
 
     Args:
         canonical_root: the toolkit ``content/`` root. Defaults to the packaged tree.
-        local_root: consuming repo's ``_local/`` root. Optional.
+        local_root: consuming repo's ``ai/local/`` root. Optional.
     """
-    layers: list[tuple[str, Path]] = [("_shared", (canonical_root or packaged_content_root()).resolve())]
+    layers: list[tuple[str, Path]] = [("shared", (canonical_root or packaged_content_root()).resolve())]
     if local_root is not None:
-        layers.append(("_local", local_root.resolve()))
+        layers.append(("local", local_root.resolve()))
 
     commands: dict[str, Command] = {}
     instructions: dict[str, Instruction] = {}

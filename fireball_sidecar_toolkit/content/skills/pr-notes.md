@@ -5,16 +5,16 @@ description: Use for drafting Pull Request notes (Summary + Changes) for the cur
 
 # PR Notes Workflow
 
-Use this file as source of truth: `.github/prompts/pr-notes.prompt.md`
+Use this file as source of truth: `ai/shared/commands/pr-notes.md`
 
-When the user asks to draft PR notes or a PR description, read that prompt file and follow it.
+When the user asks to draft PR notes or a PR description, read that file and follow it.
 
 ```bash
 uv run --no-sync invoke repo.pr_diff
 ```
 
 Write the description using the canonical `## Summary` / `## Changes` format from
-`.github/instructions/git.instructions.md`, then save it:
+`ai/shared/instructions/git.md`, then save it:
 
 ```bash
 uv run --no-sync invoke repo.pr_notes_save --content="<the notes>"

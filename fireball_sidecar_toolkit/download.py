@@ -1,8 +1,8 @@
-"""``sidecar-toolkit download`` — clobber ``_shared/`` from the installed package, then regenerate.
+"""``sidecar-toolkit download`` — clobber ``ai/shared/`` from the installed package, then regenerate.
 
-1. Refuse if ``_shared/`` has uncommitted local modifications (unless ``force``) — the caller
+1. Refuse if ``ai/shared/`` has uncommitted local modifications (unless ``force``) — the caller
    should route through :mod:`fireball_sidecar_toolkit.sync`, which asks the user what to do.
-2. ``rm -rf _shared/`` and copy the packaged ``content/`` tree into it verbatim.
+2. ``rm -rf ai/shared/`` and copy the packaged ``content/`` tree into it verbatim.
 3. :func:`fireball_sidecar_toolkit.render.render_repo` to rewrite every provider view.
 """
 
@@ -15,19 +15,19 @@ from ._git import dirty_tracked
 from .catalog import packaged_content_root
 from .render import RenderResult, render_repo
 
-SHARED_DIRNAME = "_shared"
+SHARED_SUBPATH = "ai/shared"
 
 
 class DirtySharedError(RuntimeError):
-    """``_shared/`` has uncommitted edits — resolve them (upload or discard) before a clobber."""
+    """``ai/shared/`` has uncommitted edits — resolve them (upload or discard) before a clobber."""
 
 
 def clobber_shared(repo_root: Path, *, force: bool = False) -> Path:
-    """Replace ``repo_root/_shared`` with a fresh copy of the packaged ``content/`` tree."""
-    shared = repo_root / SHARED_DIRNAME
-    if not force and dirty_tracked(repo_root, SHARED_DIRNAME):
+    """Replace ``repo_root/ai/shared`` with a fresh copy of the packaged ``content/`` tree."""
+    shared = repo_root / SHARED_SUBPATH
+    if not force and dirty_tracked(repo_root, SHARED_SUBPATH):
         raise DirtySharedError(
-            f"{SHARED_DIRNAME}/ has uncommitted changes. Run `invoke sidecar.toolkit.sync` to "
+            f"{SHARED_SUBPATH}/ has uncommitted changes. Run `invoke sidecar.toolkit.sync` to "
             "upload or discard them first, or pass force=True."
         )
     if shared.exists():
@@ -37,7 +37,7 @@ def clobber_shared(repo_root: Path, *, force: bool = False) -> Path:
 
 
 def download(repo_root: Path, *, force: bool = False) -> RenderResult:
-    """Clobber ``_shared/`` from the packaged canonical tree, then render every provider view."""
+    """Clobber ``ai/shared/`` from the packaged canonical tree, then render every provider view."""
     repo_root = repo_root.resolve()
     shared = clobber_shared(repo_root, force=force)
     return render_repo(repo_root, canonical_root=shared)

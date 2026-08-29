@@ -5,9 +5,9 @@ description: Use for drafting PR notes and opening a Pull Request via gh for the
 
 # Open PR Workflow
 
-Use this file as source of truth: `.github/prompts/pr.prompt.md`
+Use this file as source of truth: `ai/shared/commands/pr.md`
 
-When the user asks to open a pull request, read that prompt file and follow it.
+When the user asks to open a pull request, read that file and follow it.
 
 ```bash
 uv run --no-sync invoke repo.pr_diff

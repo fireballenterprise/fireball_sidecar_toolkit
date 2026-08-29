@@ -17,8 +17,9 @@ description: "Use when creating a git branch or drafting a Pull Request for this
   - `## Changes` — a bulleted list of the key changes (one bullet per logical change, not per file)
 
 This is the canonical PR format for this repo — the `pr` / `pr-notes` commands implement it. Those
-commands (and every other) are authored once in `fireball_sidecar_toolkit`'s `content/commands/`
-and rendered per tool; see `ai_commands.instructions.md`.
+commands (and every other) are authored once in `ai/shared/commands/` (via
+`fireball_sidecar_toolkit`'s `content/commands/`) and rendered per tool; see
+`ai/shared/instructions/ai_commands.md`.
 
 ## Pull Request Assignee
 Always assign the PR to the user who asked for it — `gh pr create --assignee @me` (the currently

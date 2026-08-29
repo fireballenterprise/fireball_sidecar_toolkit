@@ -5,9 +5,9 @@ description: Use for a generic /repo push|pull request — routes to the same pu
 
 # Repo Router Workflow
 
-Use this file as source of truth: `.github/prompts/repo.prompt.md`
+Use this file as source of truth: `ai/shared/commands/repo.md`
 
-When the user asks for `/repo push` or `/repo pull` specifically, read that prompt file and follow
+When the user asks for `/repo push` or `/repo pull` specifically, read that file and follow
 it — it dispatches to the same modules as the dedicated `push` and `pull` skills.
 
 ```bash
