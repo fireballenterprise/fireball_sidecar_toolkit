@@ -11,7 +11,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from ._git import porcelain
+from ._git import dirty_tracked
 from .catalog import packaged_content_root
 from .render import RenderResult, render_repo
 
@@ -25,7 +25,7 @@ class DirtySharedError(RuntimeError):
 def clobber_shared(repo_root: Path, *, force: bool = False) -> Path:
     """Replace ``repo_root/_shared`` with a fresh copy of the packaged ``content/`` tree."""
     shared = repo_root / SHARED_DIRNAME
-    if not force and porcelain(repo_root, SHARED_DIRNAME):
+    if not force and dirty_tracked(repo_root, SHARED_DIRNAME):
         raise DirtySharedError(
             f"{SHARED_DIRNAME}/ has uncommitted changes. Run `invoke sidecar.toolkit.sync` to "
             "upload or discard them first, or pass force=True."

@@ -32,6 +32,16 @@ def porcelain(path: Path, pathspec: str) -> str:
     return git("status", "--porcelain", "--", pathspec, cwd=path)
 
 
+def dirty_tracked(path: Path, pathspec: str) -> str:
+    """Porcelain status for ``pathspec`` with untracked (``??``) entries dropped.
+
+    A never-committed ``_shared/`` is not "local edits to lose" — the guard protects the committed
+    baseline, so only staged/unstaged changes to already-tracked files count.
+    """
+    lines = [line for line in porcelain(path, pathspec).splitlines() if not line.startswith("??")]
+    return "\n".join(lines)
+
+
 def tracked_diff(path: Path, pathspec: str) -> str:
     if not is_git_repo(path):
         return ""
