@@ -4,7 +4,6 @@ description: Use for rebasing the current branch onto the remote default branch,
 ---
 
 # Rebase Workflow
-
 Use this file as source of truth: `.ai/shared/commands/rebase.md`
 
 When the user asks to rebase onto the default branch, read that file and follow it.

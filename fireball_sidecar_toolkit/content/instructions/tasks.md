@@ -37,6 +37,7 @@ by the package and mounted under `sidecar.toolkit.*`:
 |---|---|
 | `download` | clobber `.ai/shared/` from the package, regenerate every provider stub |
 | `check` | read-only drift gate (runs inside `invoke test`) |
+| `mdfix` | normalise every `*.md` (no blank after a header; no stray `---` in instruction bodies). `invoke fix` writes it, `invoke test` runs `mdfix --check` |
 | `sync` | inspect `.ai/shared/` for local edits → offer upload → download |
 | `upload` | open a PR against the toolkit with local `.ai/shared/` edits |
 

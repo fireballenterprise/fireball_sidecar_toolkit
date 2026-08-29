@@ -3,15 +3,12 @@ description: "Use after changing any .py/.yml/.yaml file — the 10/10 golden ru
 applyTo: "**/*.py,**/*.yml,**/*.yaml"
 ---
 # Testing Instructions
-
 ## Golden Rule
-
 **IF YOU CHANGE `.py`, `.yml`, or `.yaml` FILES — YOU MUST GET 10/10 ON TESTS.**
 
 No exceptions. No shortcuts.
 
 ## Workflow
-
 ```bash
 # 1. Auto-fix first (ALWAYS do this before testing)
 uv run --no-sync invoke fix
@@ -22,7 +19,6 @@ uv run --no-sync invoke test
 ```
 
 ## Canonical Commands (Use These Exactly)
-
 ```bash
 # Full fix + full test
 uv run --no-sync invoke fix
@@ -42,7 +38,6 @@ uv run --no-sync invoke ruff.format
 Do not run `uv run invoke ...` without `--no-sync`.
 
 ## When to Run Tests
-
 Run tests if you modified:
 - `*.py` — any Python file (pylint + ruff)
 - `*.yml` or `*.yaml` — any YAML file (yamllint)
@@ -51,14 +46,12 @@ Run tests if you modified:
 Skip tests for: `*.md`, config files, `*.toml`, `*.json`
 
 ## What Gets Tested
-
 1. **actionlint** — GitHub Actions workflow validation
 2. **pylint** — Python code quality
 3. **ruff** — Python linting and formatting
 4. **yamllint** — YAML file validation
 
 ## Fix Issues — Never Disable Warnings
-
 ```python
 # ❌ WRONG — never do this without asking user first
 except Exception:  # pylint: disable=broad-exception-caught

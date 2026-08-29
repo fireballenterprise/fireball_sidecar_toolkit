@@ -4,7 +4,6 @@ description: Use for pulling updates from this repo's git remote — stash, pull
 ---
 
 # Pull Workflow
-
 Use this file as source of truth: `.ai/shared/commands/pull.md`
 
 When the user asks to pull the latest changes from git remote, read that file and follow it.

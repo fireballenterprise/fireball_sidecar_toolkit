@@ -1,5 +1,4 @@
 # fireball_sidecar_toolkit — Design
-
 Single source of truth for the shared AI-agent tooling. Canonical slash commands, agent
 instructions, and skills live here as tool-neutral markdown; a generator renders them into every
 AI tool's native format inside each consuming repo.
@@ -34,6 +33,7 @@ fireball_sidecar_toolkit/        <- THE distributable package (the only thing in
   upload.py         diff .ai/shared/ vs canonical -> PR against this repo
   sync.py           check .ai/shared/ -> offer upload -> download -> render
   check.py          read-only drift gate
+  mdfix.py          normalise *.md house style (no blank after header; no stray --- in instructions)
   release.py        `gh workflow run release.yml`
 modules/            <- repo-local DEV tooling (NOT packaged): common/, setup/, versioning/
 tasks/              <- repo-local invoke tasks (NOT packaged): sidecar/toolkit/, common/, tests/
@@ -119,6 +119,8 @@ submodule. Non-Python / day-job repo:
 - `sidecar.toolkit.sync` — check `.ai/shared/` for uncommitted edits -> surface them and ask whether
   to upload first -> then download -> render. What `/toolkit_sync` and the skill call.
 - `sidecar.toolkit.check` — read-only drift gate for `invoke fix` / `invoke test` and CI.
+- `sidecar.toolkit.mdfix` — normalise every `*.md` to the house style (`invoke fix` writes,
+  `invoke test` runs `--check`). Enforces the rules AI tools keep dropping mid-generation.
 - `sidecar.toolkit.release` — (toolkit repo, and a convenience wrapper elsewhere) promote
   `development` -> `main` and cut a tag.
 

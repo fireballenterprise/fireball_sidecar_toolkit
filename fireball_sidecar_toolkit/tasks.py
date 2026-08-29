@@ -17,6 +17,8 @@ from . import sync as _sync
 from . import upload as _upload
 from .check import check as _check
 from .download import download as _download
+from .mdfix import check_tree as _md_check
+from .mdfix import fix_tree as _md_fix
 from .release import release as _release
 
 
@@ -32,6 +34,20 @@ def check(context):  # noqa: ARG001
     """Read-only drift gate — fail if any generated provider file (or .ai/shared/) is stale."""
     _check(Path.cwd())
     print("No drift.")
+
+
+@task
+def mdfix(context, check=False):  # noqa: ARG001
+    """Normalise every *.md (no blank line after a header; no stray --- divider in instructions).
+
+    Pass --check for the read-only gate (raises instead of writing) — wired into `invoke test`.
+    """
+    if check:
+        _md_check(Path.cwd())
+        print("Markdown OK.")
+        return
+    changed = _md_fix(Path.cwd(), write=True)
+    print(f"Normalised {len(changed)} markdown file(s).")
 
 
 @task
@@ -65,5 +81,5 @@ def release(context):  # noqa: ARG001
 
 
 collection = Collection("toolkit")
-for _task in (download, check, sync, upload, release):
+for _task in (download, check, mdfix, sync, upload, release):
     collection.add_task(_task)

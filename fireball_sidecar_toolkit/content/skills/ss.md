@@ -9,7 +9,6 @@ hints:
 ---
 
 # Screenshot View Workflow
-
 Use this file as source of truth: `.ai/shared/commands/ss.md`
 
 When the user asks to look at the latest screenshot, or runs a `/ss` equivalent, read that file and follow it.

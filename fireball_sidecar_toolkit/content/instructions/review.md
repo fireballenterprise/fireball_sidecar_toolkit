@@ -2,7 +2,6 @@
 description: "Use when reviewing a pull request or code change in this repo — including automated PR review. Covers what to prioritize and what to skip."
 ---
 # Review Instructions
-
 ## Priorities (in order)
 1. **Logic correctness** — trace the actual code paths changed, don't just skim the PR
    description. Flag off-by-one errors, unhandled edge cases, incorrect conditionals, silent

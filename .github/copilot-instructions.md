@@ -1,5 +1,4 @@
 # Copilot Instructions
-
 This is `template_python` — a minimal skeleton for a Python repository: `invoke` tasks, a couple of
 shared modules under `modules/`, `uv` for environment/dependency management, and CI (ruff, pylint,
 pytest, yamllint, actionlint) via `.github/workflows/tests.yml`. It has no AI-agent tooling of its
