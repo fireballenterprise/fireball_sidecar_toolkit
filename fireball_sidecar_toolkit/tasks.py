@@ -36,17 +36,19 @@ def check(context):  # noqa: ARG001
     print("No drift.")
 
 
-@task
-def mdfix(context, check=False):  # noqa: ARG001
+@task(help={"check": "read-only gate (raise instead of write)", "exclude": "comma-separated path segments to skip"})
+def mdfix(context, check=False, exclude=""):  # noqa: ARG001
     """Normalise every *.md (no blank line after a header; no stray --- divider in instructions).
 
     Pass --check for the read-only gate (raises instead of writing) — wired into `invoke test`.
+    --exclude=topics,vendor skips those trees (e.g. a separately-generated docs tree).
     """
+    skip = tuple(part.strip() for part in exclude.split(",") if part.strip())
     if check:
-        _md_check(Path.cwd())
+        _md_check(Path.cwd(), exclude=skip)
         print("Markdown OK.")
         return
-    changed = _md_fix(Path.cwd(), write=True)
+    changed = _md_fix(Path.cwd(), write=True, exclude=skip)
     print(f"Normalised {len(changed)} markdown file(s).")
 
 

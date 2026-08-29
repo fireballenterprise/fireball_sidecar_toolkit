@@ -68,3 +68,14 @@ def test_fix_tree_and_check_tree(tmp_path):
     assert "\n\nneeds fixing" not in bad.read_text()
     assert "---" not in inst.read_text()
     check_tree(tmp_path)  # clean now
+
+
+def test_exclude_skips_a_tree(tmp_path):
+    (tmp_path / "topics").mkdir()
+    (tmp_path / "topics" / "gen.md").write_text("## S\n\ngenerated, do not touch\n")
+    (tmp_path / "kept.md").write_text("## S\n\nfix me\n")
+
+    changed = fix_tree(tmp_path, write=True, exclude=("topics",))
+    assert [p.name for p in changed] == ["kept.md"]
+    assert (tmp_path / "topics" / "gen.md").read_text() == "## S\n\ngenerated, do not touch\n"
+    check_tree(tmp_path, exclude=("topics",))  # passes despite the untouched topics file
