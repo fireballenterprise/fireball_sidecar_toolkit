@@ -6,10 +6,10 @@ applyTo: "**/*.md"
 Rules for every Markdown file in the repo.
 
 ## Horizontal Rules
-**Never use a standalone `---` line as a section divider in the body of a `.github/instructions/*.md`
-file.** The only place `---` belongs is the YAML frontmatter delimiter (the opening and closing
-`---` around `applyTo`) — never between headers. Headers and blank lines alone are enough
-visual separation.
+**Never use a standalone `---` line as a section divider in the body of an instruction file
+(`ai/shared/instructions/*.md`, `ai/local/instructions/*.md`).** The only place `---` belongs is
+the YAML frontmatter delimiter (the opening and closing `---` around `applyTo`) — never between
+headers. Headers and blank lines alone are enough visual separation.
 
 ```markdown
 # ✅ CORRECT
@@ -87,4 +87,4 @@ structure, context, or commentary only when the user asks for it or the file's p
 
 ## Alphabetical Ordering
 For code ordering rules (functions, invoke tasks, constants, dict/YAML keys), see
-`python.instructions.md`.
+`ai/shared/instructions/python.md`.

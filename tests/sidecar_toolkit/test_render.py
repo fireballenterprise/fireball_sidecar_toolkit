@@ -40,7 +40,7 @@ def _mini_content(root: Path) -> Path:
     )
     (content / "skills" / "repos.md").write_text(
         "---\nname: repos\ndescription: Repo map skill\nhints:\n  - the repos\n---\n\n"
-        "# Repos Trigger\n\nUse this file as source of truth: `.github/prompts/repos.prompt.md`\n"
+        "# Repos Trigger\n\nUse this file as source of truth: `ai/shared/commands/repos.md`\n"
     )
     return content
 
@@ -72,42 +72,54 @@ def test_claude_allowed_tools_are_derived(tmp_path):
     assert "allowed-tools" not in repos  # prose-only command
 
 
-def test_cline_rewrites_exec_lines(tmp_path):
+def test_cline_is_a_pointer_stub(tmp_path):
     render_repo(tmp_path, canonical_root=_mini_content(tmp_path))
     fix = (tmp_path / ".clinerules" / "workflows" / "fix.md").read_text()
     assert "!`" not in fix
-    assert "Run this terminal command:" in fix
-    assert "uv run --no-sync invoke fix" in fix
+    assert "Run this terminal command:" not in fix
+    assert "Source of truth: `ai/shared/commands/fix.md`" in fix
 
 
 def test_agents_index_lists_every_instruction(tmp_path):
     render_repo(tmp_path, canonical_root=_mini_content(tmp_path))
     agents = (tmp_path / "AGENTS.md").read_text()
-    assert "`.github/instructions/git.instructions.md`" in agents
-    assert "`.github/instructions/python.instructions.md`" in agents
+    assert "`ai/shared/instructions/git.md`" in agents
+    assert "`ai/shared/instructions/python.md`" in agents
     assert "**Git & PR**" in agents  # label derived from the H1
 
 
-def test_sidecar_files_point_at_materialized_paths(tmp_path):
+def test_sidecar_files_point_at_canonical_ai_paths(tmp_path):
     render_repo(tmp_path, canonical_root=_mini_content(tmp_path))
     cmd = (tmp_path / ".sidecar" / "commands" / "fix.md").read_text()
-    assert "Use this file as source of truth: .github/prompts/fix.prompt.md" in cmd
+    assert "Source of truth: `ai/shared/commands/fix.md`" in cmd
     inst = (tmp_path / ".sidecar" / "instructions" / "python.md").read_text()
     assert 'applyTo: "**/*.py"' in inst
-    assert "Use this file as source of truth: .github/instructions/python.instructions.md" in inst
+    assert "Source of truth: `ai/shared/instructions/python.md`" in inst
 
 
-def test_skill_dirs_copied_to_claude_and_github(tmp_path):
+def test_skill_stubs_written_for_claude_and_github(tmp_path):
     render_repo(tmp_path, canonical_root=_mini_content(tmp_path))
     for dest in (".claude/skills/repos/SKILL.md", ".github/skills/repos/SKILL.md"):
         text = (tmp_path / dest).read_text()
-        assert "# Repos Trigger" in text
+        assert "# Repos Trigger" not in text  # body is NOT inlined
+        assert "Source of truth: `ai/shared/skills/repos.md`" in text
         assert GENERATED_HEADER in text
+
+
+def test_no_canonical_body_is_inlined(tmp_path):
+    """Every generated file is a stub — a sentence from a canonical body never leaks through."""
+    result = render_repo(tmp_path, canonical_root=_mini_content(tmp_path))
+    for path in result.written:
+        if path.suffix == ".md":
+            assert "Type hints everywhere." not in path.read_text(encoding="utf-8"), path
+    inst = (tmp_path / ".github" / "instructions" / "python.instructions.md").read_text()
+    assert "Source of truth: `ai/shared/instructions/python.md`" in inst
+    assert 'applyTo: "**/*.py"' in inst
 
 
 def test_local_overlay_overrides_and_adds(tmp_path):
     canonical = _mini_content(tmp_path)
-    local = tmp_path / "_local"
+    local = tmp_path / "ai" / "local"
     (local / "commands").mkdir(parents=True)
     (local / "commands" / "fix.md").write_text(
         "---\nname: fix\ndescription: LOCAL fix\nargument-hint: none\nagent: agent\n---\n\n!`./setup.sh`\n"
@@ -118,7 +130,8 @@ def test_local_overlay_overrides_and_adds(tmp_path):
     render_repo(tmp_path, canonical_root=canonical)
 
     fix = (tmp_path / ".claude" / "commands" / "fix.md").read_text()
-    assert "LOCAL fix" in fix
+    assert "description: LOCAL fix" in fix  # provider frontmatter still reflects the overlay
+    assert "Source of truth: `ai/local/commands/fix.md`" in fix  # pointer resolves to the local layer
     assert "allowed-tools: Bash(./setup.sh)" in fix
     assert (tmp_path / ".claude" / "commands" / "deploy.md").exists()
     assert (tmp_path / ".github" / "prompts" / "deploy.prompt.md").exists()

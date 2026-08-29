@@ -2,8 +2,8 @@
 
 Two invariants, checked without writing anything:
 
-1. ``_shared/`` byte-matches the packaged canonical ``content/`` tree.
-2. Every generated provider file byte-matches a fresh render of ``content/`` + ``_local/``.
+1. ``ai/shared/`` byte-matches the packaged canonical ``content/`` tree.
+2. Every generated provider file byte-matches a fresh render of ``content/`` + ``ai/local/``.
 
 Raises :class:`DriftError` naming the stale paths and the command to fix them.
 """
@@ -19,7 +19,7 @@ from .render import render_repo
 
 
 class DriftError(RuntimeError):
-    """A generated provider file (or ``_shared/``) is stale relative to canonical content."""
+    """A generated provider file (or ``ai/shared/``) is stale relative to canonical content."""
 
 
 def _tree_mismatches(expected: Path, actual: Path, *, label: str) -> list[str]:
@@ -39,17 +39,17 @@ def _tree_mismatches(expected: Path, actual: Path, *, label: str) -> list[str]:
 
 
 def check(repo_root: Path) -> None:
-    """Raise :class:`DriftError` if any generated file — or ``_shared/`` — is out of date."""
+    """Raise :class:`DriftError` if any generated file — or ``ai/shared/`` — is out of date."""
     repo_root = repo_root.resolve()
     packaged = packaged_content_root()
 
-    stale = _tree_mismatches(packaged, repo_root / "_shared", label="_shared")
+    stale = _tree_mismatches(packaged, repo_root / "ai" / "shared", label="ai/shared")
 
     with tempfile.TemporaryDirectory() as tmp:
         mirror = Path(tmp).resolve()
-        local = repo_root / "_local"
+        local = repo_root / "ai" / "local"
         if local.is_dir():
-            shutil.copytree(local, mirror / "_local")
+            shutil.copytree(local, mirror / "ai" / "local")
         for produced in render_repo(mirror, canonical_root=packaged).written:
             rel = produced.relative_to(mirror)
             on_disk = repo_root / rel

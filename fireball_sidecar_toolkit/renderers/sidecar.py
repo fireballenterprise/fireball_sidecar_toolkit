@@ -1,9 +1,9 @@
-"""Render ``.sidecar/`` for Fireball Sidecar.
+"""Render ``.sidecar/`` for Fireball Sidecar — pointer stubs.
 
-Interim state: thin pointer stubs (``commands/``, ``instructions/``, ``skills/``) back to the
-materialised ``.github/`` files, matching the pattern already used across the family. Target end
-state is a **no-op** — Sidecar is Levon's own tool and is being taught to read the canonical files
-(``AGENTS.md`` + ``.github/instructions/`` honouring ``applyTo``, ``.github/prompts/``) directly.
+``commands/``, ``instructions/``, ``skills/`` each carry the provider frontmatter Sidecar needs
+and a one-line pointer at the canonical ``ai/shared/`` or ``ai/local/`` file. Sidecar is Levon's
+own tool and is being taught to read the canonical ``ai/`` tree directly; the target end state is
+a no-op renderer.
 """
 
 from __future__ import annotations
@@ -11,13 +11,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..catalog import ContentBundle
-from ._common import clean_dir, write_doc
+from ._common import canonical_pointer, clean_dir, write_doc
 
 _AGENT = "sidecar-agent"
-
-
-def _pointer(target: str) -> str:
-    return f"Use this file as source of truth: {target}"
 
 
 def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
@@ -28,7 +24,7 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
     cmd_files = [
         write_doc(
             cmd_dir / f"{c.slug}.md",
-            _pointer(f".github/prompts/{c.slug}.prompt.md"),
+            canonical_pointer(bundle, c.slug, "commands"),
             frontmatter={
                 "name": c.slug,
                 "description": c.description,
@@ -45,7 +41,7 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
     inst_files = [
         write_doc(
             inst_dir / f"{i.slug}.md",
-            _pointer(f".github/instructions/{i.slug}.instructions.md"),
+            canonical_pointer(bundle, i.slug, "instructions"),
             frontmatter={"name": i.slug, "description": i.description, "applyTo": i.apply_to},
         )
         for i in bundle.instructions
@@ -60,7 +56,7 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
         skill_files.append(
             write_doc(
                 skill_dir / f"{skill.name}.md",
-                _pointer(f".github/skills/{skill.name}/SKILL.md"),
+                canonical_pointer(bundle, skill.name, "skills"),
                 frontmatter={
                     "name": skill.name,
                     "description": str(frontmatter.get("description", "")),
