@@ -58,7 +58,7 @@ pushing/PRs for every repo unattended.
 1. Resolve which repos are in scope from `repos`/`lineage`. If the request is ambiguous about scope
    (all of them? just this branch? a specific sub-tree?), ask.
 2. For each repo in scope, **in root-to-leaf lineage order** (a child repo may depend on its parent
-   having the change first — e.g. `/template` pulling it down):
+   having the change first):
    a. Confirm its local clone exists at `repos_local.<org>/<repo>` (from this repo's own
       `properties.yml`).
    b. `git status` — if there are uncommitted changes, stash them (`git stash push -u`) rather than
