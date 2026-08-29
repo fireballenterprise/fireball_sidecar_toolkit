@@ -9,8 +9,7 @@ Topics are organized as a two-level hierarchy under `topics/category/subtopic/`.
 
 ```
 topics/<category>/<subtopic>/
-├── OPENCODE.md    # AI agent instructions (OpenCode)
-├── AGENTS.md      # AI agent instructions (cross-tool: Copilot, Codex, etc.)
+├── AGENTS.md      # AI agent instructions (cross-tool: Copilot, Codex, Sidecar, etc.)
 ├── CLAUDE.md      # AI agent instructions (Claude Code)
 ├── active.yml     # Active chat tracker (git-ignored)
 ├── chats/         # AI conversation logs only (YYYYMMDD_title.md format)
@@ -53,7 +52,6 @@ Any file the user asks to create goes in `docs/` by default — `.md`, `.csv`, `
 When updating topic instructions in a topic directory:
 - update `AGENTS.md` for topic-specific guidance
 - keep `CLAUDE.md` as a thin pointer to the partner `AGENTS.md` in the same directory
-- update `OPENCODE.md` only when OpenCode-specific guidance changes
 
 Topic-specific guidance should live in `AGENTS.md`.
 
@@ -64,7 +62,8 @@ Topic-specific guidance should live in `AGENTS.md`.
 
 ## templates.py Change Rule — CRITICAL
 
-`modules/topic/templates.py` is the single source of truth for all topic instruction file content. It drives what `/topic init` and `/topic update` generate for every topic's OPENCODE.md.
+`modules/topic/templates.py` is the single source of truth for each topic's generated
+`AGENTS.md`/`CLAUDE.md`. It drives what `/topic init` and `/topic update` produce.
 
 **When you modify anything in `modules/topic/` that affects topic instruction content:**
 1. Run fix + test (10/10 required)

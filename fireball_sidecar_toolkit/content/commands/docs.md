@@ -21,13 +21,12 @@ check:
    references to removed/renamed modules, commands, tasks, or config keys.
 4. **`AGENTS.md` / `CLAUDE.md`** — thin pointer files; only need edits if the pointer chain itself
    changed (rare).
-5. **The five synced command dirs** — `.github/prompts/*.prompt.md` (source of truth),
-   `.claude/commands/*.md`, `.claude/skills/*/SKILL.md`, `.clinerules/workflows/*.md`, and
-   `.opencode/command/*.md` — these must describe the same behavior; if one changed, the other
-   four need the matching edit (see `.github/instructions/prompts.instructions.md`).
-6. **`properties.yml`'s built-in template** (`_TEMPLATE` in `modules/setup/properties.py`) and any
-   other example/config file describing setup — if `setup.sh`, `setup.ps1`, or that module changed
-   what gets generated.
+5. **Generated AI-provider files** — `.github/prompts/`, `.github/instructions/`, `.claude/`,
+   `.clinerules/workflows/`, `.sidecar/`, `AGENTS.md`, `CLAUDE.md`. Never hand-edit these; if the
+   change affects shared tooling, edit `fireball_sidecar_toolkit`'s `content/` (or this repo's
+   `_local/`) and re-run `invoke sidecar.toolkit.download`.
+6. **Any example/config file describing setup** — if `setup.sh`, `setup.ps1`, or the setup module
+   changed what gets generated.
 7. Any other `*.md` file that references a file, command, module, or behavior touched by the diff.
 
 For each stale doc you find, fix it directly — this is a repo-local consistency sweep, not a
