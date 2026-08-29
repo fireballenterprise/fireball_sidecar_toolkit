@@ -59,6 +59,11 @@ def test_check_raises_when_shared_is_missing(repo: Path):
         check(repo)
 
 
+def test_download_allows_untracked_shared(repo: Path):
+    download(repo)  # creates an untracked _shared/
+    download(repo)  # a second run before committing must not trip the dirty guard
+
+
 def test_download_refuses_dirty_shared(repo: Path):
     download(repo)
     _git(repo, "add", "-A")
