@@ -17,9 +17,9 @@ description: "Use when creating a git branch or drafting a Pull Request for this
   - `## Summary` — 1-3 sentences describing the overall change
   - `## Changes` — a bulleted list of the key changes (one bullet per logical change, not per file)
 
-This is the canonical PR format for this repo — `.github/prompts/pr.prompt.md` and
-`pr-notes.prompt.md` (and their `.claude/commands/`/`.clinerules/workflows/`/`.opencode/command/`
-mirrors) implement it; see `prompts.instructions.md` for how those commands are kept in sync.
+This is the canonical PR format for this repo — the `pr` / `pr-notes` commands implement it. Those
+commands (and every other) are authored once in `fireball_sidecar_toolkit`'s `content/commands/`
+and rendered per tool; see `prompts.instructions.md`.
 
 ## Pull Request Assignee
 Always assign the PR to the user who asked for it — `gh pr create --assignee @me` (the currently

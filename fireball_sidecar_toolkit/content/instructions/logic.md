@@ -43,10 +43,11 @@ itself.
 
 **Where the "intelligence" lives.** All dynamic, judgment-based decision-making an AI applies while
 running a command — which options to pick, what to ask the user, when to stop, how to interpret
-ambiguous input — is captured as instructions in `.github/prompts/*.prompt.md`. These prompt files
+ambiguous input — is captured in the canonical command bodies (`fireball_sidecar_toolkit`'s
+`content/commands/`, rendered into `.github/prompts/` and the other provider dirs). Those bodies
 are the single source of truth every AI tool reads for command *behavior* (see
-`prompts.instructions.md` for authoring them). If a decision isn't written down in a `.prompt.md`
-file or a standing rule in `.github/instructions/`, an AI enforcing it is not reproducible.
+`prompts.instructions.md` for authoring them). If a decision isn't written down in a command body
+or a standing rule in `.github/instructions/`, an AI enforcing it is not reproducible.
 
 **The reproducibility test.** Before letting an AI make a judgment call inside a command, ask:
 *could a human, or a CI script, make the same call by hand — reading the same `.prompt.md` file and
@@ -65,49 +66,39 @@ call the same CLI, exactly like every other provider already does.
 
 ### Source of Truth
 
-**`.github/instructions/` is the one and only source of truth for all AI rules.**
+Shared rules, commands, and skills are authored once in **`fireball_sidecar_toolkit`'s `content/`**
+(repo-specific ones in this repo's `_local/`). A generator renders them into every provider's
+native files. Two kinds of output:
 
-All providers ultimately read from here. Never duplicate rules into provider-specific files — update the instruction files and let providers pick them up.
+- **Materialised** (the tool reads the text directly): `.github/instructions/*.instructions.md`
+  (full body + `applyTo`), `.github/prompts/*.prompt.md`, `.github/skills/*/SKILL.md`, and
+  `AGENTS.md` (a generated index of the instruction set).
+- **Generated pointers** back to those: `.claude/`, `.clinerules/workflows/`, `.sidecar/`,
+  `CLAUDE.md`.
 
-### Provider Hierarchy
+**Never hand-edit a generated provider file.** Edit canonical content (or `_local/`) and run
+`invoke sidecar.toolkit.download`; `invoke sidecar.toolkit.check` (inside `invoke test`) fails on
+drift.
 
-| Priority | Provider | Config files read | How rules flow in |
-|----------|----------|-------------------|-------------------|
-| 1 (primary) | **GitHub Copilot** | `.github/copilot-instructions.md` + `.github/instructions/*.md` | `copilot-instructions.md` is always loaded and is a thin pointer; `.github/instructions/*.md` files with `applyTo` frontmatter additionally auto-apply natively when their glob matches |
-| 2 | **OpenCode** | `AGENTS.md` (repo root) | `AGENTS.md` is a thin pointer; all substance is in `.github/instructions/` |
-| 3 | **Claude TUI** | `CLAUDE.md` → `AGENTS.md` | `CLAUDE.md` delegates to `AGENTS.md`, which delegates to `.github/instructions/` |
+### Providers
 
-### File Roles
+| Provider | Reads | Notes |
+|----------|-------|-------|
+| **GitHub Copilot** | `.github/copilot-instructions.md` + `.github/instructions/*.md` | the `applyTo` glob auto-applies a rule file natively when it matches |
+| **Claude Code** | `CLAUDE.md` → `AGENTS.md` → `.github/instructions/`; `.claude/commands/` + `.claude/skills/` | |
+| **Fireball Sidecar** | `AGENTS.md` + `.github/instructions/` (honouring `applyTo`) + `.github/prompts/`; interim `.sidecar/` pointer stubs | |
+| **Codex / other AGENTS.md tools** | `AGENTS.md` → `.github/instructions/` | |
 
-| File | Role | Contents |
-|------|------|----------|
-| `.github/instructions/*.md` | **Source of truth** — update here only | All rules, standards, workflow |
-| `.github/copilot-instructions.md` | Thin pointer for Copilot, always loaded | One-liner pointing to `index.instructions.md` |
-| `AGENTS.md` (root) | Thin pointer for OpenCode / other tools | Slash command quick-ref + links to instruction files |
-| `CLAUDE.md` (root) | Thin pointer for Claude TUI | One-liner pointing to `AGENTS.md` |
-| `topics/*/AGENTS.md` | Topic-scoped pointer | Topic context + link to root `AGENTS.md` |
-| `topics/*/CLAUDE.md` | Topic-scoped pointer for Claude | Points to topic `AGENTS.md` |
+### Adding or removing a provider
 
-### Adding a New Provider
-
-1. Check whether it natively reads `.github/instructions/` — if yes, nothing extra needed.
-2. If not, create a thin entrypoint file (e.g. `NEWPROVIDER.md`) that reads:
-   > "See `AGENTS.md` for all instructions. `.github/instructions/` is the source of truth."
-3. Do **not** copy rules into the new file — always delegate.
-
-### Removing a Provider
-
-Delete its entrypoint file(s) only. `.github/instructions/` and `AGENTS.md` stay untouched.
-
-- Remove OpenCode → delete `.opencode/` dir + `AGENTS.md` (if no other tool needs it)
-- Remove Claude → delete `CLAUDE.md` + `.claude/` dir
+Add or remove a **renderer** in `fireball_sidecar_toolkit/renderers/` — not a hand-maintained
+pointer file. The generator owns every provider dir.
 
 ## Documentation
 
-- `.github/instructions/logic.instructions.md` — AI decision architecture, modules/invoke/AI stack, provider hierarchy (this file)
-- `.github/instructions/layout.instructions.md` — repository and directory layout
-- `.github/instructions/prompts.instructions.md` — AI custom prompts / slash command standards and templates
-- `.github/instructions/tasks.instructions.md` — invoke task runner (plain CLI automation, no AI)
-- `.github/instructions/modules.instructions.md` — Python module architecture and layout conventions
-- `.github/instructions/tests.instructions.md` — testing requirements and workflow
-- `.github/instructions/index.instructions.md` — repository-wide operating rules
+- `logic.instructions.md` — this file (stack + provider architecture)
+- `prompts.instructions.md` — canonical command authoring
+- `tasks.instructions.md` — invoke task runner (plain CLI automation, no AI)
+- `modules.instructions.md` — Python module architecture and layout conventions
+- `tests.instructions.md` — testing requirements and workflow
+- `index.instructions.md` — repository-wide operating rules

@@ -27,9 +27,9 @@ This uses the Agent Skills format (published as an open spec, in principle imple
 tool), but treat it here as **Claude Code-specific** until other tools this repo targets
 demonstrably adopt it — hence living under `.claude/` rather than a vendor-neutral `.agents/`.
 
-Required for every command — see `prompts.instructions.md`'s "Creating a New Command" and the
-four synced command dirs it describes (`.github/prompts/`, `.claude/commands/`,
-`.opencode/command/`, `.clinerules/workflows/`) — `.claude/skills/` is a fifth.
+Every canonical command in `fireball_sidecar_toolkit`'s `content/commands/` has a matching
+`content/skills/<slug>/SKILL.md`; the generator copies the skill dir into `.claude/skills/` and
+`.github/skills/` and renders a `.sidecar/skills/` pointer. See `prompts.instructions.md`.
 
 ## GitHub Copilot Skills (.github/skills/*/SKILL.md)
 ```yaml
