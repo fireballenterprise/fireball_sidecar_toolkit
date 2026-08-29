@@ -48,7 +48,7 @@ def _mini_content(root: Path) -> Path:
 def test_every_renderer_produces_output(tmp_path):
     result = render_repo(tmp_path, canonical_root=packaged_content_root())
     produced = {p.relative_to(tmp_path).parts[0] for p in result.written}
-    assert {".github", ".claude", ".clinerules", ".opencode", ".sidecar", "AGENTS.md", "CLAUDE.md"} <= produced
+    assert {".github", ".claude", ".clinerules", ".sidecar", "AGENTS.md", "CLAUDE.md"} <= produced
     assert (tmp_path / "AGENTS.md").exists()
     assert (tmp_path / ".claude" / "commands" / "fix.md").exists()
 

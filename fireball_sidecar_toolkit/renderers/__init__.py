@@ -13,7 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from ..catalog import ContentBundle
-from . import agents, claude, cline, copilot, opencode, prompts, sidecar
+from . import agents, claude, cline, copilot, prompts, sidecar
 from ._common import GENERATED_HEADER
 
 Renderer = Callable[[ContentBundle, Path], list[Path]]
@@ -24,7 +24,6 @@ ALL: dict[str, Renderer] = {
     "claude": claude.render,
     "cline": cline.render,
     "copilot": copilot.render,
-    "opencode": opencode.render,
     "prompts": prompts.render,
     "sidecar": sidecar.render,
 }
