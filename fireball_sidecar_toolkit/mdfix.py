@@ -83,24 +83,29 @@ def _is_instruction_file(path: Path) -> bool:
     return "instructions" in path.parts
 
 
-def _iter_markdown(root: Path):
+def _iter_markdown(root: Path, exclude: tuple[str, ...]):
+    excluded = {e.strip("/") for e in exclude}
     for path in sorted(root.rglob("*.md")):
         parts = path.relative_to(root).parts
         if not _SKIP_DIRS.isdisjoint(parts):
             continue
         if parts[:2] == (".ai", "shared"):  # clobbered mirror — fix content/ upstream instead
             continue
+        if not excluded.isdisjoint(parts):  # caller-supplied opt-outs (e.g. a generated tree)
+            continue
         yield path
 
 
-def fix_tree(root: Path, *, write: bool = True) -> list[Path]:
+def fix_tree(root: Path, *, write: bool = True, exclude: tuple[str, ...] = ()) -> list[Path]:
     """Normalise every ``*.md`` under ``root``. Returns the paths that changed (or would).
 
-    ``write=True`` rewrites them in place; ``write=False`` only reports.
+    ``write=True`` rewrites them in place; ``write=False`` only reports. ``exclude`` is a tuple of
+    path segments to skip anywhere in the tree (e.g. ``("topics",)`` for a separately-generated
+    docs tree).
     """
     root = root.resolve()
     changed: list[Path] = []
-    for path in _iter_markdown(root):
+    for path in _iter_markdown(root, exclude):
         original = path.read_text(encoding="utf-8")
         fixed = normalize(original, instruction_file=_is_instruction_file(path))
         if fixed != original:
@@ -110,9 +115,9 @@ def fix_tree(root: Path, *, write: bool = True) -> list[Path]:
     return changed
 
 
-def check_tree(root: Path) -> None:
+def check_tree(root: Path, *, exclude: tuple[str, ...] = ()) -> None:
     """Raise :class:`MarkdownStyleError` naming every file that :func:`fix_tree` would change."""
-    stale = fix_tree(root, write=False)
+    stale = fix_tree(root, write=False, exclude=exclude)
     if stale:
         rels = "\n  - ".join(str(p.relative_to(root.resolve())) for p in stale)
         raise MarkdownStyleError(
