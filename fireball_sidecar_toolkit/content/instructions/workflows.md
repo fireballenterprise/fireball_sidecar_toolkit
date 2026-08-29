@@ -3,7 +3,6 @@ description: "Use when editing GitHub Actions workflows or composite actions —
 applyTo: ".github/workflows/**,.github/actions/**"
 ---
 # GitHub Actions Instructions
-
 ## Layout
 ```
 .github/

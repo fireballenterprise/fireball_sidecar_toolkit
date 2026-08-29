@@ -1,0 +1,121 @@
+"""``sidecar-toolkit mdfix`` — normalise Markdown to the house style that models keep missing.
+
+Two rules from ``content/instructions/markdown.md`` that every AI tool (this one included) drops
+during file generation, so they are enforced mechanically instead:
+
+1. **No blank line after a header.** Content starts on the line right after ``#``/``##``/… .
+2. **No standalone ``---`` divider in an instruction-file body** (a file under an ``instructions/``
+   directory). The only ``---`` allowed there is the YAML frontmatter fence.
+
+Both rules skip fenced code blocks (```` ``` ```` / ``~~~``) and rule 2 skips the leading
+frontmatter block. :func:`fix_tree` walks ``**/*.md`` under a repo; ``write=False`` is the
+read-only gate for ``invoke test`` / CI.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+_HEADER = re.compile(r"^#{1,6} \S")
+_FENCE = re.compile(r"^\s*(```|~~~)")
+_SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".ruff_cache", ".pytest_cache"}
+
+
+class MarkdownStyleError(RuntimeError):
+    """One or more Markdown files are not normalised — run ``invoke fix``."""
+
+
+def _strip_frontmatter_end(lines: list[str]) -> int:
+    """Index of the first body line: past a leading ``---`` … ``---`` block, else 0."""
+    if not lines or lines[0].rstrip() != "---":
+        return 0
+    for i in range(1, len(lines)):
+        if lines[i].rstrip() == "---":
+            return i + 1
+    return 0
+
+
+def normalize(text: str, *, instruction_file: bool = False) -> str:
+    """Return ``text`` with the house-style rules applied. Idempotent."""
+    newline = "\r\n" if "\r\n" in text else "\n"
+    trailing = text.endswith(("\n", "\r"))
+    lines = text.splitlines()
+    body_start = _strip_frontmatter_end(lines)
+
+    out: list[str] = lines[:body_start]
+    in_fence = False
+    i = body_start
+    while i < len(lines):
+        line = lines[i]
+        if _FENCE.match(line):
+            in_fence = not in_fence
+            out.append(line)
+            i += 1
+            continue
+        if not in_fence and instruction_file and line.rstrip() == "---":
+            # replace the divider (and any blank lines hugging it) with a single blank line
+            had_blank = bool(out) and out[-1].strip() == ""
+            while out and out[-1].strip() == "":
+                out.pop()
+            i += 1
+            while i < len(lines) and lines[i].strip() == "":
+                had_blank = True
+                i += 1
+            if had_blank and out and i < len(lines):
+                out.append("")
+            continue
+        out.append(line)
+        if not in_fence and _HEADER.match(line):
+            i += 1
+            while i < len(lines) and lines[i].strip() == "":
+                i += 1
+            continue
+        i += 1
+
+    result = newline.join(out)
+    if trailing:
+        result += newline
+    return result
+
+
+def _is_instruction_file(path: Path) -> bool:
+    return "instructions" in path.parts
+
+
+def _iter_markdown(root: Path):
+    for path in sorted(root.rglob("*.md")):
+        parts = path.relative_to(root).parts
+        if not _SKIP_DIRS.isdisjoint(parts):
+            continue
+        if parts[:2] == (".ai", "shared"):  # clobbered mirror — fix content/ upstream instead
+            continue
+        yield path
+
+
+def fix_tree(root: Path, *, write: bool = True) -> list[Path]:
+    """Normalise every ``*.md`` under ``root``. Returns the paths that changed (or would).
+
+    ``write=True`` rewrites them in place; ``write=False`` only reports.
+    """
+    root = root.resolve()
+    changed: list[Path] = []
+    for path in _iter_markdown(root):
+        original = path.read_text(encoding="utf-8")
+        fixed = normalize(original, instruction_file=_is_instruction_file(path))
+        if fixed != original:
+            changed.append(path)
+            if write:
+                path.write_text(fixed, encoding="utf-8")
+    return changed
+
+
+def check_tree(root: Path) -> None:
+    """Raise :class:`MarkdownStyleError` naming every file that :func:`fix_tree` would change."""
+    stale = fix_tree(root, write=False)
+    if stale:
+        rels = "\n  - ".join(str(p.relative_to(root.resolve())) for p in stale)
+        raise MarkdownStyleError(
+            f"Markdown not normalised (blank line after a header, or a stray `---` divider):\n  - {rels}\n"
+            "Run `invoke fix` (or `invoke sidecar.toolkit.mdfix`)."
+        )

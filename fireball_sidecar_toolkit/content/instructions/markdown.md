@@ -1,78 +1,39 @@
 ---
-description: "Use when writing or editing any Markdown file. Covers horizontal rules, headers, verbosity, and README structure."
+description: "Use when writing or editing any Markdown file. Covers headers, horizontal rules, verbosity, and README structure."
 applyTo: "**/*.md"
 ---
 # Markdown Style Standards
-Rules for every Markdown file in the repo.
-
-## Horizontal Rules
-**Never use a standalone `---` line as a section divider in the body of an instruction file
-(`.ai/shared/instructions/*.md`, `.ai/local/instructions/*.md`).** The only place `---` belongs is
-the YAML frontmatter delimiter (the opening and closing `---` around `applyTo`) — never between
-headers. Headers and blank lines alone are enough visual separation.
+## Headers — NO blank line after a header
+**MUST: never put a blank line after any header (`#`, `##`, `###`, …). The first line of content
+comes immediately on the next line.** This is the opposite of the common default — do not follow
+the habit. `invoke fix` (via `sidecar.toolkit.mdfix`) strips these automatically and `invoke test`
+fails on them, but write them right the first time.
 
 ```markdown
-# ✅ CORRECT
----
-applyTo: "**"
----
-# File Title
-Intro sentence.
-
-## Section One
-Content.
-
-## Section Two
-Content.
-```
-
-```markdown
-# ❌ WRONG
----
-applyTo: "**"
----
-# File Title
-
----
-
-## Section One
-Content.
-
----
-
-## Section Two
-Content.
-```
-
-## Headers
-**Do not add a blank line after any header (`#`, `##`, `###`, etc.).** Content begins on the very next line.
-
-```markdown
-# ✅ CORRECT
+✅ CORRECT
 ## Section
 - bullet one
 - bullet two
 
 ## Another Section
 Content starts here immediately.
-
-| col1 | col2 |
-|------|------|
-| a    | b    |
 ```
 
 ```markdown
-# ❌ WRONG
+❌ WRONG
 ## Section
 
 - bullet one
-
-## Another Section
-
-Content with extra blank line above.
 ```
 
 Blank lines **before** a header (to separate sections) are fine and expected.
+
+## Horizontal Rules
+**Never use a standalone `---` line as a section divider in an instruction-file body**
+(`.ai/shared/instructions/*.md`, `.ai/local/instructions/*.md`). The only `---` allowed there is
+the YAML frontmatter fence (the opening and closing pair around `applyTo`). Headers and blank
+lines are enough separation. `sidecar.toolkit.mdfix` removes stray dividers from instruction
+files automatically.
 
 ## Verbosity
 **When asked to create a file, keep it non-verbose unless the user says otherwise.** No preamble,

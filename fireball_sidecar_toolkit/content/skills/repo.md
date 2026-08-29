@@ -4,7 +4,6 @@ description: Use for a generic /repo push|pull request — routes to the same pu
 ---
 
 # Repo Router Workflow
-
 Use this file as source of truth: `.ai/shared/commands/repo.md`
 
 When the user asks for `/repo push` or `/repo pull` specifically, read that file and follow

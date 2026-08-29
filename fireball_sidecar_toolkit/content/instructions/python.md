@@ -3,7 +3,6 @@ description: "Use when writing, editing, or reviewing Python code in this projec
 applyTo: "**/*.py"
 ---
 # Python Instructions
-
 ## Python Version
 Target: `>=3.14` (defined in `pyproject.toml`, pinned in `.python-version`)
 

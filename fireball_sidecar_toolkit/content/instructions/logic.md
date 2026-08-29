@@ -3,15 +3,12 @@ description: "Use when authoring slash commands / instruction files / Python mod
 applyTo: "**"
 ---
 # Logic Architecture Instructions
-
 ## Core Principle
-
 **All business logic lives in Python, in `modules/`, so it's testable. Everything else is a thin
 CLI wrapper around it — and the AI is a decision-making wrapper on top of that CLI, not a fourth
 code layer.**
 
 ## The Stack
-
 ```
 modules/*/            All business logic. Reusable, testable. The only place anything
                        deterministic actually happens.
@@ -37,7 +34,6 @@ person is driving it.
   to ask, when to stop). See below for where that judgment is captured.
 
 ## AI Is an Automated User, Not a Fourth Layer
-
 The stack above is the entire runtime. An AI tool operates the CLI exactly the way a human would
 type it at a terminal — there is no hidden AI-only code path, and no logic lives inside the AI
 itself.
@@ -66,9 +62,7 @@ it anything new — it only needs to read the same `.ai/` files and call the sam
 every other provider already does.
 
 ## AI Provider Architecture
-
 ### Source of Truth
-
 Shared rules, commands, and skills are authored once in **`fireball_sidecar_toolkit`'s `content/`**
 and mirrored into each consuming repo as **`.ai/shared/`**; repo-specific ones live in
 **`.ai/local/`**. A generator renders both layers into every provider's native files.
@@ -85,7 +79,6 @@ it delivers is the pointer — the tool is expected to follow it to the `.ai/` s
 drift.
 
 ### Providers
-
 | Provider | Reads | Notes |
 |----------|-------|-------|
 | **GitHub Copilot** | `.github/copilot-instructions.md` + `.github/instructions/*.instructions.md` (pointer stubs) | the `applyTo` glob auto-applies the stub; Copilot must follow the pointer to `.ai/shared/instructions/<slug>.md` |
@@ -94,12 +87,10 @@ drift.
 | **Codex / other AGENTS.md tools** | `AGENTS.md` → `.ai/shared|local/instructions/` | |
 
 ### Adding or removing a provider
-
 Add or remove a **renderer** in `fireball_sidecar_toolkit/renderers/` — not a hand-maintained
 pointer file. The generator owns every provider dir.
 
 ## Documentation
-
 - `.ai/shared/instructions/logic.md` — this file (stack + provider architecture)
 - `.ai/shared/instructions/ai_commands.md` — canonical command / instruction authoring
 - `.ai/shared/instructions/ai_skills.md` — skill file conventions
