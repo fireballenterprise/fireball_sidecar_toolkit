@@ -2,13 +2,17 @@
 
 1. Diff the repo's ``_shared/`` against the packaged canonical ``content/``.
 2. Refuse if anything outside ``_shared/`` differs (never carries ``_local/`` or generated files).
-3. In a sibling ``fireball_sidecar_toolkit`` checkout: branch off ``development``, apply the changed
+3. In a local ``fireball_sidecar_toolkit`` checkout: branch off ``development``, apply the changed
    files into ``content/``, commit, push, open a PR with ``gh``. Never a direct push to ``main``.
+
+The toolkit checkout is resolved in order: an explicit ``toolkit_repo`` arg → the
+``FIREBALL_SIDECAR_TOOLKIT_REPO`` env var → a sibling ``../fireball_sidecar_toolkit`` dir.
 """
 
 from __future__ import annotations
 
 import filecmp
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -18,6 +22,7 @@ from .catalog import packaged_content_root
 from .download import SHARED_DIRNAME
 
 _PACKAGE_NAME = "fireball_sidecar_toolkit"
+_REPO_ENV_VAR = "FIREBALL_SIDECAR_TOOLKIT_REPO"
 
 
 class UploadError(RuntimeError):
@@ -25,10 +30,14 @@ class UploadError(RuntimeError):
 
 
 def _resolve_toolkit(repo_root: Path, override: Path | None) -> Path:
-    candidate = (override or repo_root.parent / _PACKAGE_NAME).expanduser().resolve()
+    env = os.environ.get(_REPO_ENV_VAR)
+    candidate = (override or (Path(env) if env else repo_root.parent / _PACKAGE_NAME)).expanduser().resolve()
     pyproject = candidate / "pyproject.toml"
     if not pyproject.is_file() or f'name = "{_PACKAGE_NAME}"' not in pyproject.read_text(encoding="utf-8"):
-        raise UploadError(f"No {_PACKAGE_NAME} checkout at {candidate}. Pass toolkit_repo=... to point at one.")
+        raise UploadError(
+            f"No {_PACKAGE_NAME} checkout at {candidate}. Pass toolkit_repo=... "
+            f"or set {_REPO_ENV_VAR}=/path/to/fireball_sidecar_toolkit."
+        )
     return candidate
 
 
