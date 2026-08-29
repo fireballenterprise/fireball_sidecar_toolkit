@@ -1,6 +1,6 @@
 ---
 name: ss
-description: Use for viewing the latest screenshot from the centralized screenshots/ folder. Equivalent to /ss.
+description: Use for viewing the latest screenshot from the centralized screenshots/ folder. Equivalent to /ss (which is /screenshots view).
 ---
 
 # Screenshot View Workflow
@@ -11,7 +11,7 @@ When the user asks to look at the latest screenshot, or runs a `/ss` equivalent,
 file and follow it.
 
 ```bash
-uv run --no-sync python -m modules.repo.route "view_screenshot"
+uv run --no-sync python -m modules.screenshots.route "view"
 ```
 
 Then use the `view_image` tool on `screenshots/latest.png` (relative to the repo root). See

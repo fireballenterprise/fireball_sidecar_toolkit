@@ -1,11 +1,11 @@
 ---
 name: ss
-description: View the latest screenshot from centralized screenshots folder
+description: View the latest screenshot from the centralized screenshots folder
 argument-hint: [optional context or question]
 agent: agent
 ---
 
-!`uv run --no-sync python -m modules.repo.route "view_screenshot"`
+!`uv run --no-sync python -m modules.screenshots.route "view"`
 
 Then use the `view_image` tool on `screenshots/latest.png` (relative to the repository root) to view the screenshot.
 

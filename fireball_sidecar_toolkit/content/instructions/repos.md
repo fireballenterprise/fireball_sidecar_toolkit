@@ -1,5 +1,6 @@
 ---
-applyTo: "**"
+description: "Use for the properties.yml repos/lineage key and the 'related repos' / 'pull all repos' / cross-repo-change trigger phrases."
+applyTo: "properties.yml,modules/setup/**"
 ---
 # Repos Instructions
 Rules for the `repos` key in `properties.yml` — the map of GitHub repos related to this repository.

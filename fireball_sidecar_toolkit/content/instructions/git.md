@@ -7,8 +7,7 @@ description: "Use when creating a git branch or drafting a Pull Request for this
 - All lowercase, `snake_case` (words separated by `_`)
 - 2-4 words describing the change — not a ticket number, not a filename
 - End with `_<github_username>` — the author's lowercase GitHub username (get it via
-  `gh api user --jq .login`; `gh` is already a required tool in this repo, see
-  `index.instructions.md`)
+  `gh api user --jq .login`; `gh` is a required tool in this repo)
 - Example: `add_branch_naming_rules_lbecker`
 
 ## Pull Request Description
@@ -19,7 +18,7 @@ description: "Use when creating a git branch or drafting a Pull Request for this
 
 This is the canonical PR format for this repo — the `pr` / `pr-notes` commands implement it. Those
 commands (and every other) are authored once in `fireball_sidecar_toolkit`'s `content/commands/`
-and rendered per tool; see `prompts.instructions.md`.
+and rendered per tool; see `ai_commands.instructions.md`.
 
 ## Pull Request Assignee
 Always assign the PR to the user who asked for it — `gh pr create --assignee @me` (the currently

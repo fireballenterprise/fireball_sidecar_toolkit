@@ -1,7 +1,7 @@
 ---
 name: repo
-description: Repo operations (push, pull, cleanup, set_screenshots, view_screenshot)
-argument-hint: push | pull | cleanup | set_screenshots | view_screenshot
+description: Repo operations (push, pull)
+argument-hint: push | pull
 agent: agent
 ---
 

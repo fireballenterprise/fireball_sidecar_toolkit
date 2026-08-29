@@ -12,11 +12,12 @@ description: "Use when reviewing a pull request or code change in this repo — 
    `modules/common/` in `.github/instructions/modules.instructions.md`), and duplicated
    constants/strings that should be defined once.
 3. **Docs kept in sync** — if the diff touches a module, command, task, or config key, the
-   matching `README.md` and the relevant `.github/instructions/*.md` file must reflect it (see
-   `.github/instructions/modules.instructions.md`). A PR that adds or edits a
-   `.github/prompts/*.prompt.md` command without updating all five synced dirs (see below) is
-   incomplete.
-4. **Style compliance** — see `.github/instructions/style.instructions.md`. Flag violations even
+   matching `README.md` and the relevant instruction file must reflect it (see
+   `.github/instructions/modules.instructions.md`). Canonical command/instruction/skill edits
+   belong in `fireball_sidecar_toolkit`'s `content/` (or `_local/`), never a generated provider
+   file — see the consistency check below.
+4. **Style compliance** — see `.github/instructions/markdown.instructions.md` (Markdown) and
+   `.github/instructions/python.instructions.md` (Python style & ordering). Flag violations even
    where `invoke test` would still pass — some of these are conventions, not lint-enforced rules.
 5. **Tests/linters** — see `.github/instructions/tests.instructions.md`. Any `.py`, `.yml`, or
    `.yaml` change must be clean under `uv run --no-sync invoke test` (pylint 10.00/10 required),
