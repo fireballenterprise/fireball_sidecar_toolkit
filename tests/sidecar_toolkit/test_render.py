@@ -18,7 +18,7 @@ def _mini_content(root: Path) -> Path:
     content = root / "content"
     (content / "commands").mkdir(parents=True)
     (content / "instructions").mkdir(parents=True)
-    (content / "skills" / "repos").mkdir(parents=True)
+    (content / "skills").mkdir(parents=True)
 
     (content / "commands" / "fix.md").write_text(
         "---\nname: fix\ndescription: Auto-fix lint\nargument-hint: none\nagent: agent\n---\n\n"
@@ -38,7 +38,7 @@ def _mini_content(root: Path) -> Path:
     (content / "instructions" / "python.md").write_text(
         '---\ndescription: "Python rules"\napplyTo: "**/*.py"\n---\n# Python\n\nType hints everywhere.\n'
     )
-    (content / "skills" / "repos" / "SKILL.md").write_text(
+    (content / "skills" / "repos.md").write_text(
         "---\nname: repos\ndescription: Repo map skill\nhints:\n  - the repos\n---\n\n"
         "# Repos Trigger\n\nUse this file as source of truth: `.github/prompts/repos.prompt.md`\n"
     )
