@@ -4,7 +4,6 @@ description: Use for auditing the repo for doc/AI-config drift after changes and
 ---
 
 # Docs Drift Audit Workflow
-
 Use this file as source of truth: `.ai/shared/commands/docs.md`
 
 When the user asks to audit docs, check for stale documentation, or run a `/docs` equivalent, read

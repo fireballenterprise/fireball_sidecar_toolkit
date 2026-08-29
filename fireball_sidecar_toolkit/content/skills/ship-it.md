@@ -10,7 +10,6 @@ hints:
 ---
 
 # Ship It Workflow
-
 Use this file as source of truth: `.ai/shared/commands/ship-it.md`
 
 When the user says "punch it", "punch it chewy", "ship it", or otherwise asks to ship a branch

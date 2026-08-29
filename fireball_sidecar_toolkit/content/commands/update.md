@@ -15,7 +15,6 @@ version table (from `ver.python`), and a `.github/workflows/` action-ref table (
 done and move on.
 
 ## Which section(s) to act on
-
 - `$ARGUMENTS` is `libs` → only act on the `pyproject.toml` section; ignore the others.
 - `$ARGUMENTS` is `python` → only act on the Python version section; ignore the others.
 - `$ARGUMENTS` is `workflows` → only act on the workflows section; ignore the others.
@@ -23,7 +22,6 @@ done and move on.
   `uv run --no-sync invoke ver.update`, which is what the check above already ran).
 
 ## Applying an update
-
 Show the user the relevant table exactly as printed, then ask whether to apply it.
 
 - `pyproject.toml`: this only rewrites version constraints — it does NOT install anything. If the

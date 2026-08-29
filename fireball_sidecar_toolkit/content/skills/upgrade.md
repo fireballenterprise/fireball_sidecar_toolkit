@@ -4,7 +4,6 @@ description: Use for upgrading the project's Python version and/or dependencies.
 ---
 
 # Upgrade Workflow
-
 Use this file as source of truth: `.ai/shared/commands/upgrade.md`
 
 When the user asks to upgrade Python or dependencies, read that file and follow it. Prefer

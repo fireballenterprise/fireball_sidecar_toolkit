@@ -3,7 +3,6 @@ description: "Use when creating or editing a canonical skill file — .ai/shared
 applyTo: ".ai/shared/skills/**,.ai/local/skills/**,.claude/skills/**,.github/skills/**,.sidecar/skills/**"
 ---
 # AI Skills Instructions
-
 ## Canonical skill file (`.ai/shared/skills/<name>.md`)
 Flat, one file per skill (repo-specific ones in `.ai/local/skills/<name>.md`). Frontmatter:
 

@@ -1,13 +1,10 @@
 # Common Utilities Module
-
 Shared utilities and helper functions used across all modules in the template_python repository.
 
 ## Overview
-
 This module provides common functionality that is used by other modules throughout the repository, including configuration parsing and utility functions.
 
 ## Files
-
 - `utils.py` — console output helpers: `success()`, `error()`, `warning()`, `info()` (✅/❌/⚠️/ℹ️
   prefixed)
 - `properties.py` — reads `properties.yml`: `get_repo_root()`, `get_repo_local()`,
@@ -17,13 +14,11 @@ This module provides common functionality that is used by other modules througho
 - `README.md` — this file
 
 ## Dependencies
-
 This module depends on:
 - Standard library: `pathlib`, `argparse`, `subprocess`
 - `pyyaml` — for reading `properties.yml`
 
 ## Architecture
-
 The common module follows these principles:
 - **Shared utilities only** - Functions used by multiple modules
 - **No business logic** - Pure utility functions
@@ -32,7 +27,6 @@ The common module follows these principles:
 - **Type hints** - Full type annotations for all functions
 
 ## Integration
-
 Other modules import from common:
 
 ```python
