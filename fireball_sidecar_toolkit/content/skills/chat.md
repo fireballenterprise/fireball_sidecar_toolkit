@@ -5,10 +5,9 @@ description: Use for starting, ending, listing, or resuming a dated planning cha
 
 # Chat Session Workflow
 
-Use this file as source of truth: `.github/prompts/chat.prompt.md`
+Use this file as source of truth: `ai/shared/commands/chat.md`
 
-When the user asks to start/end/list/resume a chat, or run a `/chat` equivalent, read that prompt
-file and follow it.
+When the user asks to start/end/list/resume a chat, or run a `/chat` equivalent, read that file and follow it.
 
 - Start: `start [title]`
 - List: `list`

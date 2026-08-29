@@ -5,9 +5,9 @@ description: Use for pushing the current branch to git remote — runs invoke fi
 
 # Push Workflow
 
-Use this file as source of truth: `.github/prompts/push.prompt.md`
+Use this file as source of truth: `ai/shared/commands/push.md`
 
-When the user asks to push changes, read that prompt file and follow it.
+When the user asks to push changes, read that file and follow it.
 
 ```bash
 uv run --no-sync python -m modules.repo.push

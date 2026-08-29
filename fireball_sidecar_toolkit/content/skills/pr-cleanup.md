@@ -5,9 +5,9 @@ description: Use after a PR has been merged on GitHub — switches to the defaul
 
 # PR Cleanup Workflow
 
-Use this file as source of truth: `.github/prompts/pr-cleanup.prompt.md`
+Use this file as source of truth: `ai/shared/commands/pr-cleanup.md`
 
-When the user asks to clean up after a merged PR, read that prompt file and follow it.
+When the user asks to clean up after a merged PR, read that file and follow it.
 
 ```bash
 uv run --no-sync invoke repo.pr_cleanup

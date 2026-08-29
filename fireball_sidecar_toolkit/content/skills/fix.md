@@ -5,10 +5,10 @@ description: Use for auto-fix requests — run ruff check --fix and ruff format.
 
 # Fix Workflow
 
-Use this file as source of truth: `.github/prompts/fix.prompt.md`
+Use this file as source of truth: `ai/shared/commands/fix.md`
 
 When the user asks to auto-fix lint/formatting issues, or an equivalent `/fix` request, read that
-prompt file and follow it.
+file and follow it.
 
 ```bash
 uv run --no-sync invoke fix

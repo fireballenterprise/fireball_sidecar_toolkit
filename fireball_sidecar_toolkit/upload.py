@@ -1,7 +1,7 @@
-"""``sidecar-toolkit upload`` — promote local ``_shared/`` edits back to the toolkit as a PR.
+"""``sidecar-toolkit upload`` — promote local ``ai/shared/`` edits back to the toolkit as a PR.
 
-1. Diff the repo's ``_shared/`` against the packaged canonical ``content/``.
-2. Refuse if anything outside ``_shared/`` differs (never carries ``_local/`` or generated files).
+1. Diff the repo's ``ai/shared/`` against the packaged canonical ``content/``.
+2. Refuse if anything outside ``ai/shared/`` differs (never carries ``ai/local/`` or generated files).
 3. In a local ``fireball_sidecar_toolkit`` checkout: branch off ``development``, apply the changed
    files into ``content/``, commit, push, open a PR with ``gh``. Never a direct push to ``main``.
 
@@ -19,7 +19,7 @@ from pathlib import Path
 
 from ._git import git, is_git_repo
 from .catalog import packaged_content_root
-from .download import SHARED_DIRNAME
+from .download import SHARED_SUBPATH
 
 _PACKAGE_NAME = "fireball_sidecar_toolkit"
 _REPO_ENV_VAR = "FIREBALL_SIDECAR_TOOLKIT_REPO"
@@ -42,7 +42,7 @@ def _resolve_toolkit(repo_root: Path, override: Path | None) -> Path:
 
 
 def _changed_files(shared: Path, packaged: Path) -> list[Path]:
-    """Relative paths under ``_shared/`` that differ from (or are new vs) the packaged tree."""
+    """Relative paths under ``ai/shared/`` that differ from (or are new vs) the packaged tree."""
     changed: list[Path] = []
     for path in sorted(p for p in shared.rglob("*") if p.is_file()):
         rel = path.relative_to(shared)
@@ -53,22 +53,22 @@ def _changed_files(shared: Path, packaged: Path) -> list[Path]:
 
 
 def upload(repo_root: Path, *, branch: str | None = None, toolkit_repo: Path | None = None) -> str:
-    """Open a PR against the toolkit with this repo's ``_shared/`` changes; return the PR URL."""
+    """Open a PR against the toolkit with this repo's ``ai/shared/`` changes; return the PR URL."""
     repo_root = repo_root.resolve()
-    shared = repo_root / SHARED_DIRNAME
+    shared = repo_root / SHARED_SUBPATH
     if not shared.is_dir():
-        raise UploadError(f"No {SHARED_DIRNAME}/ in {repo_root} — nothing to upload.")
+        raise UploadError(f"No {SHARED_SUBPATH}/ in {repo_root} — nothing to upload.")
 
     outside = is_git_repo(repo_root) and git(
-        "status", "--porcelain", "--", ".", f":(exclude){SHARED_DIRNAME}", cwd=repo_root, check=False
+        "status", "--porcelain", "--", ".", f":(exclude){SHARED_SUBPATH}", cwd=repo_root, check=False
     )
     if outside:
-        raise UploadError(f"Uncommitted changes outside {SHARED_DIRNAME}/ — commit or stash them first.")
+        raise UploadError(f"Uncommitted changes outside {SHARED_SUBPATH}/ — commit or stash them first.")
 
     packaged = packaged_content_root()
     changed = _changed_files(shared, packaged)
     if not changed:
-        return f"{SHARED_DIRNAME}/ matches canonical content — nothing to upload."
+        return f"{SHARED_SUBPATH}/ matches canonical content — nothing to upload."
 
     toolkit = _resolve_toolkit(repo_root, toolkit_repo)
     if git("status", "--porcelain", cwd=toolkit, check=False):

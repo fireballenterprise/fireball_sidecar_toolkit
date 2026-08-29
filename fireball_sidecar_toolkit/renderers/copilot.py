@@ -1,11 +1,12 @@
-"""Render GitHub Copilot / VS Code files.
+"""Render GitHub Copilot / VS Code files — all pointer stubs.
 
-* ``.github/instructions/<slug>.instructions.md`` — the materialised instruction: ``description`` +
-  ``applyTo`` frontmatter and the canonical body verbatim. Copilot is the one tool that honours
-  path-scoped ``applyTo`` auto-loading, so these carry the full text, not a pointer.
-* ``.github/copilot-instructions.md`` — the always-on index pointing at the set.
-* ``.github/skills/<name>/SKILL.md`` — the flat canonical skill file wrapped in the ``<name>/SKILL.md``
-  shape Copilot requires.
+* ``.github/instructions/<slug>.instructions.md`` — ``description`` + ``applyTo`` frontmatter and a
+  one-line pointer at the canonical ``ai/shared|local/instructions/<slug>.md``. Copilot's
+  ``applyTo`` auto-injection then delivers the pointer; whether Copilot follows it to the real
+  rules is a known tradeoff of the pointer-only model.
+* ``.github/copilot-instructions.md`` — the always-on index.
+* ``.github/skills/<name>/SKILL.md`` — ``name``/``description``/``hints`` frontmatter in the
+  ``<name>/SKILL.md`` shape Copilot requires, body a pointer at ``ai/shared|local/skills/<name>.md``.
 """
 
 from __future__ import annotations
@@ -13,13 +14,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..catalog import ContentBundle
-from ._common import clean_dir, clean_subdirs, write_doc
+from ._common import canonical_pointer, clean_dir, clean_subdirs, write_doc
 
 _INDEX = """# Copilot Instructions
 
-See `AGENTS.md` at the repo root for the project overview, the instruction-file map, and the
-golden rules. Domain rules live under `.github/instructions/*.instructions.md` and auto-apply by
-their `applyTo` glob. Never duplicate rules into this file.
+See `AGENTS.md` at the repo root for the project overview and the instruction-file map. The
+canonical rules, commands, and skills live under `ai/shared/` (from `fireball_sidecar_toolkit`)
+and `ai/local/` (this repo's own). Everything under `.github/instructions/*.instructions.md`
+auto-applies by its `applyTo` glob and points back there. Never hand-edit a generated file.
 """
 
 
@@ -30,7 +32,7 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
     written = [
         write_doc(
             inst_dir / f"{i.slug}.instructions.md",
-            i.body,
+            canonical_pointer(bundle, i.slug, "instructions"),
             frontmatter={"description": i.description, "applyTo": i.apply_to},
         )
         for i in bundle.instructions
@@ -41,11 +43,11 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
 
     skills_dir = github / "skills"
     for skill in bundle.skills:
-        frontmatter, body = skill.read()
+        frontmatter, _ = skill.read()
         written.append(
             write_doc(
                 skills_dir / skill.name / "SKILL.md",
-                body,
+                canonical_pointer(bundle, skill.name, "skills"),
                 frontmatter={
                     "name": skill.name,
                     "description": str(frontmatter.get("description", "")),

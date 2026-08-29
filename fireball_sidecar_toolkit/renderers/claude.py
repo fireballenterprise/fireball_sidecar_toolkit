@@ -1,12 +1,12 @@
-"""Render Claude Code files.
+"""Render Claude Code files — all pointer stubs.
 
-* ``.claude/commands/<slug>.md`` — canonical body verbatim (inline ``!`...``` exec line included)
-  under Claude-specific frontmatter: ``description``, ``subtask: false``, ``agent: general``,
-  ``slash_command: /<slug>``, and an ``allowed-tools`` glob derived from the exec line
-  (:func:`~fireball_sidecar_toolkit.renderers._common.derive_allowed_tools`) so the command runs
-  without a permission prompt. These extras are a template pattern, not stored per canonical file.
-* ``.claude/skills/<name>/SKILL.md`` — the flat canonical skill file (``content/skills/<name>.md``)
-  wrapped in the ``<name>/SKILL.md`` directory shape Claude Code requires.
+* ``.claude/commands/<slug>.md`` — Claude-specific frontmatter (``description``, ``subtask: false``,
+  ``agent: general``, ``slash_command: /<slug>``, and an ``allowed-tools`` glob still derived from
+  the canonical body's ``!`...``` exec line so the command runs without a permission prompt), body
+  a one-line pointer at ``ai/shared|local/commands/<slug>.md``.
+* ``.claude/skills/<name>/SKILL.md`` — ``name``/``description``/``hints`` frontmatter in the
+  ``<name>/SKILL.md`` shape Claude Code requires, body a pointer at
+  ``ai/shared|local/skills/<name>.md``.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..catalog import ContentBundle
-from ._common import clean_dir, clean_subdirs, derive_allowed_tools, write_doc
+from ._common import canonical_pointer, clean_dir, clean_subdirs, derive_allowed_tools, write_doc
 
 
 def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
@@ -27,7 +27,7 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
         written.append(
             write_doc(
                 cmd_dir / f"{command.slug}.md",
-                command.body,
+                canonical_pointer(bundle, command.slug, "commands"),
                 frontmatter={
                     "description": command.description,
                     "subtask": "false",
@@ -41,11 +41,11 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
 
     skills_dir = claude / "skills"
     for skill in bundle.skills:
-        frontmatter, body = skill.read()
+        frontmatter, _ = skill.read()
         written.append(
             write_doc(
                 skills_dir / skill.name / "SKILL.md",
-                body,
+                canonical_pointer(bundle, skill.name, "skills"),
                 frontmatter={
                     "name": skill.name,
                     "description": str(frontmatter.get("description", "")),
