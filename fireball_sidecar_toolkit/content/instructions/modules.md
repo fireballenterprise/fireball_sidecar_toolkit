@@ -4,8 +4,8 @@ applyTo: "modules/**"
 ---
 # Python Modules Instructions
 All business logic lives here — slash commands and invoke tasks are thin CLI wrappers around it
-(see `ai/shared/instructions/logic.md`). Python style, ordering, and comment rules are in
-`ai/shared/instructions/python.md`; the 10/10 test gate is in `ai/shared/instructions/tests.md`.
+(see `.ai/shared/instructions/logic.md`). Python style, ordering, and comment rules are in
+`.ai/shared/instructions/python.md`; the 10/10 test gate is in `.ai/shared/instructions/tests.md`.
 
 ## Module Layout Consistency
 Every folder under `modules/` follows the same shape so any module is navigable without reading
@@ -52,7 +52,7 @@ repo_root = get_repo_local()
 ## templates.py Change Rule
 `modules/topic/templates.py` is the single source of truth for each topic's generated `AGENTS.md`
 / `CLAUDE.md`. When you modify it, follow the **templates.py Change Rule** in
-`ai/shared/instructions/topics.md` (fix + test, ask about `/topic update`).
+`.ai/shared/instructions/topics.md` (fix + test, ask about `/topic update`).
 
 ## Common CLI Option Patterns
 ```python
@@ -91,11 +91,11 @@ if __name__ == "__main__":
 ```
 
 ## AI Provider Files
-Commands, instructions, and skills are authored in `ai/shared/` (via `fireball_sidecar_toolkit`'s
-`content/`) or this repo's `ai/local/`, and rendered as pointer stubs into every provider dir by
+Commands, instructions, and skills are authored in `.ai/shared/` (via `fireball_sidecar_toolkit`'s
+`content/`) or this repo's `.ai/local/`, and rendered as pointer stubs into every provider dir by
 `invoke sidecar.toolkit.download`. There are no per-repo sync modules —
 `invoke sidecar.toolkit.check` (inside `invoke test`) is the drift gate. See
-`ai/shared/instructions/ai_commands.md`.
+`.ai/shared/instructions/ai_commands.md`.
 
 ## Module Template
 ```python

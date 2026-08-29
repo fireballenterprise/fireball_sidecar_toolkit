@@ -3,10 +3,10 @@
 * ``.claude/commands/<slug>.md`` — Claude-specific frontmatter (``description``, ``subtask: false``,
   ``agent: general``, ``slash_command: /<slug>``, and an ``allowed-tools`` glob still derived from
   the canonical body's ``!`...``` exec line so the command runs without a permission prompt), body
-  a one-line pointer at ``ai/shared|local/commands/<slug>.md``.
+  a one-line pointer at ``.ai/shared|local/commands/<slug>.md``.
 * ``.claude/skills/<name>/SKILL.md`` — ``name``/``description``/``hints`` frontmatter in the
   ``<name>/SKILL.md`` shape Claude Code requires, body a pointer at
-  ``ai/shared|local/skills/<name>.md``.
+  ``.ai/shared|local/skills/<name>.md``.
 """
 
 from __future__ import annotations

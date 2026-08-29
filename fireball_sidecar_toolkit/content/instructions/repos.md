@@ -89,7 +89,7 @@ Phase 2 until they confirm.
 
 ### Phase 2 — Ship
 For each repo (same order), run the equivalent of `/ship-it`: fix, test, commit, push, draft PR
-notes, open the PR (assigned to the user per `ai/shared/instructions/git.md`'s Pull Request Assignee rule).
+notes, open the PR (assigned to the user per `.ai/shared/instructions/git.md`'s Pull Request Assignee rule).
 Report each repo's PR URL back to the user. Never merge a PR yourself, and never push directly to a
 shared/default branch across multiple repos without being asked.
 

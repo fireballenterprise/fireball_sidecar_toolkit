@@ -1,7 +1,7 @@
-"""``sidecar-toolkit upload`` — promote local ``ai/shared/`` edits back to the toolkit as a PR.
+"""``sidecar-toolkit upload`` — promote local ``.ai/shared/`` edits back to the toolkit as a PR.
 
-1. Diff the repo's ``ai/shared/`` against the packaged canonical ``content/``.
-2. Refuse if anything outside ``ai/shared/`` differs (never carries ``ai/local/`` or generated files).
+1. Diff the repo's ``.ai/shared/`` against the packaged canonical ``content/``.
+2. Refuse if anything outside ``.ai/shared/`` differs (never carries ``.ai/local/`` or generated files).
 3. In a local ``fireball_sidecar_toolkit`` checkout: branch off ``development``, apply the changed
    files into ``content/``, commit, push, open a PR with ``gh``. Never a direct push to ``main``.
 
@@ -42,7 +42,7 @@ def _resolve_toolkit(repo_root: Path, override: Path | None) -> Path:
 
 
 def _changed_files(shared: Path, packaged: Path) -> list[Path]:
-    """Relative paths under ``ai/shared/`` that differ from (or are new vs) the packaged tree."""
+    """Relative paths under ``.ai/shared/`` that differ from (or are new vs) the packaged tree."""
     changed: list[Path] = []
     for path in sorted(p for p in shared.rglob("*") if p.is_file()):
         rel = path.relative_to(shared)
@@ -53,7 +53,7 @@ def _changed_files(shared: Path, packaged: Path) -> list[Path]:
 
 
 def upload(repo_root: Path, *, branch: str | None = None, toolkit_repo: Path | None = None) -> str:
-    """Open a PR against the toolkit with this repo's ``ai/shared/`` changes; return the PR URL."""
+    """Open a PR against the toolkit with this repo's ``.ai/shared/`` changes; return the PR URL."""
     repo_root = repo_root.resolve()
     shared = repo_root / SHARED_SUBPATH
     if not shared.is_dir():

@@ -2,9 +2,9 @@
 
 The AI does the asking; this module only reports state and runs the primitive the caller chooses:
 
-1. :func:`inspect` — is ``ai/shared/`` modified vs the last commit? Returns the diff so the caller
+1. :func:`inspect` — is ``.ai/shared/`` modified vs the last commit? Returns the diff so the caller
    can ask "upload these first, or discard?".
-2. :func:`run` — once resolved: ``download(force=True)`` (clobber ``ai/shared/`` + regenerate).
+2. :func:`run` — once resolved: ``download(force=True)`` (clobber ``.ai/shared/`` + regenerate).
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ class SyncPlan:
 
 
 def inspect(repo_root: Path) -> SyncPlan:
-    """Report whether ``ai/shared/`` has uncommitted edits, without changing anything."""
+    """Report whether ``.ai/shared/`` has uncommitted edits, without changing anything."""
     repo_root = repo_root.resolve()
     status = dirty_tracked(repo_root, SHARED_SUBPATH)
     if not status:
@@ -47,5 +47,5 @@ def inspect(repo_root: Path) -> SyncPlan:
 
 
 def run(repo_root: Path, *, force: bool = False) -> RenderResult:
-    """Clobber ``ai/shared/`` from the package and regenerate. ``force`` skips the dirty guard."""
+    """Clobber ``.ai/shared/`` from the package and regenerate. ``force`` skips the dirty guard."""
     return download(repo_root, force=force)

@@ -5,7 +5,7 @@ description: Use for pushing the current branch to git remote — runs invoke fi
 
 # Push Workflow
 
-Use this file as source of truth: `ai/shared/commands/push.md`
+Use this file as source of truth: `.ai/shared/commands/push.md`
 
 When the user asks to push changes, read that file and follow it.
 

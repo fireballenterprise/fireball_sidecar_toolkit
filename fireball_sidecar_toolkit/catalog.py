@@ -1,10 +1,10 @@
-"""Parse the canonical content tree (and a consuming repo's ``ai/local/``) into structured records.
+"""Parse the canonical content tree (and a consuming repo's ``.ai/local/``) into structured records.
 
 Two content roots feed every renderer:
 
 * ``shared`` — the packaged canonical tree (``content/`` in this repo, shipped as package data;
-  mirrored into a consuming repo as ``ai/shared/``)
-* ``local`` — an optional per-repo overlay in the consuming repo (``ai/local/``)
+  mirrored into a consuming repo as ``.ai/shared/``)
+* ``local`` — an optional per-repo overlay in the consuming repo (``.ai/local/``)
 
 ``load_bundle()`` merges them (``local`` wins on a slug collision) and returns a
 :class:`ContentBundle` the renderers consume. Nothing here writes files or knows about any
@@ -20,8 +20,8 @@ from pathlib import Path
 import yaml
 
 # Content layers, lowest-priority first. A slug defined in a later layer overrides the earlier one.
-# `shared` is the packaged canonical tree (rendered as `ai/shared/`); `local` is the consuming
-# repo's `ai/local/` overlay.
+# `shared` is the packaged canonical tree (rendered as `.ai/shared/`); `local` is the consuming
+# repo's `.ai/local/` overlay.
 LAYERS = ("shared", "local")
 
 _EXEC_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
@@ -150,7 +150,7 @@ class ContentBundle:
         return self.origin.get(slug)
 
     def is_local(self, slug: str) -> bool:
-        """True when ``slug`` was resolved from the consuming repo's ``ai/local/`` overlay."""
+        """True when ``slug`` was resolved from the consuming repo's ``.ai/local/`` overlay."""
         return self.origin.get(slug) == "local"
 
 
@@ -175,7 +175,7 @@ def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None =
 
     Args:
         canonical_root: the toolkit ``content/`` root. Defaults to the packaged tree.
-        local_root: consuming repo's ``ai/local/`` root. Optional.
+        local_root: consuming repo's ``.ai/local/`` root. Optional.
     """
     layers: list[tuple[str, Path]] = [("shared", (canonical_root or packaged_content_root()).resolve())]
     if local_root is not None:

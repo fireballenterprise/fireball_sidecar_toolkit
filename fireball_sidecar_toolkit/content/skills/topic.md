@@ -5,7 +5,7 @@ description: Use for switching the active planning-topic workspace, or listing/c
 
 # Topic Workspace Workflow
 
-Use this file as source of truth: `ai/shared/commands/topic.md`
+Use this file as source of truth: `.ai/shared/commands/topic.md`
 
 When the user asks to switch topics, list topics, create a new topic, or run a `/topic`
 equivalent, read that file and follow it.
