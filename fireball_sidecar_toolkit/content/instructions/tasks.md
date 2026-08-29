@@ -15,16 +15,14 @@ no judgment calls, no AI-specific behavior.
 
 | Task | Command | Description |
 |------|---------|-------------|
-| AI Sync | `uv run --no-sync invoke ai.sync` | Sync all AI tool commands from `.github/prompts/` |
 | Fix | `uv run --no-sync invoke fix` | Run all auto-fixes (ruff fix + format) |
-| Test | `uv run --no-sync invoke test` | Run all tests (actionlint + check_agents + pylint + pytest + ruff + yamllint) |
+| Test | `uv run --no-sync invoke test` | Run all tests (actionlint + pylint + pytest + ruff + yamllint + toolkit drift check) |
 
 ## Test Tasks
 
 | Task | Command | Description |
 |------|---------|-------------|
 | actionlint | `uv run --no-sync invoke tests.actionlint` | GitHub Actions workflow validation |
-| check_agents | `uv run --no-sync invoke tests.check_agents` | Verify `.github/prompts/` mirrors stay in sync |
 | pylint | `uv run --no-sync invoke tests.pylint` | Python code quality |
 | pytest | `uv run --no-sync invoke tests.pytest` | Python unit test suite |
 | rufflint | `uv run --no-sync invoke tests.rufflint` | Python linting and formatting |
@@ -92,18 +90,19 @@ uv run --no-sync invoke test   # verify 10/10
 
 All `uv run` calls MUST use `--no-sync`. See `.github/instructions/tests.instructions.md`.
 
-## AI Sync Tasks
+## AI Provider Sync Tasks
 
-`.github/prompts/` is the source of truth for all slash commands. Run after adding or modifying any `.github/prompts/*.prompt.md` file.
+Shared commands/instructions/skills come from `fireball_sidecar_toolkit`. The tasks are shipped by
+the package and mounted under `sidecar.toolkit.*`:
 
 | Task | Command | Description |
 |------|---------|-------------|
-| sync all | `uv run --no-sync invoke ai.sync` | Sync all AI tools at once (runs both below) |
-| hermes | `uv run --no-sync invoke hermes.sync` | Sync `~/.hermes/` config + SKILL.md |
-| opencode | `uv run --no-sync invoke opencode.sync` | Sync `.opencode/command/` |
+| download | `uv run --no-sync invoke sidecar.toolkit.download` | clobber `_shared/` from the package, regenerate every provider file |
+| check | `uv run --no-sync invoke sidecar.toolkit.check` | read-only drift gate (runs inside `invoke test`) |
+| sync | `uv run --no-sync invoke sidecar.toolkit.sync` | inspect `_shared/` for local edits → offer upload → download |
+| upload | `uv run --no-sync invoke sidecar.toolkit.upload` | open a PR against the toolkit with local `_shared/` edits |
 
-`.claude/commands/` and `.clinerules/workflows/` have no sync task — they're hand-maintained
-mirrors, checked by `tests.check_agents` (below).
+Never hand-edit a generated provider file. See `prompts.instructions.md`.
 
 ## Ollama Tasks
 
@@ -127,14 +126,11 @@ Tasks within a file must be ordered **alphabetically by function name**. Do not 
 
 ```
 tasks/
-├── combos.py        # fix, test, ai.sync combo tasks
+├── combos.py        # fix, test combo tasks
 ├── debug.py         # debug utilities
-├── hermes.py        # hermes.sync — syncs ~/.hermes/ config + SKILL.md
-├── ollama.py        # ollama.install/list/update/uninstall/start/stop/status/restart/clean
-├── opencode.py      # opencode.sync — syncs .opencode/command/
 ├── ruff.py          # ruff.fix + ruff.format
 ├── setup.py         # setup.properties — creates/stamps properties.yml
-├── tests.py         # actionlint, check_agents, pylint, pytest, rufflint, yamllint
+├── tests.py         # actionlint, pylint, pytest, rufflint, yamllint
 ├── upgrade.py        # libs, python, sync, upgrade
 ├── uv.py            # uv.upgrade_bin, uv.upgrade_libs
 └── versioning.py    # all, libs, workflows (version-lock checks)

@@ -26,10 +26,11 @@ description: "Use when reviewing a pull request or code change in this repo — 
 - `.github/instructions/` is this repo's source of truth for all AI/agent rules — a PR that
   changes behavior without updating the relevant instruction file is incomplete, not just
   under-documented.
-- The five synced command/skill dirs (`.github/prompts/`, `.claude/commands/`, `.claude/skills/`,
-  `.clinerules/workflows/`, `.opencode/command/`) must stay behaviorally consistent — see
-  `.github/instructions/prompts.instructions.md` and `skills.instructions.md`. Flag a PR that edits
-  some but not all five; `uv run --no-sync invoke tests.check_agents` confirms they match.
+- Commands/instructions/skills are authored once in `fireball_sidecar_toolkit`'s `content/` and
+  rendered into every provider dir (`.github/prompts/`, `.github/instructions/`, `.claude/`,
+  `.clinerules/workflows/`, `.sidecar/`). Never hand-edit a generated provider file — flag a PR
+  that does. `uv run --no-sync invoke sidecar.toolkit.check` confirms the generated files match
+  canonical + `_local/`; it runs inside `invoke test`.
 
 ## What NOT to Flag
 - Formatting nitpicks `ruff format` already enforces — don't re-litigate what the tool owns.

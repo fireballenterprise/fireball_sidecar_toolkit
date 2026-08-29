@@ -22,9 +22,7 @@ reading its source first:
   not one large file. The filename matches the CLI subcommand name exactly
   (`financials/update_card_limit.py` → `/financials update_card_limit`).
 - **Naming** — module directory names are lowercase `snake_case` nouns matching the domain/tool
-  they wrap (`financials`, `opencode`, `topic`) — never mixed case or a `_module` suffix.
-- **Sync-only modules** (`hermes/`, `opencode/`) are the lightweight exception: just `sync.py`,
-  plus `route.py` only where a slash command exists.
+  they wrap (`chat`, `repo`, `topic`) — never mixed case or a `_module` suffix.
 - **`common/`** is the only module importable from every other module — it holds no domain logic
   of its own, only shared plumbing.
 
@@ -70,12 +68,12 @@ All Python changes must achieve 10/10 before any commit. See `.github/instructio
 
 ## templates.py Change Rule
 
-`modules/topic/templates.py` is the single source of truth for all topic instruction file content (OPENCODE.md). It drives what gets generated when `/topic init` or `/topic update` runs.
+`modules/topic/templates.py` is the single source of truth for each topic's generated
+`AGENTS.md`/`CLAUDE.md`. It drives what `/topic init` and `/topic update` produce.
 
 **When you modify `templates.py`:**
 1. Run fix + test as usual (10/10 required)
 2. **Ask the user**: "Should I run `/topic update` to regenerate all topic AGENTS.md files with the new template?"
-3. Also **check whether `AGENTS.md` (repo root) needs manual sync** — root AGENTS.md is hand-maintained and may need the same rule added if the template change reflects a new policy
 
 ## Common CLI Option Patterns
 
@@ -133,8 +131,6 @@ modules/
 ├── financials/
 │   ├── route.py
 │   └── update_card_limit.py
-├── hermes/
-│   └── sync.py         # Syncs ~/.hermes/ config + SKILL.md from .github/prompts/
 ├── ollama/
 │   ├── helpers.py      # Shared helpers (pull_model via Ollama REST API)
 │   ├── install.py      # Install Ollama + local coding LLM on Apple Silicon
@@ -142,8 +138,6 @@ modules/
 │   ├── status.py       # Show service + running-model status
 │   ├── uninstall.py    # Uninstall Ollama + remove all models
 │   └── update.py       # Update binary + models + cleanup orphaned blobs
-├── opencode/
-│   └── sync.py         # Syncs .opencode/command/ from .github/prompts/
 ├── repo/
 │   ├── cleanup.py
 │   ├── pull.py
@@ -169,7 +163,7 @@ modules/
 │   ├── new.py
 │   ├── route.py        # /topic routing
 │   ├── switch.py
-│   ├── templates.py    # Single source of truth for OPENCODE.md content
+│   ├── templates.py    # Single source of truth for each topic's generated AGENTS.md/CLAUDE.md
 │   │                   # ⚠️  See topics.instructions.md → "templates.py Change Rule" when modifying this file.
 │   ├── update.py
 │   └── update_list.py
@@ -184,22 +178,12 @@ modules/
 `tasks.instructions.md`), not a `route.py` — there's no per-slash-command router module for this
 one, unlike most other modules.
 
-## AI Tool Sync Modules
+## AI Provider Files
 
-`.github/prompts/` is the single source of truth for all slash commands — see
-`.github/instructions/logic.instructions.md` for why. Two sync modules generate tool-specific
-formats from it:
-
-| Module | Output | Invoke command |
-|---|---|---|
-| `modules/hermes/sync.py` | `~/.hermes/config.yaml` + `SKILL.md` | `inv hermes.sync` |
-| `modules/opencode/sync.py` | `.opencode/command/*.md` | `inv opencode.sync` |
-
-Run `inv ai.sync` to regenerate both at once. Never hand-edit these two output dirs.
-
-`.claude/commands/*.md` and `.clinerules/workflows/*.md` have no sync script — they're
-hand-maintained 1:1 mirrors of `.github/prompts/`, verified by `inv tests.check_agents`. See
-`.github/instructions/prompts.instructions.md`.
+Commands, instructions, and skills are authored in `fireball_sidecar_toolkit`'s `content/` (or this
+repo's `_local/`) and rendered into every provider dir by `invoke sidecar.toolkit.download`. There
+are no per-repo sync modules — `invoke sidecar.toolkit.check` (inside `invoke test`) is the drift
+gate. See `prompts.instructions.md`.
 
 ## Module Template
 
