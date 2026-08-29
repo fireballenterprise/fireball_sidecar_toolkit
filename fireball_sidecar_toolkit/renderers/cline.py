@@ -1,7 +1,7 @@
 """Render ``.clinerules/workflows/*.md`` for Cline — pointer stubs.
 
 Cline workflows are body-only (no frontmatter). Each is a one-line pointer at the canonical
-``ai/shared|local/commands/<slug>.md``.
+``.ai/shared|local/commands/<slug>.md``.
 """
 
 from __future__ import annotations

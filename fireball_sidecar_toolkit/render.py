@@ -24,9 +24,9 @@ def render_repo(
     canonical_root: Path | None = None,
     only: list[str] | None = None,
 ) -> RenderResult:
-    """Regenerate every provider view in ``repo_root`` from ``ai/shared`` + ``ai/local``.
+    """Regenerate every provider view in ``repo_root`` from ``.ai/shared`` + ``.ai/local``.
 
-    ``ai/shared/`` comes from the packaged canonical tree (or ``canonical_root``); ``ai/local/`` is
+    ``.ai/shared/`` comes from the packaged canonical tree (or ``canonical_root``); ``.ai/local/`` is
     read from ``repo_root`` when that directory exists.
 
     Args:
@@ -35,7 +35,7 @@ def render_repo(
         only: restrict to a subset of renderer names (``renderers.ALL`` keys).
     """
     repo_root = repo_root.resolve()
-    local_dir = repo_root / "ai" / "local"
+    local_dir = repo_root / ".ai" / "local"
     bundle: ContentBundle = load_bundle(
         canonical_root=canonical_root or packaged_content_root(),
         local_root=local_dir if local_dir.is_dir() else None,

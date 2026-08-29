@@ -10,7 +10,7 @@ hints:
 
 # Screenshot View Workflow
 
-Use this file as source of truth: `ai/shared/commands/ss.md`
+Use this file as source of truth: `.ai/shared/commands/ss.md`
 
 When the user asks to look at the latest screenshot, or runs a `/ss` equivalent, read that file and follow it.
 
@@ -19,4 +19,4 @@ uv run --no-sync python -m modules.screenshots.route "view"
 ```
 
 Then use the `view_image` tool on `screenshots/latest.png` (relative to the repo root). See
-`ai/shared/instructions/screenshots.md` for the shared-folder rules.
+`.ai/shared/instructions/screenshots.md` for the shared-folder rules.

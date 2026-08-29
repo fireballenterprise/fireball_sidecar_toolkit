@@ -1,4 +1,4 @@
-"""Parsing the canonical content trees and an ai/local/ overlay."""
+"""Parsing the canonical content trees and an .ai/local/ overlay."""
 
 import pytest
 
@@ -28,7 +28,7 @@ def test_local_overlay_wins_and_is_flagged(tmp_path):
     (canonical / "instructions").mkdir(parents=True)
     (canonical / "commands" / "push.md").write_text("---\ndescription: canonical\n---\nbody\n")
 
-    local = tmp_path / "ai" / "local"
+    local = tmp_path / ".ai" / "local"
     (local / "commands").mkdir(parents=True)
     (local / "commands" / "push.md").write_text("---\ndescription: local override\n---\nlocal body\n")
     (local / "commands" / "mine.md").write_text("---\ndescription: repo-only\n---\nx\n")

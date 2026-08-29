@@ -5,7 +5,7 @@ argument-hint: no arguments required
 agent: agent
 ---
 
-First, read `ai/shared/instructions/repos.md` in full — it's the source of truth for
+First, read `.ai/shared/instructions/repos.md` in full — it's the source of truth for
 both what the `repos` map means and the Cross-Repo Change Workflow.
 
 Then read `properties.yml` at the repo root and resolve its `repos` key (the org/repo list) and
@@ -15,8 +15,8 @@ run `/setup` first.
 - If the user just wants to know what the related repos are, summarize the map and stop there.
 - If the user wants a change applied to the related repos (e.g. "apply this to the related repos" /
   "update the related repos with this"), follow the Cross-Repo Change Workflow in
-  `ai/shared/instructions/repos.md` against each repo in scope.
+  `.ai/shared/instructions/repos.md` against each repo in scope.
 
 This command doubles as a recognition trigger: whenever the user says "related repos", "the repos",
 "other repos", "pull all repos", or "pull the repos" about this vault's family (not generic talk about "the repository"), read
-`ai/shared/instructions/repos.md` and act on it — even if they didn't explicitly run `/repos`.
+`.ai/shared/instructions/repos.md` and act on it — even if they didn't explicitly run `/repos`.
