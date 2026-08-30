@@ -15,10 +15,17 @@ function Install-Tools {
     }
 }
 
+# Dot-source setup.local.ps1 once, then run its `Setup-Local-<Phase>` function if defined.
+# Phases: `Tools` (after the tool install, before the venv) and `Post` (after properties.yml).
+$script:LocalHookSourced = $false
 function Invoke-LocalHook {
-    if (Test-Path "setup.local.ps1") {
-        Write-Host "`nINFO: Running repo-local setup hook (setup.local.ps1)"
-        . ./setup.local.ps1
+    param([string]$Phase)
+    if (-not (Test-Path "setup.local.ps1")) { return }
+    if (-not $script:LocalHookSourced) { . ./setup.local.ps1; $script:LocalHookSourced = $true }
+    $fn = "Setup-Local-$Phase"
+    if (Get-Command $fn -ErrorAction SilentlyContinue) {
+        Write-Host "`nINFO: setup.local.ps1 -> $fn"
+        & $fn
     }
 }
 
@@ -42,6 +49,7 @@ function Configure-Properties {
 }
 
 Install-Tools
-Invoke-LocalHook
+Invoke-LocalHook Tools
 Setup-PythonEnv
 Configure-Properties
+Invoke-LocalHook Post
