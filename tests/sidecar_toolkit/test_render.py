@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from fireball_sidecar_toolkit.catalog import packaged_content_root
+from fireball_sidecar_toolkit.catalog import packaged_ai_root
 from fireball_sidecar_toolkit.render import render_repo
 from fireball_sidecar_toolkit.renderers import GENERATED_HEADER
 
@@ -46,7 +46,7 @@ def _mini_content(root: Path) -> Path:
 
 
 def test_every_renderer_produces_output(tmp_path):
-    result = render_repo(tmp_path, canonical_root=packaged_content_root())
+    result = render_repo(tmp_path, canonical_root=packaged_ai_root())
     produced = {p.relative_to(tmp_path).parts[0] for p in result.written}
     assert {".github", ".claude", ".clinerules", ".sidecar", "AGENTS.md", "CLAUDE.md"} <= produced
     assert (tmp_path / "AGENTS.md").exists()
@@ -54,7 +54,7 @@ def test_every_renderer_produces_output(tmp_path):
 
 
 def test_generated_header_on_every_markdown_file(tmp_path):
-    for path in render_repo(tmp_path, canonical_root=packaged_content_root()).written:
+    for path in render_repo(tmp_path, canonical_root=packaged_ai_root()).written:
         if path.suffix == ".md":
             assert GENERATED_HEADER in path.read_text(encoding="utf-8"), path
 

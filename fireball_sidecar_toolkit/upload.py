@@ -1,7 +1,9 @@
-"""``sidecar-toolkit upload`` — promote local ``.ai/toolkit/`` edits back to the toolkit as a PR.
+"""``sidecar-toolkit upload`` — promote local edits to a toolkit-managed path back as a PR.
 
-1. Diff the repo's ``.ai/toolkit/`` against the packaged canonical ``content/``.
-2. Refuse if anything outside ``.ai/toolkit/`` differs (never carries ``.ai/local/`` or generated files).
+1. Diff every clobbered tree/file (``.ai/toolkit/``, ``modules/toolkit/``, ``tasks/toolkit/``,
+   ``tests/toolkit/``, ``setup.sh``, ``setup.ps1``) against the packaged ``content/``.
+2. Refuse if anything *outside* those paths differs (never carries ``.ai/<repo>/`` or generated
+   provider files).
 3. In a local ``fireball_sidecar_toolkit`` checkout: branch off ``development``, apply the changed
    files into ``content/``, commit, push, open a PR with ``gh``. Never a direct push to ``main``.
 
@@ -13,16 +15,15 @@ from __future__ import annotations
 
 import filecmp
 import os
-import shutil
 import subprocess
 from pathlib import Path
 
 from ._git import git, is_git_repo
-from .catalog import packaged_content_root
-from .download import TOOLKIT_SUBPATH
+from .catalog import CLOBBER_FILES, CLOBBER_TREES, packaged_content_root
 
 _PACKAGE_NAME = "fireball_sidecar_toolkit"
 _REPO_ENV_VAR = "FIREBALL_SIDECAR_TOOLKIT_REPO"
+_IGNORE_PARTS = {"__pycache__"}
 
 
 class UploadError(RuntimeError):
@@ -41,34 +42,42 @@ def _resolve_toolkit(repo_root: Path, override: Path | None) -> Path:
     return candidate
 
 
-def _changed_files(shared: Path, packaged: Path) -> list[Path]:
-    """Relative paths under ``.ai/toolkit/`` that differ from (or are new vs) the packaged tree."""
-    changed: list[Path] = []
-    for path in sorted(p for p in shared.rglob("*") if p.is_file()):
-        rel = path.relative_to(shared)
-        reference = packaged / rel
-        if not reference.is_file() or not filecmp.cmp(path, reference, shallow=False):
-            changed.append(rel)
-    return changed
+def _changed(repo_root: Path, content: Path) -> list[tuple[Path, Path]]:
+    """``(repo file, content-relative path)`` pairs for every clobbered file that differs."""
+    out: list[tuple[Path, Path]] = []
+    for key, rel in CLOBBER_TREES.items():
+        tree = repo_root / rel
+        if not tree.is_dir():
+            continue
+        for path in sorted(p for p in tree.rglob("*") if p.is_file()):
+            sub = path.relative_to(tree)
+            if not _IGNORE_PARTS.isdisjoint(sub.parts) or path.suffix in (".pyc", ".pyo"):
+                continue
+            reference = content / key / sub
+            if not reference.is_file() or not filecmp.cmp(path, reference, shallow=False):
+                out.append((path, Path(key) / sub))
+    for src_rel, dest_rel in CLOBBER_FILES.items():
+        path = repo_root / dest_rel
+        reference = content / src_rel
+        if path.is_file() and (not reference.is_file() or not filecmp.cmp(path, reference, shallow=False)):
+            out.append((path, Path(src_rel)))
+    return out
 
 
 def upload(repo_root: Path, *, branch: str | None = None, toolkit_repo: Path | None = None) -> str:
-    """Open a PR against the toolkit with this repo's ``.ai/toolkit/`` changes; return the PR URL."""
+    """Open a PR against the toolkit with this repo's toolkit-managed edits; return the PR URL."""
     repo_root = repo_root.resolve()
-    shared = repo_root / TOOLKIT_SUBPATH
-    if not shared.is_dir():
-        raise UploadError(f"No {TOOLKIT_SUBPATH}/ in {repo_root} — nothing to upload.")
+    managed = (*CLOBBER_TREES.values(), *CLOBBER_FILES.values())
 
-    outside = is_git_repo(repo_root) and git(
-        "status", "--porcelain", "--", ".", f":(exclude){TOOLKIT_SUBPATH}", cwd=repo_root, check=False
-    )
+    excludes = [f":(exclude){p}" for p in managed]
+    outside = is_git_repo(repo_root) and git("status", "--porcelain", "--", ".", *excludes, cwd=repo_root, check=False)
     if outside:
-        raise UploadError(f"Uncommitted changes outside {TOOLKIT_SUBPATH}/ — commit or stash them first.")
+        raise UploadError("Uncommitted changes outside the toolkit-managed paths — commit or stash them first.")
 
-    packaged = packaged_content_root()
-    changed = _changed_files(shared, packaged)
+    content = packaged_content_root()
+    changed = _changed(repo_root, content)
     if not changed:
-        return f"{TOOLKIT_SUBPATH}/ matches canonical content — nothing to upload."
+        return "Toolkit-managed paths match canonical content — nothing to upload."
 
     toolkit = _resolve_toolkit(repo_root, toolkit_repo)
     if git("status", "--porcelain", cwd=toolkit, check=False):
@@ -77,12 +86,12 @@ def upload(repo_root: Path, *, branch: str | None = None, toolkit_repo: Path | N
     branch = branch or "sync_shared_content"
     git("fetch", "origin", "development", cwd=toolkit)
     git("checkout", "-B", branch, "origin/development", cwd=toolkit)
-    for rel in changed:
-        target = toolkit / _PACKAGE_NAME / "content" / rel
+    for path, content_rel in changed:
+        target = toolkit / _PACKAGE_NAME / "content" / content_rel
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(shared / rel, target)
+        target.write_bytes(path.read_bytes())
     git("add", "--", f"{_PACKAGE_NAME}/content", cwd=toolkit)
-    summary = ", ".join(str(r) for r in changed)
+    summary = ", ".join(str(r) for _, r in changed)
     git("commit", "-m", f"content: sync from a consuming repo ({summary})", cwd=toolkit)
     git("push", "-u", "origin", branch, cwd=toolkit)
 

@@ -38,6 +38,25 @@ def test_download_clobbers_shared_and_renders(repo: Path):
     assert (repo / ".claude" / "commands").is_dir()
 
 
+def test_download_clobbers_the_shared_python_and_scripts(repo: Path):
+    download(repo)
+    assert (repo / "modules" / "toolkit" / "common" / "properties.py").is_file()
+    assert (repo / "tasks" / "toolkit" / "common" / "main.py").is_file()
+    assert (repo / "tests" / "toolkit").is_dir()
+    setup = repo / "setup.sh"
+    assert setup.is_file() and setup.stat().st_mode & 0o111  # executable
+    assert (repo / "setup.ps1").is_file()
+
+
+def test_check_flags_a_tampered_shared_module(repo: Path):
+    download(repo)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "generated")
+    (repo / "modules" / "toolkit" / "common" / "properties.py").write_text("tampered\n")
+    with pytest.raises(DriftError, match="modules/toolkit/common/properties.py"):
+        check(repo)
+
+
 def test_check_passes_immediately_after_download(repo: Path):
     download(repo)
     _git(repo, "add", "-A")
