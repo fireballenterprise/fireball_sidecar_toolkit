@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 import yaml
-from modules.toolkit.topic import init, templates, update, update_list
+from modules.toolkit.topic import init, reindex, switch, templates, update, update_list
+from modules.toolkit.topic import list as topic_list
 
 pytestmark = pytest.mark.topic
 
@@ -12,9 +13,15 @@ pytestmark = pytest.mark.topic
 @pytest.fixture
 def topics_root(tmp_path, monkeypatch):
     (tmp_path / "topics").mkdir()
-    for module in (update_list, init, update):
+    for module in (update_list, init, update, reindex, switch):
         monkeypatch.setattr(module, "get_repo_root", lambda: tmp_path, raising=False)
     return tmp_path
+
+
+def _make_topic_dir(root, path: str) -> None:
+    topic_dir = root / "topics" / path
+    topic_dir.mkdir(parents=True, exist_ok=True)
+    (topic_dir / "AGENTS.md").write_text(f"# {path}\n")
 
 
 def _list_yml(root) -> dict:
@@ -33,6 +40,12 @@ class TestRenderAgentsMd:
     def test_nested_topic_gets_deeper_relative_path(self):
         out = templates.render_agents_md("a/b", instructions=["sidecar"])
         assert "(../../../.github/instructions/sidecar.instructions.md)" in out
+
+    def test_deeply_nested_topic_gets_one_dotdot_per_segment(self):
+        out = templates.render_agents_md("workshop/welding/tig/dcen", instructions=["sidecar"])
+        # 4 path segments + 1 for topics/ = five `../`
+        assert "(../../../../../.github/instructions/sidecar.instructions.md)" in out
+        assert "# Agent Instructions — dcen" in out
 
     def test_no_instructions_section_when_none_given(self):
         out = templates.render_agents_md("plain")
@@ -97,3 +110,89 @@ class TestScaffoldAndUpdate:
         ]
         assert init.split_instructions(None) is None
         assert init.split_instructions("") is None
+
+
+class TestLegacyLayoutMigration:
+    def _write_legacy(self, root, tree: dict) -> None:
+        (root / "topics" / "topics_list.yml").write_text(yaml.safe_dump({"topics_layout": tree}))
+
+    def test_load_flattens_nested_layout_to_paths(self, topics_root):
+        self._write_legacy(
+            topics_root,
+            {"workshop": {"tig_welding": {}, "tools": {}}, "help": {"mac": {"vscode": {}}}, "travel": {}},
+        )
+        assert update_list.list_topics() == [
+            "help/mac/vscode",
+            "travel",
+            "workshop/tig_welding",
+            "workshop/tools",
+        ]
+
+    def test_topic_exists_works_off_migrated_layout(self, topics_root):
+        self._write_legacy(topics_root, {"workshop": {"tig_welding": {}}})
+        (topics_root / "topics" / "workshop" / "tig_welding").mkdir(parents=True)
+        assert update_list.topic_exists("workshop/tig_welding")
+
+    def test_next_write_drops_topics_layout_key(self, topics_root):
+        self._write_legacy(topics_root, {"a": {}, "b": {}})
+        update_list.add_topic("c")
+        data = yaml.safe_load((topics_root / "topics" / "topics_list.yml").read_text())
+        assert "topics_layout" not in data
+        assert data["topics"] == ["a", "b", "c"]
+
+
+class TestReindex:
+    def test_registers_every_agents_md_dir_and_prunes_gone_ones(self, topics_root):
+        for path in ("travel", "workshop/tig_welding", "workshop/welding/tig"):
+            _make_topic_dir(topics_root, path)
+        update_list.add_topic("stale/removed")  # in index, no directory
+
+        reindex.main(dry_run=False)
+
+        assert update_list.list_topics() == ["travel", "workshop/tig_welding", "workshop/welding/tig"]
+
+    def test_preserves_topic_meta_for_survivors(self, topics_root):
+        _make_topic_dir(topics_root, "sidecar_vscode")
+        update_list.add_topic("sidecar_vscode", "Extension.", ["sidecar"])
+
+        reindex.main(dry_run=False)
+
+        assert update_list.topic_meta("sidecar_vscode") == {"description": "Extension.", "instructions": ["sidecar"]}
+
+    def test_dry_run_does_not_write(self, topics_root):
+        _make_topic_dir(topics_root, "travel")
+        reindex.main(dry_run=True)
+        assert not (topics_root / "topics" / "topics_list.yml").exists()
+
+
+class TestSwitchSelfHeal:
+    @pytest.fixture(autouse=True)
+    def _repo_root(self, topics_root, monkeypatch):
+        monkeypatch.setattr(switch.topic_active, "get_repo_root", lambda: topics_root, raising=False)
+
+    def test_switch_registers_unindexed_but_real_topic(self, topics_root):
+        _make_topic_dir(topics_root, "workshop/tig_welding")
+
+        switch.main(path="workshop/tig_welding")
+
+        assert "workshop/tig_welding" in update_list.list_topics()
+        assert switch.topic_active.get_active_topic() == "workshop/tig_welding"
+
+    def test_switch_errors_when_directory_absent(self, topics_root):
+        with pytest.raises(SystemExit):
+            switch.main(path="workshop/does_not_exist")
+
+
+class TestListTree:
+    def test_list_all_renders_indented_tree_with_active_star(self, topics_root, monkeypatch, capsys):
+        for path in ("travel", "workshop/tig_welding", "workshop/tools"):
+            update_list.add_topic(path)
+        monkeypatch.setattr(topic_list.topic_active, "get_active_topic", lambda: "workshop/tig_welding")
+        monkeypatch.setattr(topic_list.update_list, "get_repo_root", lambda: topics_root, raising=False)
+
+        topic_list.main(show_all=True)
+
+        out = capsys.readouterr().out
+        assert "workshop/" in out
+        assert "  tig_welding ⭐" in out
+        assert "  tools" in out
