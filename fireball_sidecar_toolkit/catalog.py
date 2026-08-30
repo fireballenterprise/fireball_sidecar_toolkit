@@ -25,6 +25,21 @@ import yaml
 # repo's `.ai/<repo>/` overlay.
 LAYERS = ("shared", "local")
 
+# Everything the toolkit ships lives under `content/`. `download` clobber-copies each of these into
+# the consuming repo verbatim; `check` drift-gates them; `upload` maps repo edits back.
+#   content/<key>/  ->  <repo path>/
+CLOBBER_TREES = {
+    "ai": ".ai/toolkit",  # commands/ instructions/ skills/ — then rendered into every provider dir
+    "modules": "modules/toolkit",  # shared Python — imported as modules.toolkit.*
+    "tasks": "tasks/toolkit",  # shared invoke tasks
+    "tests": "tests/toolkit",  # tests for the shared modules
+}
+#   content/<key>  ->  <repo file>
+CLOBBER_FILES = {
+    "scripts/setup.sh": "setup.sh",
+    "scripts/setup.ps1": "setup.ps1",
+}
+
 _EXEC_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
 _H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 
@@ -186,8 +201,13 @@ def _collect(root: Path, subdir: str, suffix: str = ".md") -> list[Path]:
 
 
 def packaged_content_root() -> Path:
-    """Absolute path to the ``content/`` tree bundled inside this package."""
+    """Absolute path to the ``content/`` tree bundled inside this package (all shipped trees)."""
     return (Path(__file__).resolve().parent / "content").resolve()
+
+
+def packaged_ai_root() -> Path:
+    """Absolute path to ``content/ai/`` — the commands/instructions/skills bundle the renderers read."""
+    return packaged_content_root() / "ai"
 
 
 def load_bundle(
@@ -203,11 +223,12 @@ def load_bundle(
     :attr:`ContentBundle.origin` records which layer won.
 
     Args:
-        canonical_root: the toolkit ``content/`` root. Defaults to the packaged tree.
+        canonical_root: the ``ai/`` bundle root (``content/ai/`` packaged, ``.ai/toolkit/`` in a
+            consuming repo). Defaults to the packaged ``content/ai/``.
         local_root: consuming repo's ``.ai/<local_name>/`` root. Optional.
         local_name: the local dir's name, recorded on the bundle for the renderers' pointers.
     """
-    layers: list[tuple[str, Path]] = [("shared", (canonical_root or packaged_content_root()).resolve())]
+    layers: list[tuple[str, Path]] = [("shared", (canonical_root or packaged_ai_root()).resolve())]
     if local_root is not None:
         layers.append(("local", local_root.resolve()))
 

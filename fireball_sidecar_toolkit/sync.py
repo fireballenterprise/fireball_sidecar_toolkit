@@ -2,9 +2,9 @@
 
 The AI does the asking; this module only reports state and runs the primitive the caller chooses:
 
-1. :func:`inspect` — is ``.ai/toolkit/`` modified vs the last commit? Returns the diff so the caller
-   can ask "upload these first, or discard?".
-2. :func:`run` — once resolved: ``download(force=True)`` (clobber ``.ai/toolkit/`` + regenerate).
+1. :func:`inspect` — is any toolkit-managed path modified vs the last commit? Returns the diff so
+   the caller can ask "upload these first, or discard?".
+2. :func:`run` — once resolved: ``download(force=True)`` (re-clobber every managed path + regenerate).
 """
 
 from __future__ import annotations
@@ -13,8 +13,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ._git import dirty_tracked, tracked_diff
-from .download import TOOLKIT_SUBPATH, download
+from .catalog import CLOBBER_FILES, CLOBBER_TREES
+from .download import download
 from .render import RenderResult
+
+_MANAGED = (*CLOBBER_TREES.values(), *CLOBBER_FILES.values())
 
 
 @dataclass(frozen=True)
@@ -25,21 +28,21 @@ class SyncPlan:
 
 
 def inspect(repo_root: Path) -> SyncPlan:
-    """Report whether ``.ai/toolkit/`` has uncommitted edits, without changing anything."""
+    """Report whether any toolkit-managed path has uncommitted edits, without changing anything."""
     repo_root = repo_root.resolve()
-    status = dirty_tracked(repo_root, TOOLKIT_SUBPATH)
+    status = "\n".join(s for p in _MANAGED if (s := dirty_tracked(repo_root, p)))
     if not status:
         return SyncPlan(
             dirty=False,
             shared_diff="",
-            message=f"{TOOLKIT_SUBPATH}/ is clean — safe to `invoke sidecar.toolkit.download`.",
+            message="Toolkit-managed paths are clean — safe to `invoke sidecar.toolkit.download`.",
         )
-    diff = tracked_diff(repo_root, TOOLKIT_SUBPATH)
+    diff = "\n".join(d for p in _MANAGED if (d := tracked_diff(repo_root, p)))
     return SyncPlan(
         dirty=True,
         shared_diff=diff,
         message=(
-            f"{TOOLKIT_SUBPATH}/ has uncommitted edits:\n{status}\n\n"
+            f"Toolkit-managed paths have uncommitted edits:\n{status}\n\n"
             "Upload them to the toolkit first (`invoke sidecar.toolkit.upload`) or discard them, "
             "then download."
         ),
@@ -47,5 +50,5 @@ def inspect(repo_root: Path) -> SyncPlan:
 
 
 def run(repo_root: Path, *, force: bool = False) -> RenderResult:
-    """Clobber ``.ai/toolkit/`` from the package and regenerate. ``force`` skips the dirty guard."""
+    """Re-clobber every managed path from the package and regenerate. ``force`` skips the guard."""
     return download(repo_root, force=force)
