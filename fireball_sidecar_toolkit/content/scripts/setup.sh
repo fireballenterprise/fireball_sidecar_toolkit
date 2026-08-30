@@ -37,12 +37,17 @@ install_tools_linux() {
 # Repo-local hook
 # ---------------------------------------------------------------------------
 
+# Source setup.local.sh once, then run its `setup_local_<phase>` function if it defines one.
+# Phases: `tools` (after the OS tool install, before the venv) and `post` (after properties.yml).
 run_local_hook() {
-  if [ -f "setup.local.sh" ]; then
+  [ -f "setup.local.sh" ] || return 0
+  # shellcheck disable=SC1091
+  [ -n "${_SETUP_LOCAL_SOURCED:-}" ] || { source setup.local.sh; _SETUP_LOCAL_SOURCED=1; }
+  local fn="setup_local_$1"
+  if declare -F "$fn" > /dev/null; then
     echo -e
-    echo "INFO: Running repo-local setup hook (setup.local.sh)"
-    # shellcheck disable=SC1091
-    source setup.local.sh
+    echo "INFO: setup.local.sh -> $fn"
+    "$fn"
   fi
 }
 
@@ -91,9 +96,10 @@ main() {
       ;;
   esac
 
-  run_local_hook
+  run_local_hook tools
   setup_python_env
   configure_properties
+  run_local_hook post
 }
 
 main "$@"
