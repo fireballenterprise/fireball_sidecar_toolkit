@@ -92,6 +92,32 @@ class TestSyncGitignoreTracking:
         assert gitignore.read_text() == "node_modules/\n\n.DS_Store\n"
 
 
+class TestNormalizeLineage:
+    """Tests for _normalize_lineage() — collapsing the nested-tree lineage form to flat adjacency."""
+
+    def test_flat_input_is_unchanged(self):
+        raw = {"template_python": ["a", "b"]}
+        assert setup_props._normalize_lineage(raw) == {"template_python": ["a", "b"]}  # pylint: disable=protected-access
+
+    def test_nested_tree_flattens_to_adjacency(self):
+        raw = {
+            "template_python": [
+                "sidecar_chat",
+                {"template_shopify": ["powerups", "gear"]},
+                {"template_ai_python": ["orchestrator", {"template_ai_vault": ["ai_vault"]}]},
+            ]
+        }
+        assert setup_props._normalize_lineage(raw) == {  # pylint: disable=protected-access
+            "template_python": ["sidecar_chat", "template_shopify", "template_ai_python"],
+            "template_shopify": ["powerups", "gear"],
+            "template_ai_python": ["orchestrator", "template_ai_vault"],
+            "template_ai_vault": ["ai_vault"],
+        }
+
+    def test_empty_input(self):
+        assert setup_props._normalize_lineage(None) == {}  # pylint: disable=protected-access
+
+
 class TestBackfillMissingSections:
     """Tests for backfill_missing_sections() — adding tier-fragment sections to an existing file."""
 
@@ -127,5 +153,30 @@ class TestBackfillMissingSections:
             monkeypatch,
             fragments={"template_python": 'repo:\n  local: "x"\n'},
             existing='---\n\nrepo:\n  local: "/real/path"\n',
+        )
+        assert setup_props.backfill_missing_sections() == []
+
+    def test_noop_with_nested_lineage_and_a_fragment_edge(self, tmp_path, monkeypatch):
+        """A fragment's `{parent: [self]}` edge already covered by the nested-tree lineage on disk
+        is a true no-op — regression for the crash when the tree wasn't flattened first."""
+        self._setup(
+            tmp_path,
+            monkeypatch,
+            fragments={
+                "template_python": "repos:\n  LevonBecker:\n    - template_python\n",
+                "orchestrator": (
+                    "repos:\n  acme:\n    - orchestrator\n"
+                    "  lineage:\n    template_ai_python:\n      - orchestrator\n"
+                ),
+            },
+            existing=(
+                "---\n\nrepos:\n"
+                "  acme:\n    - orchestrator\n"
+                "  levonbecker:\n    - template_python\n"
+                "  lineage:\n"
+                "    template_python:\n"
+                "      - template_ai_python:\n"
+                "          - orchestrator\n"
+            ),
         )
         assert setup_props.backfill_missing_sections() == []
