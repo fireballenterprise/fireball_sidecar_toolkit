@@ -1,10 +1,11 @@
-"""Parse the canonical content tree (and a consuming repo's ``.ai/local/``) into structured records.
+"""Parse the canonical content tree (and a consuming repo's local overlay) into structured records.
 
 Two content roots feed every renderer:
 
 * ``shared`` — the packaged canonical tree (``content/`` in this repo, shipped as package data;
-  mirrored into a consuming repo as ``.ai/shared/``)
-* ``local`` — an optional per-repo overlay in the consuming repo (``.ai/local/``)
+  mirrored into a consuming repo as ``.ai/toolkit/``)
+* ``local`` — an optional per-repo overlay in the consuming repo (``.ai/<repo>/``, e.g.
+  ``.ai/ai_vault/``)
 
 ``load_bundle()`` merges them (``local`` wins on a slug collision) and returns a
 :class:`ContentBundle` the renderers consume. Nothing here writes files or knows about any
@@ -20,8 +21,8 @@ from pathlib import Path
 import yaml
 
 # Content layers, lowest-priority first. A slug defined in a later layer overrides the earlier one.
-# `shared` is the packaged canonical tree (rendered as `.ai/shared/`); `local` is the consuming
-# repo's `.ai/local/` overlay.
+# `shared` is the packaged canonical tree (rendered as `.ai/toolkit/`); `local` is the consuming
+# repo's `.ai/<repo>/` overlay.
 LAYERS = ("shared", "local")
 
 _EXEC_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
@@ -135,6 +136,27 @@ class Skill:
         return _split_frontmatter(self.path.read_text(encoding="utf-8"))
 
 
+TOOLKIT_DIRNAME = "toolkit"
+
+
+def local_layer_name(repo_root: Path) -> str:
+    """Name of the ``.ai/<name>/`` dir holding this repo's own (non-toolkit) content.
+
+    The repo's folder name (``.ai/ai_vault/``) when that dir exists; else — if the repo was cloned
+    to a different folder name — the sole non-``toolkit`` child of ``.ai/``. Falls back to the
+    stable literal ``"local"`` when there is no local dir yet (must be deterministic: ``check``
+    renders in a temp mirror and has to match what ``download`` wrote).
+    """
+    ai = repo_root / ".ai"
+    if (ai / repo_root.name).is_dir():
+        return repo_root.name
+    if ai.is_dir():
+        others = [d.name for d in sorted(ai.iterdir()) if d.is_dir() and d.name != TOOLKIT_DIRNAME]
+        if len(others) == 1:
+            return others[0]
+    return "local"
+
+
 @dataclass(frozen=True)
 class ContentBundle:
     """Everything the renderers need: the merged ``shared`` + ``local`` content."""
@@ -144,13 +166,15 @@ class ContentBundle:
     skills: list[Skill] = field(default_factory=list)
     # slug -> layer name it was resolved from ("shared" or "local")
     origin: dict[str, str] = field(default_factory=dict)
+    # the consuming repo's `.ai/<local_name>/` dir name (e.g. "ai_vault"); "local" as a bare default
+    local_name: str = "local"
 
     def layer_of(self, slug: str) -> str | None:
         """Which layer a slug was resolved from, or ``None`` if unknown."""
         return self.origin.get(slug)
 
     def is_local(self, slug: str) -> bool:
-        """True when ``slug`` was resolved from the consuming repo's ``.ai/local/`` overlay."""
+        """True when ``slug`` was resolved from the consuming repo's ``.ai/<local_name>/`` overlay."""
         return self.origin.get(slug) == "local"
 
 
@@ -166,7 +190,12 @@ def packaged_content_root() -> Path:
     return (Path(__file__).resolve().parent / "content").resolve()
 
 
-def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None = None) -> ContentBundle:
+def load_bundle(
+    *,
+    canonical_root: Path | None = None,
+    local_root: Path | None = None,
+    local_name: str = "local",
+) -> ContentBundle:
     """Merge the content layers into a :class:`ContentBundle`.
 
     Layers apply lowest-priority first: ``canonical_root`` (``shared``, defaults to the packaged
@@ -175,7 +204,8 @@ def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None =
 
     Args:
         canonical_root: the toolkit ``content/`` root. Defaults to the packaged tree.
-        local_root: consuming repo's ``.ai/local/`` root. Optional.
+        local_root: consuming repo's ``.ai/<local_name>/`` root. Optional.
+        local_name: the local dir's name, recorded on the bundle for the renderers' pointers.
     """
     layers: list[tuple[str, Path]] = [("shared", (canonical_root or packaged_content_root()).resolve())]
     if local_root is not None:
@@ -204,4 +234,5 @@ def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None =
         instructions=[instructions[k] for k in sorted(instructions)],
         skills=[skills[k] for k in sorted(skills)],
         origin=origin,
+        local_name=local_name,
     )

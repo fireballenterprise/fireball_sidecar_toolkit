@@ -5,4 +5,4 @@ argument-hint: push | pull
 agent: agent
 ---
 
-!`uv run --no-sync python -m modules.repo.route "$ARGUMENTS"`
+!`uv run --no-sync python -m modules.toolkit.repo.route "$ARGUMENTS"`

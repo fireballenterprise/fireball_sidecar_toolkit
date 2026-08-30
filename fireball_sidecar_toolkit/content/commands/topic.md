@@ -5,7 +5,7 @@ argument-hint: list [all] | switch <path> | new <path> [description] | init [des
 agent: agent
 ---
 
-!`uv run --no-sync python -m modules.topic.route "$ARGUMENTS"`
+!`uv run --no-sync python -m modules.toolkit.topic.route "$ARGUMENTS"`
 
 
 If $ARGUMENTS starts with "new", create a new topic at the given path (relative to topics/), then run init in that directory. Example: /topic new workshop/3d_printing [description].
