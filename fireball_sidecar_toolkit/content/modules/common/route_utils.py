@@ -9,8 +9,16 @@ from pathlib import Path
 LOGGER = logging.getLogger(__name__)
 
 
+#: Set this to run a routed command against a different checkout than the current directory's
+#: (e.g. a wrapper that targets another managed repo). find_repo_root() honours it before searching.
+REPO_ROOT_ENV = "SIDECAR_REPO_ROOT"
+
+
 def find_repo_root() -> Path:
-    """Find repository root by locating properties.yml."""
+    """Return the repo root: ``$SIDECAR_REPO_ROOT`` if set, else the nearest parent with properties.yml."""
+    override = os.environ.get(REPO_ROOT_ENV)
+    if override:
+        return Path(override)
     current = Path.cwd()
     while current != current.parent:
         if (current / "properties.yml").exists():

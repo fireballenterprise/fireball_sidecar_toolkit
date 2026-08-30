@@ -3,7 +3,7 @@ properties.yml's current version/latest_changes requires. See changelogs.instruc
 
 `check_each_log(update=False)` raises `ValueError` itself on the first stale entry it finds
 (rather than returning a list to assert on) — see `modules/docs/lib/change_logs.py` — so this test
-just calls it and lets that propagate as the failure. A no-op while CHANGELOG_CATEGORIES is empty.
+just calls it and lets that propagate as the failure. A no-op when properties.yml has no `changelogs:` key.
 """
 
 import pytest
