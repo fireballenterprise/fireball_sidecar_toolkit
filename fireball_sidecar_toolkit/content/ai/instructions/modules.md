@@ -38,9 +38,9 @@ def main(title):
 ```
 
 ### Path resolution
-Always use `modules/toolkit/common/properties.py` — never hardcode paths:
+Always use `modules/toolkit/setup/properties.py` — never hardcode paths:
 ```python
-from ..common.properties import get_repo_local, get_screenshots_location
+from ..setup.properties import get_repo_local, get_screenshots_location
 
 repo_root = get_repo_local()
 ```
@@ -107,7 +107,7 @@ Usage:
 """
 
 from modules.toolkit.common import cli
-from modules.toolkit.common.properties import get_repo_local
+from modules.toolkit.setup.properties import get_repo_local
 
 
 @cli.command()

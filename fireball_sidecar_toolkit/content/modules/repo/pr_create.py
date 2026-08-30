@@ -5,8 +5,8 @@ from __future__ import annotations
 import subprocess
 
 from ..common import cli as click
-from ..common.properties import get_repo_local
 from ..common.utils import error, success
+from ..setup.properties import get_repo_local
 from .pr_diff import current_branch, detect_base_branch
 
 

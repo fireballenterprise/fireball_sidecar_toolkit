@@ -11,5 +11,5 @@ The screenshot workflow — one shared `screenshots/` folder at the repo root se
 
 Invoke tasks: `inv screenshots.configure` / `inv screenshots.view` / `inv screenshots.clean`.
 
-Path resolution goes through `modules/toolkit/common/properties.py` (`get_screenshots_location()`,
+Path resolution goes through `modules/toolkit/setup/properties.py` (`get_screenshots_location()`,
 `get_screenshots_latest_file()`).

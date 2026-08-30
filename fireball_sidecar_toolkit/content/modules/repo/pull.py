@@ -3,8 +3,8 @@
 import subprocess
 
 from ..common import cli as click
-from ..common.properties import get_icloud_path, get_repo_local, is_icloud_enabled
 from ..common.utils import error, success, warning
+from ..setup.properties import get_icloud_path, get_repo_local, is_icloud_enabled
 
 
 def _decode_output(output: bytes | None) -> str:

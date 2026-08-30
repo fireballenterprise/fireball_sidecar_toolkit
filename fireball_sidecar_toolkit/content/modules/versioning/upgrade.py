@@ -5,8 +5,8 @@ import subprocess
 from pathlib import Path
 
 from ..common import cli
-from ..common.properties import get_repo_local
 from ..common.utils import error, info, success, warning
+from ..setup.properties import get_repo_local
 
 # Import check functions
 from .libs import find_updates, get_installed_packages, get_outdated_packages, load_pyproject

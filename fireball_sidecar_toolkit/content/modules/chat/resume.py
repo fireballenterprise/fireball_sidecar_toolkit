@@ -7,8 +7,8 @@ from pathlib import Path
 
 from ..common import cli as click
 from ..common.invoke_runner import get_original_cwd
-from ..common.properties import get_repo_local
 from ..common.utils import error, get_active_topic_path, get_topic_path, success, validate_topics_directory
+from ..setup.properties import get_repo_local
 from .active import clear_active, read_active, write_active
 
 

@@ -3,12 +3,12 @@
 import subprocess
 
 from ..common import cli as click
-from ..common.properties import (
+from ..common.utils import success, warning
+from ..setup.properties import (
     get_repo_local,
     get_screenshots_latest_file,
     get_screenshots_location,
 )
-from ..common.utils import success, warning
 
 
 @click.command()
