@@ -121,6 +121,11 @@ modules/ tasks/ tests/ (root)   this repo's own code — never touched
 ```
 - `sidecar.toolkit.download` — clobber every managed path from the package, render every provider
   stub (with `.ai/<repo>/` layered on top).
+- **Partial vendoring** — `.sidecar-toolkit.yml` at the repo root, `vendor: [ai, scripts]`, limits
+  which shipped trees a repo takes (`ai`, `modules`, `tasks`, `tests`, `scripts`; absent file =
+  all of them). For a repo whose shared Python has diverged too far to clobber: take `.ai/` +
+  `setup.sh` now, reconcile the rest into `content/` over time, then widen the list. `download` /
+  `check` / `sync` / `upload` all honour it; without `ai` in the list the render step is skipped.
 - `sidecar.toolkit.upload` — diff every managed path vs `content/`, open a PR against this repo
   (refuses edits outside the managed set, and `.ai/<repo>/` / generated output).
 - `sidecar.toolkit.sync` — check the managed paths for uncommitted edits -> surface them and ask

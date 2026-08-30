@@ -40,6 +40,44 @@ CLOBBER_FILES = {
     "scripts/setup.ps1": "setup.ps1",
 }
 
+# A consuming repo may vendor only a subset of what the toolkit ships — a repo whose shared Python
+# has diverged too far to clobber can still take the `.ai/` content and `setup.sh` while it
+# reconciles. `.sidecar-toolkit.yml` at the repo root, `vendor: [ai, scripts]`; absent = all of it.
+#   ai      -> content/ai/      (.ai/toolkit/ + every regenerated provider file)
+#   modules -> content/modules/ (modules/toolkit/)
+#   tasks   -> content/tasks/   (tasks/toolkit/)
+#   tests   -> content/tests/   (tests/toolkit/)
+#   scripts -> content/scripts/ (setup.sh, setup.ps1)
+VENDOR_KEYS = ("ai", "modules", "tasks", "tests", "scripts")
+_VENDOR_CONFIG = ".sidecar-toolkit.yml"
+
+
+def read_vendor(repo_root: Path) -> tuple[str, ...]:
+    """Which shipped trees this repo vendors, in :data:`VENDOR_KEYS` order. All of them by default."""
+    cfg = repo_root / _VENDOR_CONFIG
+    if not cfg.is_file():
+        return VENDOR_KEYS
+    data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+    if "vendor" not in data:
+        return VENDOR_KEYS
+    picked = set(_as_list(data.get("vendor")))
+    unknown = picked - set(VENDOR_KEYS)
+    if unknown:
+        msg = f"{_VENDOR_CONFIG}: unknown vendor keys {sorted(unknown)} (valid: {list(VENDOR_KEYS)})"
+        raise ValueError(msg)
+    return tuple(k for k in VENDOR_KEYS if k in picked)
+
+
+def vendored_trees(repo_root: Path) -> dict[str, str]:
+    """:data:`CLOBBER_TREES` filtered to what this repo vendors."""
+    vendor = read_vendor(repo_root)
+    return {k: v for k, v in CLOBBER_TREES.items() if k in vendor}
+
+
+def vendored_files(repo_root: Path) -> dict[str, str]:
+    """:data:`CLOBBER_FILES` filtered to what this repo vendors (all under the ``scripts`` key)."""
+    return dict(CLOBBER_FILES) if "scripts" in read_vendor(repo_root) else {}
+
 _EXEC_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
 _H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 
