@@ -203,11 +203,42 @@ _PROPERTIES_FILE = _REPO_ROOT / "properties.yml"
 _TEMPLATES_DIR = _REPO_ROOT / "modules" / "setup" / "templates" / "properties"
 
 
+def _normalize_lineage(raw: Any) -> dict[str, list[str]]:
+    """Flatten a `lineage` value into `parent -> [child bare names]` adjacency.
+
+    `properties.yml` stores lineage as a nested tree — a child that is itself a parent appears as a
+    single-key `{name: [grandchildren]}` mapping inside its parent's list (see repos.instructions.md).
+    A tier fragment contributes the already-flat `{parent: [self]}` edge. Both collapse to the same
+    flat adjacency map, which is what `_merge_repos` / `_lineage_depth` / `_render_repos_block` work
+    with internally.
+    """
+    flat: dict[str, list[str]] = {}
+
+    def _add(parent: str, child: str) -> None:
+        flat.setdefault(parent, [])
+        if child not in flat[parent]:
+            flat[parent].append(child)
+
+    def _walk(parent: str, children: Any) -> None:
+        for child in children or []:
+            if isinstance(child, dict):
+                name, grandchildren = next(iter(child.items()))
+                _add(parent, name)
+                _walk(name, grandchildren)
+            else:
+                _add(parent, child)
+
+    for parent, children in (raw or {}).items():
+        _walk(parent, children)
+    return flat
+
+
 def _extract_repos_block(text: str) -> tuple[str, dict[str, Any] | None]:
     """Split a top-level `repos:` block out of raw YAML text.
 
     Returns (text with that block removed, its parsed value) — or (text, None) if there's no
-    `repos:` block (a flow-style `repos: {}` placeholder doesn't count as one to extract).
+    `repos:` block (a flow-style `repos: {}` placeholder doesn't count as one to extract). Any
+    `lineage` sub-key is normalized to flat `parent -> [children]` adjacency (see `_normalize_lineage`).
     """
     lines = text.splitlines(keepends=True)
     for i, line in enumerate(lines):
@@ -217,7 +248,10 @@ def _extract_repos_block(text: str) -> tuple[str, dict[str, Any] | None]:
                 end += 1
             block = "".join(lines[i:end])
             remaining = "".join(lines[:i] + lines[end:])
-            return remaining, yaml.safe_load(block)["repos"]
+            parsed = yaml.safe_load(block)["repos"]
+            if parsed and parsed.get("lineage"):
+                parsed["lineage"] = _normalize_lineage(parsed["lineage"])
+            return remaining, parsed
     return text, None
 
 
@@ -231,16 +265,19 @@ def _merge_repos(accumulated: dict[str, Any], addition: dict[str, Any]) -> dict[
     lineage = {parent: list(children) for parent, children in accumulated.get("lineage", {}).items()}
     for org, names in addition.items():
         if org == "lineage":
-            for parent, children in names.items():
+            for parent, children in _normalize_lineage(names).items():
                 lineage.setdefault(parent, [])
                 for child in children:
                     if child not in lineage[parent]:
                         lineage[parent].append(child)
             continue
-        merged.setdefault(org, [])
+        # Org lists are matched case-insensitively (a fragment may say `LevonBecker` where the
+        # family normalized to `levonbecker`) — keep whatever casing is already accumulated.
+        target = next((existing for existing in merged if existing.lower() == org.lower()), org)
+        merged.setdefault(target, [])
         for name in names:
-            if name not in merged[org]:
-                merged[org].append(name)
+            if name not in merged[target]:
+                merged[target].append(name)
     if lineage:
         merged["lineage"] = lineage
     return merged
