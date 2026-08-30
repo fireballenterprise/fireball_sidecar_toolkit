@@ -28,7 +28,7 @@ uv run --no-sync invoke ver.project_bump_build      # feature-branch build count
 All four only rewrite `VERSION` — no commit, branch, push, tag, or workflow trigger. `project.py`
 exposes `bump_patch()`/`bump_minor()`/`bump_major()`/`bump_build()` and a `python -m
 modules.toolkit.versioning.project [patch|minor|major|build]` CLI. It has its **own** `get_repo_root()`
-keyed on `pyproject.toml` + `VERSION` — not `modules.toolkit.common.properties.get_repo_root()`, which
+keyed on `pyproject.toml` + `VERSION` — not `modules.toolkit.setup.properties.get_repo_root()`, which
 searches for the git-ignored `properties.yml` and fails in CI where `version.yml`/`release.yml`
 runs these tasks.
 

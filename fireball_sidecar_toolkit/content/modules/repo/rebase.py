@@ -4,8 +4,8 @@ import subprocess
 from pathlib import Path
 
 from ..common import cli as click
-from ..common.properties import get_repo_local
 from ..common.utils import success
+from ..setup.properties import get_repo_local
 from . import squash as squash_module
 
 _CONFLICT_CODES = {"UU", "AA", "AU", "UA", "DD", "DU", "UD"}

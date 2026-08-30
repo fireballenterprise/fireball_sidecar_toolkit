@@ -18,8 +18,8 @@ import subprocess
 from pathlib import Path
 
 from ..common import cli as click
-from ..common.properties import get_repo_root
 from ..common.utils import info, success
+from ..setup.properties import get_repo_root
 
 _USES_RE = re.compile(r"^(\s*(?:-\s+)?uses:\s*)([\w.-]+/[\w.-]+(?:/[\w./-]+)?)@([\w.-]+)\s*(?:#.*)?$")
 _MAJOR_TAG_RE = re.compile(r"^v?(\d+)$")

@@ -1,6 +1,6 @@
 ---
-description: "Use when setting up a repo for the first time, editing setup.sh / setup.local.sh, or working on modules/setup/ (the properties.yml bootstrap)."
-applyTo: "setup.sh,setup.ps1,setup.local.sh,setup.local.ps1,setup_templates/**,modules/setup/**"
+description: "Use when setting up a repo for the first time, editing setup.sh / setup.local.sh, or working on the properties.yml bootstrap (modules/toolkit/setup/ + modules/setup/templates/)."
+applyTo: "setup.sh,setup.ps1,setup.local.sh,setup.local.ps1,modules/setup/**,modules/toolkit/setup/**"
 ---
 # Setup
 ## First-time setup
@@ -29,11 +29,13 @@ setup_local_post()  { uv run --no-sync invoke aws.cdk.ensure; }
 ```
 PowerShell: `Setup-Local-Tools` / `Setup-Local-Post` in `setup.local.ps1`.
 
-## `properties.yml` bootstrap (`modules/setup/properties.py`)
-- Assembled once, on first run, from `setup_templates/*.yml` at the **repo root** (repo-local — the
-  `setup` module is clobbered, so the tier fragments cannot live beside it). One fragment per repo
-  in the lineage (`template_python.yml` … `ai_vault.yml`), deep-merged; `repo.local`,
-  `repo.remote`, `screenshots.location` stamped with detected values.
+## `properties.yml` bootstrap (`modules/toolkit/setup/properties.py`)
+- The `setup` module code is **shared** — clobbered into `modules/toolkit/setup/`. The tier YAML
+  fragments are **repo-local** — kept in `modules/setup/templates/properties/*.yml` (never
+  clobbered); `properties.py` reads them from there.
+- Assembled once, on first run: one fragment per repo in the lineage
+  (`template_python.yml` … `ai_vault.yml`), deep-merged; `repo.local`, `repo.remote`,
+  `screenshots.location` stamped with detected values.
 - A no-op every run after that — it only ever *creates* the file. To regenerate: delete
   `properties.yml` and re-run.
 - Gitignored in `template_*` repos; the ignore line is stripped on first real setup so a scaffolded

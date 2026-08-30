@@ -17,7 +17,7 @@ an entry worth logging; everything else in the module already supports it.
   <name>:
     version: 1.0.0
     latest_changes:
-      author: Ada Lovelace    # git config user.name — modules.toolkit.common.properties.get_git_author()
+      author: Ada Lovelace    # git config user.name — modules.toolkit.setup.properties.get_git_author()
       date: 2026-08-11
       description: Initial Release    # comma-separate for multiple bullets: "Added X, Fixed Y"
 ```

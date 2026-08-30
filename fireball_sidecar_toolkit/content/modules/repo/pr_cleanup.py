@@ -6,8 +6,8 @@ import subprocess
 from pathlib import Path
 
 from ..common import cli as click
-from ..common.properties import get_repo_local
 from ..common.utils import error, success
+from ..setup.properties import get_repo_local
 from . import pull as pull_module
 from .pr_diff import PROTECTED_BRANCHES, current_branch, detect_base_branch
 

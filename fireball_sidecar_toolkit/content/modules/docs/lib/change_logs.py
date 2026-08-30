@@ -6,7 +6,7 @@ import fileinput
 import logging
 from pathlib import Path
 
-from ...common.properties import get_properties, get_repo_root
+from ...setup.properties import get_properties, get_repo_root
 
 LOGGER = logging.getLogger(__name__)
 
