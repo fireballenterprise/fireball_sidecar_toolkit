@@ -19,7 +19,7 @@ import subprocess
 from pathlib import Path
 
 from ._git import git, is_git_repo
-from .catalog import CLOBBER_FILES, CLOBBER_TREES, packaged_content_root
+from .catalog import packaged_content_root, vendored_files, vendored_trees
 
 _PACKAGE_NAME = "fireball_sidecar_toolkit"
 _REPO_ENV_VAR = "FIREBALL_SIDECAR_TOOLKIT_REPO"
@@ -45,7 +45,7 @@ def _resolve_toolkit(repo_root: Path, override: Path | None) -> Path:
 def _changed(repo_root: Path, content: Path) -> list[tuple[Path, Path]]:
     """``(repo file, content-relative path)`` pairs for every clobbered file that differs."""
     out: list[tuple[Path, Path]] = []
-    for key, rel in CLOBBER_TREES.items():
+    for key, rel in vendored_trees(repo_root).items():
         tree = repo_root / rel
         if not tree.is_dir():
             continue
@@ -56,7 +56,7 @@ def _changed(repo_root: Path, content: Path) -> list[tuple[Path, Path]]:
             reference = content / key / sub
             if not reference.is_file() or not filecmp.cmp(path, reference, shallow=False):
                 out.append((path, Path(key) / sub))
-    for src_rel, dest_rel in CLOBBER_FILES.items():
+    for src_rel, dest_rel in vendored_files(repo_root).items():
         path = repo_root / dest_rel
         reference = content / src_rel
         if path.is_file() and (not reference.is_file() or not filecmp.cmp(path, reference, shallow=False)):
@@ -67,7 +67,7 @@ def _changed(repo_root: Path, content: Path) -> list[tuple[Path, Path]]:
 def upload(repo_root: Path, *, branch: str | None = None, toolkit_repo: Path | None = None) -> str:
     """Open a PR against the toolkit with this repo's toolkit-managed edits; return the PR URL."""
     repo_root = repo_root.resolve()
-    managed = (*CLOBBER_TREES.values(), *CLOBBER_FILES.values())
+    managed = (*vendored_trees(repo_root).values(), *vendored_files(repo_root).values())
 
     excludes = [f":(exclude){p}" for p in managed]
     outside = is_git_repo(repo_root) and git("status", "--porcelain", "--", ".", *excludes, cwd=repo_root, check=False)

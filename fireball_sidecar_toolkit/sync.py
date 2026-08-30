@@ -13,11 +13,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ._git import dirty_tracked, tracked_diff
-from .catalog import CLOBBER_FILES, CLOBBER_TREES
+from .catalog import vendored_files, vendored_trees
 from .download import download
 from .render import RenderResult
 
-_MANAGED = (*CLOBBER_TREES.values(), *CLOBBER_FILES.values())
+
+def _managed(repo_root: Path) -> tuple[str, ...]:
+    """The toolkit-managed repo paths this repo actually vendors (``.sidecar-toolkit.yml``)."""
+    return (*vendored_trees(repo_root).values(), *vendored_files(repo_root).values())
 
 
 @dataclass(frozen=True)
@@ -30,14 +33,15 @@ class SyncPlan:
 def inspect(repo_root: Path) -> SyncPlan:
     """Report whether any toolkit-managed path has uncommitted edits, without changing anything."""
     repo_root = repo_root.resolve()
-    status = "\n".join(s for p in _MANAGED if (s := dirty_tracked(repo_root, p)))
+    managed = _managed(repo_root)
+    status = "\n".join(s for p in managed if (s := dirty_tracked(repo_root, p)))
     if not status:
         return SyncPlan(
             dirty=False,
             shared_diff="",
             message="Toolkit-managed paths are clean — safe to `invoke sidecar.toolkit.download`.",
         )
-    diff = "\n".join(d for p in _MANAGED if (d := tracked_diff(repo_root, p)))
+    diff = "\n".join(d for p in managed if (d := tracked_diff(repo_root, p)))
     return SyncPlan(
         dirty=True,
         shared_diff=diff,

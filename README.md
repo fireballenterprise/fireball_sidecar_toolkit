@@ -31,7 +31,10 @@ No dependency wanted (non-Python repo): `uvx --from git+https://github.com/fireb
 |------|------|
 | `.ai/toolkit/` | clobbered copy of the toolkit's `content/` — never hand-edit |
 | `.ai/<repo>/` | this repo's own `instructions/ commands/ skills/` — never synced |
+| `modules/toolkit/`, `tasks/toolkit/`, `tests/toolkit/` | clobbered copies of `content/{modules,tasks,tests}/` — shared Python (`modules.toolkit.*`) |
+| `setup.sh`, `setup.ps1` | clobbered from `content/scripts/` — repo extras go in `setup.local.sh` (never clobbered) |
 | `.claude/`, `.github/{prompts,instructions,skills,copilot-instructions.md}`, `.clinerules/`, `.sidecar/`, `AGENTS.md`, `CLAUDE.md` | generated pointer stubs → `.ai/` — never hand-edit |
+| `.sidecar-toolkit.yml` (optional) | `vendor: [ai, scripts]` — take only some shipped trees (`ai`, `modules`, `tasks`, `tests`, `scripts`); absent = all |
 
 Fix shared behavior by editing `content/` here, or by editing `.ai/toolkit/` in a consuming repo and
 running `sidecar.toolkit.upload` to open a PR.
