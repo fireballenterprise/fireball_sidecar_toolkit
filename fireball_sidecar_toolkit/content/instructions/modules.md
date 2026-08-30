@@ -4,8 +4,8 @@ applyTo: "modules/**"
 ---
 # Python Modules Instructions
 All business logic lives here — slash commands and invoke tasks are thin CLI wrappers around it
-(see `.ai/shared/instructions/logic.md`). Python style, ordering, and comment rules are in
-`.ai/shared/instructions/python.md`; the 10/10 test gate is in `.ai/shared/instructions/tests.md`.
+(see `.ai/toolkit/instructions/logic.md`). Python style, ordering, and comment rules are in
+`.ai/toolkit/instructions/python.md`; the 10/10 test gate is in `.ai/toolkit/instructions/tests.md`.
 
 ## Module Layout Consistency
 Every folder under `modules/` follows the same shape so any module is navigable without reading
@@ -38,7 +38,7 @@ def main(title):
 ```
 
 ### Path resolution
-Always use `modules/common/properties.py` — never hardcode paths:
+Always use `modules/toolkit/common/properties.py` — never hardcode paths:
 ```python
 from ..common.properties import get_repo_local, get_screenshots_location
 
@@ -50,9 +50,9 @@ repo_root = get_repo_local()
 - No cross-imports between domain modules (`chat/`, `topic/`, `repo/`, …) — if truly shared, move it to `common/`
 
 ## templates.py Change Rule
-`modules/topic/templates.py` is the single source of truth for each topic's generated `AGENTS.md`
+`modules/toolkit/topic/templates.py` is the single source of truth for each topic's generated `AGENTS.md`
 / `CLAUDE.md`. When you modify it, follow the **templates.py Change Rule** in
-`.ai/shared/instructions/topics.md` (fix + test, ask about `/topic update`).
+`.ai/toolkit/instructions/topics.md` (fix + test, ask about `/topic update`).
 
 ## Common CLI Option Patterns
 ```python
@@ -63,16 +63,16 @@ repo_root = get_repo_local()
 @cli.option("--sort", type=cli.Choice(["newest", "oldest"]), default="newest")
 @cli.option("--file", type=cli.Path(exists=True), help="...")
 ```
-`modules.common.cli` handles parsing, `--help` generation, type validation, defaults, and
+`modules.toolkit.common.cli` handles parsing, `--help` generation, type validation, defaults, and
 user-friendly errors.
 
 ## Router Template
 ```python
 # modules/<module>/route.py — argument dispatch only
 import shlex, subprocess, sys
-from modules.common.route_utils import build_env, find_repo_root
+from modules.toolkit.common.route_utils import build_env, find_repo_root
 
-_SUBCOMMAND_MODULES = {"start": "modules.<module>.start", "end": "modules.<module>.end"}
+_SUBCOMMAND_MODULES = {"start": "modules.toolkit.<module>.start", "end": "modules.toolkit.<module>.end"}
 
 
 def main() -> int:
@@ -91,11 +91,11 @@ if __name__ == "__main__":
 ```
 
 ## AI Provider Files
-Commands, instructions, and skills are authored in `.ai/shared/` (via `fireball_sidecar_toolkit`'s
-`content/`) or this repo's `.ai/local/`, and rendered as pointer stubs into every provider dir by
+Commands, instructions, and skills are authored in `.ai/toolkit/` (via `fireball_sidecar_toolkit`'s
+`content/`) or this repo's `.ai/<repo>/`, and rendered as pointer stubs into every provider dir by
 `invoke sidecar.toolkit.download`. There are no per-repo sync modules —
 `invoke sidecar.toolkit.check` (inside `invoke test`) is the drift gate. See
-`.ai/shared/instructions/ai_commands.md`.
+`.ai/toolkit/instructions/ai_commands.md`.
 
 ## Module Template
 ```python
@@ -103,11 +103,11 @@ Commands, instructions, and skills are authored in `.ai/shared/` (via `fireball_
 Module description.
 
 Usage:
-    uv run --no-sync python -m modules.<group>.<name> [--option value]
+    uv run --no-sync python -m modules.toolkit.<group>.<name> [--option value]
 """
 
-from modules.common import cli
-from modules.common.properties import get_repo_local
+from modules.toolkit.common import cli
+from modules.toolkit.common.properties import get_repo_local
 
 
 @cli.command()

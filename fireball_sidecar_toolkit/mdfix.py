@@ -8,7 +8,7 @@ during file generation, so they are enforced mechanically instead:
    directory). The only ``---`` allowed there is the YAML frontmatter fence.
 
 Both rules skip fenced code blocks (```` ``` ```` / ``~~~``) and rule 2 skips the leading
-frontmatter block. :func:`fix_tree` walks ``**/*.md`` under a repo (skipping ``.ai/shared/``, any
+frontmatter block. :func:`fix_tree` walks ``**/*.md`` under a repo (skipping ``.ai/toolkit/``, any
 ``exclude`` segment, and every file carrying the generated-provider ``DO NOT EDIT`` marker);
 ``write=False`` is the read-only gate for ``invoke test`` / CI.
 """
@@ -92,7 +92,7 @@ def _iter_markdown(root: Path, exclude: tuple[str, ...]):
         parts = path.relative_to(root).parts
         if not _SKIP_DIRS.isdisjoint(parts):
             continue
-        if parts[:2] == (".ai", "shared"):  # clobbered mirror — fix content/ upstream instead
+        if parts[:2] == (".ai", "toolkit"):  # clobbered mirror — fix content/ upstream instead
             continue
         if not excluded.isdisjoint(parts):  # caller-supplied opt-outs (e.g. a generated tree)
             continue

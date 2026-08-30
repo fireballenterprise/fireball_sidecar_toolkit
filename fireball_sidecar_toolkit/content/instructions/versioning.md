@@ -1,6 +1,6 @@
 ---
-description: "Use when working with the modules/versioning/ package — bumping the repo's VERSION file for releases, or checking/updating dependency version locks and GitHub Actions action-ref pins."
-applyTo: "modules/versioning/**"
+description: "Use when working with the modules/toolkit/versioning/ package — bumping the repo's VERSION file for releases, or checking/updating dependency version locks and GitHub Actions action-ref pins."
+applyTo: "modules/toolkit/versioning/**"
 ---
 # Versioning Instructions
 ## Project VERSION Bumps (`project.py`)
@@ -27,8 +27,8 @@ uv run --no-sync invoke ver.project_bump_build      # feature-branch build count
 ```
 All four only rewrite `VERSION` — no commit, branch, push, tag, or workflow trigger. `project.py`
 exposes `bump_patch()`/`bump_minor()`/`bump_major()`/`bump_build()` and a `python -m
-modules.versioning.project [patch|minor|major|build]` CLI. It has its **own** `get_repo_root()`
-keyed on `pyproject.toml` + `VERSION` — not `modules.common.properties.get_repo_root()`, which
+modules.toolkit.versioning.project [patch|minor|major|build]` CLI. It has its **own** `get_repo_root()`
+keyed on `pyproject.toml` + `VERSION` — not `modules.toolkit.common.properties.get_repo_root()`, which
 searches for the git-ignored `properties.yml` and fails in CI where `version.yml`/`release.yml`
 runs these tasks.
 
@@ -41,7 +41,7 @@ Three checks against external sources of truth, plus the installs that follow (`
 - `ver.workflows` — compares `.github/workflows/*.yml`'s `uses: owner/repo@vN` refs against
   the latest major tag published on GitHub for that action, and rewrites just the ref pins
 
-See `modules/versioning/README.md` for full behavior/data-flow details on each.
+See `modules/toolkit/versioning/README.md` for full behavior/data-flow details on each.
 
 ```sh
 uv run --no-sync invoke ver.libs        # check + prompt to update pyproject.toml locks
@@ -67,6 +67,6 @@ uv run --no-sync invoke ver.upgrade      # install the upgrades reviewed above (
 `libs.py`/`python.py`/`workflows.py` use `@click.command()` with `--dry-run`/`--yes` options.
 
 ## Module Conventions
-Same conventions as `.ai/shared/instructions/modules.md` and
-`.ai/shared/instructions/python.md` — `main()`-style entry points, subprocess/`print()`/
+Same conventions as `.ai/toolkit/instructions/modules.md` and
+`.ai/toolkit/instructions/python.md` — `main()`-style entry points, subprocess/`print()`/
 type-hint rules — not restated here.
