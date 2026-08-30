@@ -7,8 +7,8 @@ from pathlib import Path
 import yaml
 
 from ..common import cli as click
-from ..common.chat_state import read_active
 from ..common.utils import error
+from .state import read_active
 
 ACTIVE_YML_HEADER = "# Active chat tracker\n# This file is managed by the chat scripts\n# Do not edit manually\n\n"
 

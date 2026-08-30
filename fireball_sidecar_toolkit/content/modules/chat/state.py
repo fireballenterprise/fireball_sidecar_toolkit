@@ -1,6 +1,6 @@
 """
-Shared read access to a topic's active.yml (chat state), used by both modules/chat/ (which owns
-writing/clearing it) and modules/topic/switch.py (which only needs to peek at it before switching).
+Shared read access to a topic's active.yml (chat state), used by both modules/toolkit/chat/ (which owns
+writing/clearing it) and modules/toolkit/topic/switch.py (which only needs to peek at it before switching).
 """
 
 from __future__ import annotations
