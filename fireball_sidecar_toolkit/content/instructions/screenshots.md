@@ -1,6 +1,6 @@
 ---
 description: "Use when working with screenshots or the shared screenshots/ folder — where they go, the /ss viewing workflow, and the /screenshots command."
-applyTo: "screenshots/**,modules/screenshots/**"
+applyTo: "screenshots/**,modules/toolkit/screenshots/**"
 ---
 # Screenshots Instructions
 Rules for the `screenshots/` folder at the repository root.
@@ -29,5 +29,5 @@ When the user shares a screenshot or asks you to look at one:
 3. Treat the image as context for the current conversation — don't auto-create a doc unless asked
 
 ## Implementation
-`modules/screenshots/` (`configure.py`, `view.py`, `clean.py`, `route.py`) — see its `README.md`.
-Path resolution via `modules/common/properties.py`.
+`modules/toolkit/screenshots/` (`configure.py`, `view.py`, `clean.py`, `route.py`) — see its `README.md`.
+Path resolution via `modules/toolkit/common/properties.py`.

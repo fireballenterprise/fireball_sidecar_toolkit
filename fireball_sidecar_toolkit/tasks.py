@@ -24,14 +24,14 @@ from .release import release as _release
 
 @task
 def download(context):  # noqa: ARG001
-    """Clobber .ai/shared/ from the installed toolkit, then regenerate every provider view."""
+    """Clobber .ai/toolkit/ from the installed toolkit, then regenerate every provider view."""
     result = _download(Path.cwd())
     print(f"Rendered {result.by_count} files.")
 
 
 @task
 def check(context):  # noqa: ARG001
-    """Read-only drift gate — fail if any generated provider file (or .ai/shared/) is stale."""
+    """Read-only drift gate — fail if any generated provider file (or .ai/toolkit/) is stale."""
     _check(Path.cwd())
     print("No drift.")
 
@@ -54,7 +54,7 @@ def mdfix(context, check=False, exclude=""):  # noqa: ARG001
 
 @task
 def sync(context, force=False):  # noqa: ARG001
-    """Inspect .ai/shared/ for local edits; if clean (or force), clobber + regenerate."""
+    """Inspect .ai/toolkit/ for local edits; if clean (or force), clobber + regenerate."""
     plan = _sync.inspect(Path.cwd())
     print(plan.message)
     if plan.dirty and not force:
@@ -65,7 +65,7 @@ def sync(context, force=False):  # noqa: ARG001
 
 @task
 def upload(context, branch=None, toolkit_repo=None):  # noqa: ARG001
-    """Open a PR against fireball_sidecar_toolkit with this repo's .ai/shared/ edits.
+    """Open a PR against fireball_sidecar_toolkit with this repo's .ai/toolkit/ edits.
 
     The toolkit checkout is found via --toolkit-repo, then $FIREBALL_SIDECAR_TOOLKIT_REPO,
     then a sibling ../fireball_sidecar_toolkit dir.

@@ -7,7 +7,7 @@ agent: agent
 
 Gather the branch and diff context:
 
-!`uv run --no-sync python -m modules.repo.route "pr_diff"`
+!`uv run --no-sync python -m modules.toolkit.repo.route "pr_diff"`
 
 If that fails, show the full output to the user and ask how they'd like to proceed.
 
@@ -20,7 +20,7 @@ Then create the pull request:
 1. Note the `Base branch:` value printed above.
 2. Draft a concise PR title (under 70 characters) summarizing the change.
 3. Run:
-   `uv run --no-sync python -m modules.repo.route "pr_create --title=\"<title>\" --content=\"<notes>\""`
+   `uv run --no-sync python -m modules.toolkit.repo.route "pr_create --title=\"<title>\" --content=\"<notes>\""`
 4. Report the PR URL to the user.
 
 If a PR already exists for this branch, `pr_create` reports its URL instead of erroring — just

@@ -4,7 +4,7 @@ description: Use for running all tests and linters — ruff, pylint, yamllint, a
 ---
 
 # Test Workflow
-Use this file as source of truth: `.ai/shared/commands/test.md`
+Use this file as source of truth: `.ai/toolkit/commands/test.md`
 
 When the user asks to run tests/linters, or an equivalent `/test` request, read that file and
 follow it.
