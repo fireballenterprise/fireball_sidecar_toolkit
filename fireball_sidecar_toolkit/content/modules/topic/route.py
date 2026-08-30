@@ -11,7 +11,7 @@ from ..common.route_utils import build_env, find_repo_root
 
 LOGGER = logging.getLogger(__name__)
 
-_SUBCOMMANDS = {"init", "list", "new", "switch", "update"}
+_SUBCOMMANDS = {"init", "list", "new", "reindex", "switch", "update"}
 
 # `modules.toolkit.topic` when vendored, `modules.topic` flat — resolve against our own package so
 # the file is identical either way.
@@ -83,7 +83,7 @@ def main() -> int:
     else:
         subcommand, rest = "switch", args
 
-    flags = rest if subcommand == "update" else _ARG_BUILDERS[subcommand](rest)
+    flags = rest if subcommand in ("update", "reindex") else _ARG_BUILDERS[subcommand](rest)
 
     return _run(_SUBCOMMAND_MODULES[subcommand], flags)
 
