@@ -1,81 +1,38 @@
-"""Display topics in pretty tree format."""
+"""List all topics in a tree/flat view, starring the active one. Backs `/topic list`."""
 
 from __future__ import annotations
 
-from typing import Any
-
-import yaml
+import logging
 
 from ..common import cli as click
-from ..common.utils import error
-from ..setup.properties import get_repo_local
-from .active import read_active_topic
+from . import active as topic_active
+from . import update_list
 
-
-def _print_tree(tree: dict[str, Any], active_topic: str | None) -> None:
-    for category in sorted(tree.keys()):
-        children = tree[category]
-        star = "⭐ " if active_topic == category else ""
-        click.secho(f"{star}{category}/", fg="cyan", bold=True)
-        _print_tree_node(children, active_topic, parent_path=category, indent="  ")
-
-
-def _print_tree_node(tree: dict[str, Any], active_topic: str | None, parent_path: str, indent: str) -> None:
-    for key in sorted(tree.keys()):
-        children = tree[key]
-        current_path = f"{parent_path}/{key}"
-        if children:
-            star = "⭐ " if active_topic == current_path else ""
-            click.secho(f"{indent}{star}{key}/", fg="yellow", bold=True)
-            _print_tree_node(children, active_topic, parent_path=current_path, indent=indent + "  ")
-        else:
-            star = "⭐ " if active_topic == current_path else ""
-            click.secho(f"{indent}├─ {star}{key}", fg="green")
+LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.option("--all", "show_all", is_flag=True, help="Show the full topics tree")
+@click.option("--all", "show_all", is_flag=True, default=False, help="Show every topic instead of just the active one")
 def main(show_all: bool = False) -> None:
-    """Display the active topic or the full topic tree."""
-    repo_local = get_repo_local()
-    topics_yaml = repo_local / "topics" / "topics_list.yml"
-    active_topic = read_active_topic(repo_local)
-
-    if not topics_yaml.exists():
-        error("topics_list.yml not found. Run /topic update to generate it.")
-
-    with topics_yaml.open() as f:
-        data = yaml.safe_load(f) or {}
-
-    topics_layout = data.get("topics_layout")
-    if not isinstance(topics_layout, dict):
-        error("Invalid topics_list.yml format: missing or invalid 'topics_layout' key")
+    """Show the active topic, or every topic when `show_all` is set."""
+    active = topic_active.get_active_topic()
+    topics = update_list.list_topics()
 
     if not show_all:
-        if active_topic:
-            click.echo(f"⭐ Active Topic: {active_topic}")
-        else:
-            click.echo("No active topic is currently set.")
+        if active is None:
+            click.echo("No active topic. Run `/topic switch <path>` or `/topic list all` to see every topic.")
+            return
+        click.echo(f"⭐ Active Topic: {active}")
+        return
 
-        click.echo()
-        click.echo("💡 Use /topic list all to show all topics")
-        click.echo("💡 Use /topic <path> to navigate to a topic")
-        click.echo("   Example: /topic mac/fusion")
+    if not topics:
+        click.echo("No topics yet. Run `/topic new <path>` to create one.")
         return
 
     click.echo("📚 Available Topics")
-    click.echo("==================")
-    click.echo()
-
-    if active_topic:
-        click.echo(f"⭐ Active Topic: {active_topic}")
-        click.echo()
-
-    _print_tree(topics_layout, active_topic)
-
-    click.echo()
-    click.echo("💡 Use /topic <path> to navigate to a topic")
-    click.echo("   Example: /topic mac/fusion")
+    for topic in topics:
+        marker = "⭐ " if topic == active else "  "
+        click.echo(f"{marker}{topic}")
 
 
 if __name__ == "__main__":

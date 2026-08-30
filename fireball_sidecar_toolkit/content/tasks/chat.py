@@ -15,9 +15,9 @@ def end(context):
 
 
 @task(name="list")
-def list_chats(context, sort="newest_first"):
-    """Show every chat file in the active topic, starring the active one (--sort=newest_first|oldest_first|alphabetical)"""
-    context.run(f"python -m modules.toolkit.chat.list --sort={sort}")
+def list_chats(context):
+    """Show every chat file in the active topic, starring the active one"""
+    context.run("python -m modules.toolkit.chat.list")
 
 
 @task

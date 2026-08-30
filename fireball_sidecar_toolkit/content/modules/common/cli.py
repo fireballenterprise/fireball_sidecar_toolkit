@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import inspect
+import logging
+import os
 import pathlib
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
+
+LOGGER = logging.getLogger(__name__)
 
 
 def is_tty() -> bool:
@@ -86,6 +91,11 @@ def _coerce(value: str, value_type: type | object) -> object:
     return value
 
 
+def _auto_confirm_enabled() -> bool:
+    """Return True when confirmation prompts should be auto-accepted for scripts."""
+    return os.environ.get("AUTO_CONFIRM", "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
 def prompt(
     label: str,
     *,
@@ -119,7 +129,7 @@ def prompt(
 
 def confirm(label: str, *, default: bool = False) -> bool:
     """Prompt yes/no in interactive terminals; use default in non-interactive mode."""
-    if not is_tty():
+    if _auto_confirm_enabled() or not is_tty():
         return default
 
     hint = "[Y/n]" if default else "[y/N]"
@@ -215,6 +225,19 @@ def _add_option(parser: argparse.ArgumentParser, spec: _OptionSpec) -> None:
     parser.add_argument(*spec.flags, **kwargs)
 
 
+def _invoked_as_script() -> bool:
+    """True only when reached via this module's own `if __name__ == "__main__": main()`.
+
+    Distinguishes `python -m modules.x.y [--flags]` (where `sys.argv[1:]` are genuine CLI args
+    for this command) from an in-process call like `some_module.main()` from an invoke task
+    (where `sys.argv` still holds the invoke process's own argv, e.g. `['repo.pr_diff']` — parsing
+    that as this command's own args raises a spurious "unrecognized arguments" error).
+    """
+    frame = inspect.currentframe()
+    caller = frame.f_back.f_back if frame and frame.f_back else None
+    return caller is not None and caller.f_globals.get("__name__") == "__main__"
+
+
 def command() -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator compatible subset of click.command."""
 
@@ -229,7 +252,10 @@ def command() -> Callable[[Callable[..., Any]], Callable[..., Any]]:
             for spec in specs:
                 _add_option(parser, spec)
 
-            parsed = parser.parse_args()
+            argv = sys.argv[1:]
+            if not _invoked_as_script() and not any(arg.startswith("-") for arg in argv):
+                argv = []
+            parsed = parser.parse_args(argv)
             return func(**vars(parsed))
 
         wrapper.__cli_options__ = specs
