@@ -10,11 +10,17 @@ from ...setup.properties import get_properties, get_repo_root
 
 LOGGER = logging.getLogger(__name__)
 
-# Root properties.yml keys that own a change log under docs/change_logs/<category>/<name>.md.
-# Empty here — this repo has nothing versioned in properties.yml in that shape yet. Add a
-# category (e.g. "cloudformation", "lambda_functions") to this tuple once there's a version-
-# tracked entry to log; everything else in this module already supports it.
-CHANGELOG_CATEGORIES: tuple[str, ...] = ()
+
+def _changelog_categories() -> tuple[str, ...]:
+    """Root properties.yml keys that own a change log under docs/change_logs/<category>/<name>.md.
+
+    Read from properties.yml's ``changelogs:`` list (e.g. ``changelogs: [cloudformation]``); empty
+    when there's no such key or no properties.yml at all — nothing to check.
+    """
+    try:
+        return tuple(get_properties().get("changelogs", []))
+    except FileNotFoundError:
+        return ()
 
 
 def changelog_entries() -> list[tuple[str, str, dict]]:
@@ -24,13 +30,14 @@ def changelog_entries() -> list[tuple[str, str, dict]]:
         List of (category, name, product) tuples — product is the dict holding `version` and
         `latest_changes`.
     """
-    if not CHANGELOG_CATEGORIES:
+    categories = _changelog_categories()
+    if not categories:
         return []  # nothing to check — skip needing a properties.yml at all
     props = get_properties()
     return [
         (category, name, product)
         for category, products in props.items()
-        if category in CHANGELOG_CATEGORIES
+        if category in categories
         for name, product in products.items()
     ]
 
@@ -121,7 +128,7 @@ def check_each_log(update: bool = False) -> None:
 
     With `update=False` (used by the drift test), raises `ValueError` on the first stale entry
     found. With `update=True` (used by `invoke docs.update_changelogs`), prepends any missing
-    entry instead and never raises. A no-op either way while CHANGELOG_CATEGORIES is empty.
+    entry instead and never raises. A no-op either way when properties.yml has no `changelogs:` key.
     """
     if update:
         LOGGER.info("Checking and Updating Change Logs as Needed")
