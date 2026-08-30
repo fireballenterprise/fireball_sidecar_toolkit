@@ -1,8 +1,10 @@
 """Parsing the canonical content trees and a local overlay."""
 
+import ast
+
 import pytest
 
-from fireball_sidecar_toolkit.catalog import load_bundle, packaged_ai_root
+from fireball_sidecar_toolkit.catalog import load_bundle, packaged_ai_root, packaged_content_root
 
 pytestmark = pytest.mark.sidecar_toolkit
 
@@ -20,6 +22,29 @@ def test_command_exec_line_extracted():
     push = next((c for c in bundle.commands if c.slug == "push"), None)
     assert push is not None
     assert push.exec_line.startswith("uv run")
+
+
+def test_content_modules_relative_imports_resolve():
+    """Every `from .x` / `from ..x` inside content/modules/ points at a file that exists.
+
+    Catches a module move (chat_state -> chat/state, common/properties -> setup/properties, …)
+    that missed updating an importer — the toolkit's own suite never imports content/ as a package.
+    """
+    modules_root = packaged_content_root() / "modules"
+    broken = []
+    for py in sorted(modules_root.rglob("*.py")):
+        tree = ast.parse(py.read_text(), filename=str(py))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom) or node.level == 0:
+                continue
+            base = py.parent
+            for _ in range(node.level - 1):
+                base = base.parent
+            target = base / (node.module.replace(".", "/") if node.module else "")
+            if target.with_suffix(".py").exists() or (target / "__init__.py").exists():
+                continue
+            broken.append(f"{py.relative_to(modules_root)}: from {'.' * node.level}{node.module or ''}")
+    assert not broken, "unresolved relative imports in content/modules/:\n" + "\n".join(broken)
 
 
 def test_local_overlay_wins_and_is_flagged(tmp_path):
