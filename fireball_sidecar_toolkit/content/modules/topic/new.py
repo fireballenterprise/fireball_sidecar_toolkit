@@ -22,9 +22,13 @@ LOGGER = logging.getLogger(__name__)
     help="Comma-separated .github/instructions/ slugs whose rules apply to this topic",
 )
 def main(path: str, description: str | None = None, instructions: str | None = None) -> None:
-    """Create a new topic at topics/<path>, initialize its structure, and switch to it."""
+    """Create a new topic at topics/<path>, initialize its structure, and switch to it.
+
+    `path` may nest to any depth (`workshop/welding/tig`); missing parent directories are
+    created. An existing directory is fine as long as it isn't already a scaffolded topic.
+    """
     topic_dir = get_repo_root() / "topics" / path
-    if topic_dir.exists():
+    if (topic_dir / "AGENTS.md").is_file():
         error(f"Topic '{path}' already exists.")
     scaffold(topic_dir, path, description, split_instructions(instructions))
 

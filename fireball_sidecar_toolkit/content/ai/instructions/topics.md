@@ -4,16 +4,26 @@ applyTo: "topics/**"
 ---
 # Topics Instructions
 ## Topic Structure
-Topics are organized as a two-level hierarchy under `topics/category/subtopic/`. Each leaf topic contains:
+Topics live under `topics/` and nest to **any depth** — `topics/travel/`,
+`topics/workshop/tig_welding/`, `topics/help/mac/vscode/` are all valid. A directory is a topic
+when it holds an `AGENTS.md`; a directory that only groups deeper topics is not itself a topic.
+Each topic directory contains:
 
 ```
-topics/<category>/<subtopic>/
+topics/<path…>/
 ├── AGENTS.md      # AI agent instructions (cross-tool: Copilot, Codex, Sidecar, etc.)
-├── CLAUDE.md      # AI agent instructions (Claude Code)
-├── active.yml     # Active chat tracker (git-ignored)
+├── CLAUDE.md      # thin pointer to AGENTS.md (Claude Code)
+├── active.yml     # active chat tracker (git-ignored)
 ├── chats/         # AI conversation logs only (YYYYMMDD_title.md format)
-└── docs/          # User-facing files of any type (created on request)
+├── plans/         # living design docs (YYYYMMDD_slug.md — see plans.instructions.md)
+└── docs/          # user-facing files of any type (created on request)
 ```
+
+The registry of every topic path is `topics/topics_list.yml` (`topics:` list + optional
+`topic_meta:`). `/topic reindex` rebuilds it from the directories on disk — run it after a pull
+that added or moved topics, or if `/topic switch` reports a topic "missing from the index". A
+legacy `topics_layout:` nested tree is migrated to the flat `topics:` list automatically on first
+read.
 
 ## Research Document Workflow — CRITICAL
 **Default: Research stays in the chat file**

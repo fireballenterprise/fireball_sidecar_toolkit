@@ -6,6 +6,11 @@ Fuzzy-match confirmation ported from `fireball_ai_vault`'s `template_ai_vault` l
 that port and stays as-is: auto-closing (not just noting) an active chat in the outgoing topic,
 and `topic/active.py`'s own richer `active_topic.yml` schema (ported the same day) is what
 actually records the switch.
+
+Self-heal: when the target `topics/<path>/` exists (has an `AGENTS.md`) but isn't in
+`topics_list.yml`, switch registers that one path and proceeds instead of erroring — the common
+case right after a pull that added topics or that the legacy-layout migration didn't fully cover.
+Only a genuinely absent directory falls through to the fuzzy suggestion / `/topic new` message.
 """
 
 from __future__ import annotations
@@ -41,13 +46,23 @@ def main(path: str) -> None:
             info(f"Auto-saved the active chat in '{current}'")
 
     if not update_list.topic_exists(path):
-        suggestion = _suggest(path)
-        if suggestion and click.confirm(f"Topic '{path}' not found. Use '{suggestion}' instead?", default=True):
-            path = suggestion
-        elif suggestion:
-            error(f"Run `/topic new {path}` to create it instead.")
+        target_dir = get_repo_root() / "topics" / path
+        if (target_dir / "AGENTS.md").is_file():
+            # The directory is a real topic; the index just doesn't know about it yet
+            # (e.g. a pull added it, or migrated a legacy topics_layout: that missed a
+            # parent). Register this one path and carry on rather than sending the user
+            # to `/topic new` for a topic that already exists. `/topic reindex` does the
+            # whole tree.
+            update_list.add_topic(path)
+            info(f"'{path}' was missing from topics_list.yml — registered it. Run `/topic reindex` to sync the rest.")
         else:
-            error(f"Topic '{path}' not found. Run `/topic new {path}` to create it.")
+            suggestion = _suggest(path)
+            if suggestion and click.confirm(f"Topic '{path}' not found. Use '{suggestion}' instead?", default=True):
+                path = suggestion
+            elif suggestion:
+                error(f"No topics/{path}/ directory. Run `/topic new {path}` to create it, or use `{suggestion}`.")
+            else:
+                error(f"No topics/{path}/ directory. Run `/topic new {path}` to create it.")
 
     topic_active.set_active_topic(path)
     success(f"Switched to: {path}")
