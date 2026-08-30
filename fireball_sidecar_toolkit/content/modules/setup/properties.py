@@ -18,6 +18,11 @@ def _expand_path(value: str) -> Path:
     return Path(os.path.expandvars(os.path.expanduser(value)))
 
 
+#: Point every repo-root/repo-local lookup at a different checkout — a wrapper that runs a routed
+#: command against another managed repo sets this before invoking the module.
+REPO_ROOT_ENV = "SIDECAR_REPO_ROOT"
+
+
 @lru_cache(maxsize=1)
 def get_repo_root() -> Path:
     """
@@ -70,14 +75,13 @@ def get_properties() -> dict[str, Any]:
 
 
 def get_repo_local() -> Path:
+    """Local repo path: ``$SIDECAR_REPO_ROOT`` if set (a wrapper targeting another checkout), else
+    ``properties.yml`` ``repo.local``.
     """
-    Get repo local path as Path object.
-
-    Returns:
-        Path to local repository.
-    """
-    props = get_properties()
-    return _expand_path(props["repo"]["local"])
+    override = os.environ.get(REPO_ROOT_ENV)
+    if override:
+        return Path(override)
+    return _expand_path(get_properties()["repo"]["local"])
 
 
 def get_repo_remote() -> str:
