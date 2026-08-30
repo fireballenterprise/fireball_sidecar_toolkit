@@ -8,8 +8,8 @@ import sys
 from pathlib import Path
 
 from ..common import cli as click
-from ..common.properties import get_repo_local
 from ..common.utils import error, info, success
+from ..setup.properties import get_repo_local
 from .active import write_active_topic
 
 

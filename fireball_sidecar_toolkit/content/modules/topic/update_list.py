@@ -5,8 +5,8 @@ from pathlib import Path
 import yaml
 
 from ..common import cli as click
-from ..common.properties import get_repo_local
 from ..common.utils import success
+from ..setup.properties import get_repo_local
 
 
 def sync_from_filesystem(repo_local: Path) -> bool:

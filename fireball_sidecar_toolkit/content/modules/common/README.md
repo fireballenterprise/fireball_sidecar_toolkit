@@ -19,7 +19,7 @@ Common utility functions for console output, error handling, and shared operatio
 
 ## Dependencies
 This module depends on:
-- `common.properties` - For reading configuration from `properties.yml`
+- `setup.properties` - For reading configuration from `properties.yml`
 - Standard library: `pathlib`, `shutil`
 - Internal CLI helper: `modules/toolkit/common/cli.py` (TUI-safe prompt/confirm/option handling)
 
@@ -51,7 +51,7 @@ Every other module imports from `common/`:
 
 ```python
 from modules.common import cli
-from modules.toolkit.common.properties import get_repo_local, get_screenshots_location
+from modules.toolkit.setup.properties import get_repo_local, get_screenshots_location
 from modules.toolkit.common.utils import success, error, warning, info
 from modules.toolkit.common.route_utils import build_env, find_repo_root
 ```

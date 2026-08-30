@@ -5,8 +5,8 @@ import shutil
 import subprocess
 
 from ..common import cli
-from ..common.properties import get_screenshots_latest_file, get_screenshots_location
 from ..common.utils import error, success, warning
+from ..setup.properties import get_screenshots_latest_file, get_screenshots_location
 
 
 def main() -> None:

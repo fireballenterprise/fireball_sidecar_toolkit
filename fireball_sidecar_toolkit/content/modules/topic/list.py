@@ -7,8 +7,8 @@ from typing import Any
 import yaml
 
 from ..common import cli as click
-from ..common.properties import get_repo_local
 from ..common.utils import error
+from ..setup.properties import get_repo_local
 from .active import read_active_topic
 
 
