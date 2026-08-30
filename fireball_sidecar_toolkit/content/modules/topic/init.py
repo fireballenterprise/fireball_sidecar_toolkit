@@ -5,8 +5,8 @@ from pathlib import Path
 
 from ..common import cli as click
 from ..common.invoke_runner import get_original_cwd
-from ..common.properties import get_repo_local, get_screenshots_location
 from ..common.utils import error, info, success
+from ..setup.properties import get_repo_local, get_screenshots_location
 from .templates import agents_md, claude_md
 from .update_list import sync_from_filesystem
 

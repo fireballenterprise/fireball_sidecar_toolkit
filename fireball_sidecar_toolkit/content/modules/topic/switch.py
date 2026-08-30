@@ -5,8 +5,8 @@ import difflib
 from ..chat.state import read_active as read_chat_active
 from ..common import cli as click
 from ..common.invoke_runner import get_original_cwd
-from ..common.properties import get_repo_local
 from ..common.utils import success
+from ..setup.properties import get_repo_local
 from .active import write_active_topic
 
 

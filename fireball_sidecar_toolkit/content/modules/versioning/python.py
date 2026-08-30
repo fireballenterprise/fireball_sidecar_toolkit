@@ -6,8 +6,8 @@ import sys
 from pathlib import Path
 
 from ..common import cli
-from ..common.properties import get_repo_local
 from ..common.utils import error, info, success, warning
+from ..setup.properties import get_repo_local
 
 
 def get_latest_stable_python() -> tuple[int, int, int]:

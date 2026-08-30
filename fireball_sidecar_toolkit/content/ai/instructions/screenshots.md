@@ -30,4 +30,4 @@ When the user shares a screenshot or asks you to look at one:
 
 ## Implementation
 `modules/toolkit/screenshots/` (`configure.py`, `view.py`, `clean.py`, `route.py`) — see its `README.md`.
-Path resolution via `modules/toolkit/common/properties.py`.
+Path resolution via `modules/toolkit/setup/properties.py`.

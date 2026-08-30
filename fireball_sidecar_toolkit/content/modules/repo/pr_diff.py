@@ -6,8 +6,8 @@ import subprocess
 from pathlib import Path
 
 from ..common import cli as click
-from ..common.properties import get_repo_local
 from ..common.utils import error
+from ..setup.properties import get_repo_local
 
 PROTECTED_BRANCHES = ("development", "develop", "main", "master")
 _DIFF_CHAR_LIMIT = 20_000

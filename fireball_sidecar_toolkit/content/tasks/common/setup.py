@@ -6,4 +6,4 @@ from invoke import task
 @task
 def properties(context):
     """Create/stamp properties.yml with this machine's repo path and git remote"""
-    context.run("python -m modules.setup.properties")
+    context.run("python -m modules.toolkit.setup.properties")

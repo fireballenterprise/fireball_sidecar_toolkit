@@ -4,8 +4,8 @@ import subprocess
 from pathlib import Path
 
 from ..common import cli as click
-from ..common.properties import get_repo_local
 from ..common.utils import error, success
+from ..setup.properties import get_repo_local
 
 
 def _find_root_commit(repo_path: Path) -> str:

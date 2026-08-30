@@ -12,8 +12,8 @@ from pathlib import Path
 import tomlkit
 
 from ..common import cli
-from ..common.properties import get_repo_local
 from ..common.utils import error, info, success
+from ..setup.properties import get_repo_local
 
 
 def get_outdated_packages() -> list[dict]:
