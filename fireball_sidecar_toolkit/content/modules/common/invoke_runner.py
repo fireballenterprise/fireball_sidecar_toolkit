@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from .properties import get_repo_local
+from ..setup.properties import get_repo_local
 
 
 def run_from_root(ctx, command: str, **kwargs):
