@@ -37,13 +37,13 @@ def switch(context, path):
 
 
 @task
-def update(context, dry_run=False, current_only=False, working_dir=None):
-    """Regenerate AGENTS.md/CLAUDE.md for every topic (or just the active one)"""
+def update(context, dry_run=False, current_only=False, topic=None):
+    """Regenerate AGENTS.md/CLAUDE.md for every topic (or just the active/named one)"""
     flags = ""
     if dry_run:
         flags += " --dry-run"
     if current_only:
         flags += " --current-only"
-    if working_dir:
-        flags += f' --working-dir="{working_dir}"'
+    if topic:
+        flags += f' --topic="{topic}"'
     context.run(f"python -m modules.toolkit.topic.update{flags}")
