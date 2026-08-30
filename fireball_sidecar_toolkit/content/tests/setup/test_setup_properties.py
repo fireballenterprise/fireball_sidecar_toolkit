@@ -90,3 +90,42 @@ class TestSyncGitignoreTracking:
         monkeypatch.setattr(setup_props, "_REPO_ROOT", tmp_path)
         setup_props._sync_gitignore_tracking("github.com/user/my_vault")  # pylint: disable=protected-access
         assert gitignore.read_text() == "node_modules/\n\n.DS_Store\n"
+
+
+class TestBackfillMissingSections:
+    """Tests for backfill_missing_sections() — adding tier-fragment sections to an existing file."""
+
+    def _setup(self, tmp_path, monkeypatch, *, fragments: dict[str, str], existing: str) -> None:
+        templates = tmp_path / "modules" / "setup" / "templates" / "properties"
+        templates.mkdir(parents=True)
+        for name, body in fragments.items():
+            (templates / f"{name}.yml").write_text(body)
+        props = tmp_path / "properties.yml"
+        props.write_text(existing)
+        monkeypatch.setattr(setup_props, "_TEMPLATES_DIR", templates)
+        monkeypatch.setattr(setup_props, "_PROPERTIES_FILE", props)
+
+    def test_adds_a_missing_section_and_leaves_existing_values_alone(self, tmp_path, monkeypatch):
+        self._setup(
+            tmp_path,
+            monkeypatch,
+            fragments={
+                "template_python": 'repos:\n  acme:\n    - template_python\n\nrepo:\n  local: "x"\n',
+                "acme_vault": 'screenshots:\n  location: "$HOME/shots"\n',
+            },
+            existing='---\n\nrepo:\n  local: "/real/path"\n',
+        )
+        added = setup_props.backfill_missing_sections()
+        assert "screenshots" in added
+        text = (tmp_path / "properties.yml").read_text()
+        assert 'local: "/real/path"' in text  # untouched
+        assert "screenshots:" in text and "$HOME/shots" in text
+
+    def test_noop_when_every_section_is_present(self, tmp_path, monkeypatch):
+        self._setup(
+            tmp_path,
+            monkeypatch,
+            fragments={"template_python": 'repo:\n  local: "x"\n'},
+            existing='---\n\nrepo:\n  local: "/real/path"\n',
+        )
+        assert setup_props.backfill_missing_sections() == []

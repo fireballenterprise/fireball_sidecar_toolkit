@@ -267,6 +267,70 @@ def _render_repos_block(repos: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _split_top_level_blocks(text: str) -> list[tuple[str, str]]:
+    """Split a fragment's remaining text (its ``repos:`` block already removed) into blank-line
+    delimited top-level blocks, each labeled by the first top-level YAML key it defines.
+
+    Keeps a block's own leading comment lines (e.g. ``# region Versions``) attached — the split
+    point is blank lines, not the key line itself.
+    """
+    blocks: list[tuple[str, str]] = []
+    for chunk in re.split(r"\n\s*\n", text.strip("\n")):
+        if not chunk.strip():
+            continue
+        match = re.search(r"^([A-Za-z_][\w.-]*):", chunk, re.MULTILINE)
+        if match:
+            blocks.append((match.group(1), chunk))
+    return blocks
+
+
+def _replace_repos_block(text: str, new_block: str) -> str:
+    """Swap the file's existing ``repos:`` block for ``new_block``, in place at the same position."""
+    remaining, _ = _extract_repos_block(text)
+    lines = remaining.splitlines(keepends=True)
+    insert_at = 1 if lines and lines[0].rstrip("\n") == "---" else 0
+    while insert_at < len(lines) and not lines[insert_at].strip():
+        insert_at += 1
+    return "".join(lines[:insert_at]) + new_block.rstrip("\n") + "\n\n" + "".join(lines[insert_at:])
+
+
+def backfill_missing_sections() -> list[str]:
+    """Add any top-level section the tier fragments define that's missing from an already-existing
+    properties.yml, leaving every existing value untouched. Returns the names of the sections added
+    (``repos`` counts as one, covering any new orgs/lineage entries), empty if nothing to add.
+    """
+    text = _PROPERTIES_FILE.read_text()
+    _, existing_repos = _extract_repos_block(text)
+
+    fragment_repos: dict[str, Any] = {}
+    fragment_blocks: list[tuple[str, str]] = []
+    for template_file in sorted(_TEMPLATES_DIR.glob("*.yml")):
+        remaining, template_repos = _extract_repos_block(template_file.read_text())
+        if template_repos:
+            fragment_repos = _merge_repos(fragment_repos, template_repos)
+        fragment_blocks.extend(_split_top_level_blocks(remaining))
+
+    added: list[str] = []
+
+    if fragment_repos:
+        merged_repos = _merge_repos(existing_repos or {}, fragment_repos)
+        if merged_repos != (existing_repos or {}):
+            text = _replace_repos_block(text, _render_repos_block(merged_repos))
+            added.append("repos")
+
+    existing_lines = text.splitlines(keepends=True)
+    for key, block in fragment_blocks:
+        if _has_section(existing_lines, key):
+            continue
+        text = text.rstrip("\n") + "\n\n" + block.rstrip("\n") + "\n"
+        existing_lines = text.splitlines(keepends=True)
+        added.append(key)
+
+    if added:
+        _PROPERTIES_FILE.write_text(text)
+    return added
+
+
 def _build_initial_content() -> str:
     """Assemble a fresh properties.yml from every tier fragment under templates/properties/*.yml.
 
@@ -414,9 +478,15 @@ def _prompt_icloud_enabled(lines: list[str]) -> None:
 
 @cli.command()
 def main() -> None:
-    """Create properties.yml from every tier fragment; a no-op if it already exists."""
+    """Create properties.yml from every tier fragment. If it already exists, backfill any section a
+    tier fragment defines that's missing from it, leaving every existing value untouched."""
     if _PROPERTIES_FILE.exists():
-        info("properties.yml already exists — leaving it untouched (delete or rename it to regenerate)")
+        added = backfill_missing_sections()
+        if added:
+            for section in added:
+                success(f"properties.yml: backfilled missing section '{section}'")
+        else:
+            info("properties.yml already up to date — nothing to backfill")
         _sync_gitignore_tracking(_detect_repo_remote())
         return
 
