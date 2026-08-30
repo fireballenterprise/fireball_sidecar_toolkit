@@ -1,1 +1,1 @@
-"""Chat management modules."""
+"""Dated chat-session logging for /chat."""

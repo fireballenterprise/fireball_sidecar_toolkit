@@ -1,57 +1,56 @@
-"""Active topic state management for repository root."""
+"""Track the currently active topic in active_topic.yml at the repo root.
 
+Schema ported from `fireball_ai_vault`'s `template_ai_vault` lineage (2026-08-09) — a header
+comment + `---` document-start marker (fixes the yamllint "missing document start" warning the
+old bare `topic: <path>` form triggered) plus `current_topic`/`base_path`/`switched_at`, richer
+than this repo's original single-field version. `base_path` is written for parity with that
+format (and as a convenience for anything that wants the `topics/`-prefixed form without
+recomputing it) but isn't read back by anything here — `current_topic` plus `get_repo_root()` is
+always the derived source of truth, same "paths stay portable across machines" reasoning
+`fireball_ai_vault`'s own version documents.
+"""
+
+from __future__ import annotations
+
+import logging
 from datetime import datetime
 from pathlib import Path
 
 import yaml
 
-ACTIVE_TOPIC_YML_HEADER = "# Active topic tracker\n# Managed by topic/switch.py\n# Do not edit manually\n---\n"
+from ..setup.properties import get_repo_root
+
+LOGGER = logging.getLogger(__name__)
+
+_ACTIVE_TOPIC_FILE = "active_topic.yml"
+_HEADER = "# Active topic tracker\n# Managed by topic/switch.py\n# Do not edit manually\n---\n"
 
 
-def read_active_topic(repo_root: Path) -> str | None:
-    """
-    Read current topic path from active_topic.yml.
+def _active_topic_path() -> Path:
+    return get_repo_root() / _ACTIVE_TOPIC_FILE
 
-    Args:
-        repo_root: Path to repository root.
 
-    Returns:
-        Current topic path string, or None if not set.
-    """
-    active_topic_file = repo_root / "active_topic.yml"
-    if not active_topic_file.exists():
+def get_active_topic() -> str | None:
+    """Return the currently active topic path (relative to topics/), or None if unset."""
+    path = _active_topic_path()
+    if not path.exists():
         return None
-
-    try:
-        with active_topic_file.open() as f:
-            data = yaml.safe_load(f) or {}
-        return data.get("current_topic")
-    except OSError:
-        return None
-    except yaml.YAMLError:
-        return None
+    data = yaml.safe_load(path.read_text()) or {}
+    return data.get("current_topic")
 
 
-def write_active_topic(repo_root: Path, topic_path: str) -> None:
-    """
-    Write active_topic.yml at repository root.
-
-    Paths are stored repo-relative only — the absolute topic path is derived at
-    read time from the repo root, so the file stays portable across machines.
-
-    Args:
-        repo_root: Path to repository root.
-        topic_path: Relative topic path (e.g. workshop/tig_welding).
-    """
-    active_topic_file = repo_root / "active_topic.yml"
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    active_topic_data = {
+def set_active_topic(topic_path: str) -> None:
+    """Record `topic_path` as the active topic, with the timestamp of this switch."""
+    data = {
         "current_topic": topic_path,
         "base_path": f"topics/{topic_path}",
-        "switched_at": timestamp,
+        "switched_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
+    _active_topic_path().write_text(_HEADER + yaml.safe_dump(data, sort_keys=False))
 
-    with active_topic_file.open("w") as f:
-        f.write(ACTIVE_TOPIC_YML_HEADER)
-        yaml.dump(active_topic_data, f, default_flow_style=False)
+
+def clear_active_topic() -> None:
+    """Remove the active-topic tracker, if present."""
+    path = _active_topic_path()
+    if path.exists():
+        path.unlink()

@@ -1,198 +1,62 @@
-"""Resume an existing chat."""
+"""Reopen an existing chat in the active topic to continue appending to it. Backs `/chat resume`."""
 
 from __future__ import annotations
 
-import subprocess
+import logging
 from pathlib import Path
 
 from ..common import cli as click
-from ..common.invoke_runner import get_original_cwd
-from ..common.utils import error, get_active_topic_path, get_topic_path, success, validate_topics_directory
-from ..setup.properties import get_repo_local
-from .active import clear_active, read_active, write_active
+from ..common.utils import error, success
+from ..setup.properties import get_repo_root
+from ..topic import active as topic_active
+from . import active as chat_active
+from . import end as chat_end
+
+LOGGER = logging.getLogger(__name__)
 
 
-def _auto_end_active_chat(current_dir: Path, active_data: dict) -> None:
-    """
-    Automatically end the active chat (internal function).
-
-    This handles the automatic ending when resuming a different chat.
-    """
-    chat_filename = active_data.get("filename", "")
-    chat_title = active_data.get("title", "chat")
-
-    # Verify chat file exists
-    chat_file = current_dir / "chats" / chat_filename
-    if not chat_file.exists():
-        error(f"Active chat file not found: {chat_filename}")
-
-    click.echo("🔄 Auto-ending active chat to resume another...")
-    click.echo(f"   Saving: {chat_filename} ({chat_title})")
-
-    # Get repo root
-    repo_root = get_repo_local()
-
-    # Stage all changes
-    try:
-        subprocess.run(["git", "add", "-A"], cwd=repo_root, check=True, capture_output=True)
-    except subprocess.CalledProcessError as e:
-        error(f"Failed to stage changes: {e}")
-
-    # Generate commit message
-    message = f"Research session: {chat_title}"
-
-    # Commit changes
-    try:
-        subprocess.run(
-            ["git", "commit", "-m", message],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        click.echo("   ✅ Changes committed")
-    except subprocess.CalledProcessError as e:
-        # Check if there were no changes to commit
-        if "nothing to commit" not in e.stdout and "nothing to commit" not in e.stderr:
-            error(f"Failed to commit changes: {e.stderr}")
-        # If nothing to commit, that's fine - continue
-
-    click.echo("   📌 Changes saved locally (run /push when ready)")
-
-    # Remove active.yml
-    clear_active(current_dir)
-    click.echo("   ✅ Cleared previous active chat status")
-
-    click.echo()
-
-
-def _get_topic_dir() -> Path:
-    active_topic_path = get_active_topic_path()
-    if active_topic_path:
-        return active_topic_path
-
-    current_dir = get_original_cwd()
-    validate_topics_directory(current_dir)
-    return current_dir
-
-
-def _load_chat_files(topic_dir: Path, topic_path: str, pattern: str | None) -> list[Path]:
-    chats_dir = topic_dir / "chats"
-    if not chats_dir.exists():
-        click.echo()
-        click.echo("💡 Use /chat start to create your first chat")
-        error(f"No chats found in topic: {topic_path}")
-
-    chat_files = list(chats_dir.glob("*.md"))
-    if not chat_files:
-        click.echo()
-        click.echo("💡 Use /chat start to create your first chat")
-        error(f"No chats found in topic: {topic_path}")
-
-    if not pattern:
-        chat_files.sort(reverse=True)
-        return chat_files
-
-    matching_files = [f for f in chat_files if pattern.lower() in f.name.lower()]
-    if not matching_files and " " in pattern:
-        underscored_pattern = pattern.replace(" ", "_")
-        matching_files = [f for f in chat_files if underscored_pattern.lower() in f.name.lower()]
-
-    if not matching_files:
-        error(f"No chats found matching: {pattern}")
-
-    matching_files.sort(reverse=True)
-    return matching_files
-
-
-def _select_chat_file(chat_files: list[Path], topic_path: str) -> Path:
-    if len(chat_files) == 1:
-        return chat_files[0]
-
-    click.echo(f"📂 Available chats in {topic_path}:")
-    click.echo()
-    for idx, conv_file in enumerate(chat_files, 1):
-        click.echo(f"{idx}. {conv_file.name}")
-        try:
-            content = conv_file.read_text()
-            lines = content.split("\n")
-            if lines:
-                title_line = lines[0].replace("#", "").strip()
-                if title_line:
-                    click.echo(f"   {title_line}")
-        except OSError:
-            pass
-        except UnicodeDecodeError:
-            pass
-        click.echo()
-
-    selection = click.prompt("Select chat number to resume", type=click.IntRange(1, len(chat_files)))
-    return chat_files[selection - 1]
-
-
-def _extract_title(chat_file: Path) -> str:
-    try:
-        content = chat_file.read_text()
-    except OSError:
-        return chat_file.stem
-
-    lines = content.split("\n")
-    if not lines:
-        return chat_file.stem
-
-    first = lines[0].replace("#", "").strip()
-    return first or chat_file.stem
-
-
-def _print_chat_preview(chat_file: Path) -> None:
-    """Print a short preview to help continue the conversation."""
-    try:
-        content = chat_file.read_text()
-    except OSError:
-        return
-
-    preview_lines = [line for line in content.splitlines() if line.strip()][:6]
-    if not preview_lines:
-        return
-
-    click.echo("📖 Chat preview:")
-    for line in preview_lines:
-        click.echo(f"   {line}")
-    click.echo()
+def _read_started(chat_path: Path) -> str:
+    for line in chat_path.read_text().splitlines():
+        if line.startswith("Date:"):
+            return line.removeprefix("Date:").strip()
+    return ""
 
 
 @click.command()
-@click.option("--pattern", default=None, help="Search pattern to filter chats")
+@click.option("--pattern", default=None, help="Filename/title substring to match (omit to require a single chat)")
 def main(pattern: str | None = None) -> None:
-    """
-    Resume an existing chat.
+    """Reopen the chat matching `pattern` (filename/title substring) in the active topic."""
+    topic_path = topic_active.get_active_topic()
+    if topic_path is None:
+        error("No active topic. Run `/topic switch <path>` first.")
 
-    If pattern provided, searches for matching chat files.
-    If no pattern, prompts user to select from available chats.
-    Updates active.yml to track the resumed chat.
-    """
-    topic_dir = _get_topic_dir()
-    topic_path = get_topic_path(topic_dir)
+    topic_dir = get_repo_root() / "topics" / topic_path
+    chats_dir = topic_dir / "chats"
+    files = sorted(p.name for p in chats_dir.glob("*.md")) if chats_dir.is_dir() else []
+    if not files:
+        error(f"No chats in '{topic_path}' yet.")
 
-    # Check for active chat and auto-end it if resuming a different chat
-    existing_active = read_active(topic_dir)
-    if existing_active is not None:
-        # Automatically end the active chat
-        _auto_end_active_chat(topic_dir, existing_active)
+    matches = [f for f in files if not pattern or pattern.lower() in f.lower()]
+    if not matches:
+        error(f"No chat matches '{pattern}'.")
+    if len(matches) > 1:
+        error(f"Multiple chats match '{pattern}': {', '.join(matches)}. Be more specific.")
 
-    chat_files = _load_chat_files(topic_dir, topic_path, pattern)
-    selected_file = _select_chat_file(chat_files, topic_path)
-    title = _extract_title(selected_file)
-    write_active(topic_dir, selected_file.name, title, topic_path, resumed=True)
+    filename = matches[0]
+    active_chat = chat_active.get_active_chat(topic_dir)
+    if active_chat is not None and active_chat["filename"] != filename:
+        chat_end.auto_close(topic_dir)
 
-    # Success output
-    success(f"Resumed chat: {selected_file.name}")
-    click.echo("✅ Active chat tracked: active.yml")
-    click.echo(f"✅ Topic: {topic_path}")
-    click.echo()
-    _print_chat_preview(selected_file)
-    click.echo("You can now continue this chat.")
-    click.echo("Use /chat end when done to save and clear active status.")
+    chat_path = chats_dir / filename
+    chat_active.set_active_chat(
+        topic_dir,
+        filename=filename,
+        title=filename,
+        started=_read_started(chat_path),
+        topic=topic_path,
+        status="resumed",
+    )
+    success(f"Resumed chat: {chat_path}")
 
 
 if __name__ == "__main__":
