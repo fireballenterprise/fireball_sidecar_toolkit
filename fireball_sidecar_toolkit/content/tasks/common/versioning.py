@@ -20,7 +20,7 @@ def _run_module(context, module, dry_run, yes):
 @task
 def libs(context, dry_run=False, yes=False):
     """Check pyproject.toml dependencies against latest releases and update version locks"""
-    _run_module(context, "modules.versioning.libs", dry_run, yes)
+    _run_module(context, "modules.toolkit.versioning.libs", dry_run, yes)
 
 
 @task
@@ -50,18 +50,22 @@ def project_bump_build(context):
 @task
 def python(context, dry_run=False, yes=False):
     """Check the pinned Python version against the latest release and update config references"""
-    _run_module(context, "modules.versioning.python", dry_run, yes)
+    _run_module(context, "modules.toolkit.versioning.python", dry_run, yes)
 
 
 @task
 def workflows(context, dry_run=False, yes=False):
     """Check .github/workflows/ action refs against latest major versions and update them"""
-    _run_module(context, "modules.versioning.workflows", dry_run, yes)
+    _run_module(context, "modules.toolkit.versioning.workflows", dry_run, yes)
 
 
 @task
 def update(context, dry_run=False, yes=False):
-    """Run every version check (libs, python, workflows)"""
-    libs(context, dry_run=dry_run, yes=yes)
-    python(context, dry_run=dry_run, yes=yes)
-    workflows(context, dry_run=dry_run, yes=yes)
+    """Backfill properties.yml from the tier fragments, then run every version check (libs, python,
+    workflows) — each runs even if an earlier one exits early."""
+    context.run("python -m modules.toolkit.setup.properties")
+    for check in (libs, python, workflows):
+        try:
+            check(context, dry_run=dry_run, yes=yes)
+        except SystemExit:  # noqa: PERF203
+            pass
