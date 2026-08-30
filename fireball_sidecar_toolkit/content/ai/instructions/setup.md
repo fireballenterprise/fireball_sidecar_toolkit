@@ -14,14 +14,20 @@ then hand off to `uv run --no-sync invoke setup.properties` to write `properties
 ## `setup.sh` / `setup.ps1` are clobbered
 They come from `fireball_sidecar_toolkit` (`content/scripts/`) — `invoke sidecar.toolkit.download`
 overwrites them. **Never edit them.** Anything repo-specific goes in `setup.local.sh` /
-`setup.local.ps1` (git-tracked, never clobbered), which the base script runs after the OS tool
-install and before the venv step. Example — a repo that needs Node:
+`setup.local.ps1` (git-tracked, never clobbered). The base script sources it once and calls two
+optional phase functions:
+- `setup_local_tools` — after the OS tool install, **before** the venv (install extra tools here:
+  Node, esbuild, …)
+- `setup_local_post` — **after** `properties.yml` is written (things that read it: `invoke
+  aws.cdk.ensure`, …)
+
 ```sh
-# setup.local.sh
+# setup.local.sh — a repo that needs Node + a post-properties step
 install_node_fnm() { ... }
-ensure_node
-ensure_esbuild
+setup_local_tools() { install_node_fnm; npm install --global esbuild; }
+setup_local_post()  { uv run --no-sync invoke aws.cdk.ensure; }
 ```
+PowerShell: `Setup-Local-Tools` / `Setup-Local-Post` in `setup.local.ps1`.
 
 ## `properties.yml` bootstrap (`modules/setup/properties.py`)
 - Assembled once, on first run, from `setup_templates/*.yml` at the **repo root** (repo-local — the
