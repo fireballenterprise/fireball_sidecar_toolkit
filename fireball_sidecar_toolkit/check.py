@@ -15,7 +15,14 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from .catalog import CLOBBER_FILES, CLOBBER_TREES, local_layer_name, packaged_ai_root, packaged_content_root
+from .catalog import (
+    local_layer_name,
+    packaged_ai_root,
+    packaged_content_root,
+    read_vendor,
+    vendored_files,
+    vendored_trees,
+)
 from .render import render_repo
 
 _IGNORE = {"__pycache__"}
@@ -23,6 +30,11 @@ _IGNORE = {"__pycache__"}
 
 class DriftError(RuntimeError):
     """A generated or clobbered file is stale relative to the packaged ``content/``."""
+
+
+_DRIFT_MSG = (
+    "Toolkit-managed files are stale:\n  - {items}\nRun `invoke sidecar.toolkit.sync` (or `download`) to regenerate."
+)
 
 
 def _files(root: Path) -> set[Path]:
@@ -56,12 +68,17 @@ def check(repo_root: Path) -> None:
     content = packaged_content_root()
 
     stale: list[str] = []
-    for key, rel in CLOBBER_TREES.items():
+    for key, rel in vendored_trees(repo_root).items():
         stale += _tree_mismatches(content / key, repo_root / rel, label=rel)
-    for src_rel, dest_rel in CLOBBER_FILES.items():
+    for src_rel, dest_rel in vendored_files(repo_root).items():
         src, dest = content / src_rel, repo_root / dest_rel
         if src.is_file() and (not dest.is_file() or src.read_bytes() != dest.read_bytes()):
             stale.append(f"{dest_rel} ({'missing' if not dest.is_file() else 'stale'})")
+
+    if "ai" not in read_vendor(repo_root):
+        if stale:
+            raise DriftError(_DRIFT_MSG.format(items="\n  - ".join(stale)))
+        return
 
     local_name = local_layer_name(repo_root)
     with tempfile.TemporaryDirectory() as tmp:
@@ -78,8 +95,4 @@ def check(repo_root: Path) -> None:
                 stale.append(str(rel))
 
     if stale:
-        raise DriftError(
-            "Toolkit-managed files are stale:\n  - "
-            + "\n  - ".join(stale)
-            + "\nRun `invoke sidecar.toolkit.sync` (or `download`) to regenerate."
-        )
+        raise DriftError(_DRIFT_MSG.format(items="\n  - ".join(stale)))

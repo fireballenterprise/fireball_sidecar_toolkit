@@ -103,3 +103,40 @@ def test_sync_inspect_reports_clean_then_dirty(repo: Path):
     plan = sync.inspect(repo)
     assert plan.dirty is True
     assert "fix.md" in plan.shared_diff
+
+
+def test_vendor_subset_skips_python_trees(repo: Path):
+    (repo / ".sidecar-toolkit.yml").write_text("vendor:\n  - ai\n  - scripts\n")
+    download(repo)
+    assert (repo / ".ai" / "toolkit" / "commands").is_dir()  # ai vendored
+    assert (repo / "setup.sh").is_file()  # scripts vendored
+    assert not (repo / "modules" / "toolkit").exists()  # modules NOT vendored
+    assert not (repo / "tasks" / "toolkit").exists()
+    assert not (repo / "tests" / "toolkit").exists()
+
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "generated")
+    check(repo)  # no raise — check ignores the un-vendored trees
+
+    # a hand-edited generated file is still caught
+    (repo / "AGENTS.md").write_text("hand-edited\n")
+    with pytest.raises(DriftError, match="AGENTS.md"):
+        check(repo)
+
+
+def test_vendor_subset_without_ai_skips_render(repo: Path):
+    (repo / ".sidecar-toolkit.yml").write_text("vendor: [scripts]\n")
+    result = download(repo)
+    assert result.by_count == 0
+    assert (repo / "setup.sh").is_file()
+    assert not (repo / ".ai" / "toolkit").exists()
+    assert not (repo / "AGENTS.md").exists()
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "generated")
+    check(repo)  # no raise
+
+
+def test_vendor_config_rejects_unknown_keys(repo: Path):
+    (repo / ".sidecar-toolkit.yml").write_text("vendor: [ai, bogus]\n")
+    with pytest.raises(ValueError, match="bogus"):
+        download(repo)
