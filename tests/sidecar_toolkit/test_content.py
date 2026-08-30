@@ -2,13 +2,13 @@
 
 import pytest
 
-from fireball_sidecar_toolkit.catalog import load_bundle, packaged_content_root
+from fireball_sidecar_toolkit.catalog import load_bundle, packaged_ai_root
 
 pytestmark = pytest.mark.sidecar_toolkit
 
 
 def test_packaged_bundle_parses():
-    bundle = load_bundle(canonical_root=packaged_content_root())
+    bundle = load_bundle(canonical_root=packaged_ai_root())
     assert bundle.commands, "expected canonical commands"
     assert bundle.instructions, "expected canonical instructions"
     assert all(c.slug for c in bundle.commands)
@@ -16,7 +16,7 @@ def test_packaged_bundle_parses():
 
 
 def test_command_exec_line_extracted():
-    bundle = load_bundle(canonical_root=packaged_content_root())
+    bundle = load_bundle(canonical_root=packaged_ai_root())
     push = next((c for c in bundle.commands if c.slug == "push"), None)
     assert push is not None
     assert push.exec_line.startswith("uv run")

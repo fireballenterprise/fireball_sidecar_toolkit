@@ -2,8 +2,9 @@
 
 Two invariants, checked without writing anything:
 
-1. ``.ai/toolkit/`` byte-matches the packaged canonical ``content/`` tree.
-2. Every generated provider file byte-matches a fresh render of ``content/`` + ``.ai/<repo>/``.
+1. Every clobbered tree/file (``.ai/toolkit/``, ``modules/toolkit/``, ``tasks/toolkit/``,
+   ``tests/toolkit/``, ``setup.sh``, ``setup.ps1``) byte-matches the packaged ``content/``.
+2. Every generated provider file byte-matches a fresh render of ``content/ai/`` + ``.ai/<repo>/``.
 
 Raises :class:`DriftError` naming the stale paths and the command to fix them.
 """
@@ -14,36 +15,53 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from .catalog import local_layer_name, packaged_content_root
+from .catalog import CLOBBER_FILES, CLOBBER_TREES, local_layer_name, packaged_ai_root, packaged_content_root
 from .render import render_repo
+
+_IGNORE = {"__pycache__"}
 
 
 class DriftError(RuntimeError):
-    """A generated provider file (or ``.ai/toolkit/``) is stale relative to canonical content."""
+    """A generated or clobbered file is stale relative to the packaged ``content/``."""
+
+
+def _files(root: Path) -> set[Path]:
+    return {
+        p.relative_to(root)
+        for p in root.rglob("*")
+        if p.is_file() and _IGNORE.isdisjoint(p.relative_to(root).parts) and p.suffix not in (".pyc", ".pyo")
+    }
 
 
 def _tree_mismatches(expected: Path, actual: Path, *, label: str) -> list[str]:
+    if not expected.is_dir():
+        return []
     if not actual.is_dir():
         return [f"{label}/ (missing — run `invoke sidecar.toolkit.download`)"]
     out: list[str] = []
-    expected_files = {p.relative_to(expected) for p in expected.rglob("*") if p.is_file()}
-    actual_files = {p.relative_to(actual) for p in actual.rglob("*") if p.is_file()}
-    for rel in sorted(expected_files - actual_files):
-        out.append(f"{label}/{rel} (missing)")
-    for rel in sorted(actual_files - expected_files):
-        out.append(f"{label}/{rel} (stale, not in canonical)")
-    for rel in sorted(expected_files & actual_files):
-        if (expected / rel).read_bytes() != (actual / rel).read_bytes():
-            out.append(f"{label}/{rel}")
+    expected_files, actual_files = _files(expected), _files(actual)
+    out += [f"{label}/{rel} (missing)" for rel in sorted(expected_files - actual_files)]
+    out += [f"{label}/{rel} (stale, not in canonical)" for rel in sorted(actual_files - expected_files)]
+    out += [
+        f"{label}/{rel}"
+        for rel in sorted(expected_files & actual_files)
+        if (expected / rel).read_bytes() != (actual / rel).read_bytes()
+    ]
     return out
 
 
 def check(repo_root: Path) -> None:
-    """Raise :class:`DriftError` if any generated file — or ``.ai/toolkit/`` — is out of date."""
+    """Raise :class:`DriftError` if any clobbered or generated file is out of date."""
     repo_root = repo_root.resolve()
-    packaged = packaged_content_root()
+    content = packaged_content_root()
 
-    stale = _tree_mismatches(packaged, repo_root / ".ai" / "toolkit", label=".ai/toolkit")
+    stale: list[str] = []
+    for key, rel in CLOBBER_TREES.items():
+        stale += _tree_mismatches(content / key, repo_root / rel, label=rel)
+    for src_rel, dest_rel in CLOBBER_FILES.items():
+        src, dest = content / src_rel, repo_root / dest_rel
+        if src.is_file() and (not dest.is_file() or src.read_bytes() != dest.read_bytes()):
+            stale.append(f"{dest_rel} ({'missing' if not dest.is_file() else 'stale'})")
 
     local_name = local_layer_name(repo_root)
     with tempfile.TemporaryDirectory() as tmp:
@@ -51,7 +69,7 @@ def check(repo_root: Path) -> None:
         local = repo_root / ".ai" / local_name
         if local.is_dir():
             shutil.copytree(local, mirror / ".ai" / local_name)
-        for produced in render_repo(mirror, canonical_root=packaged).written:
+        for produced in render_repo(mirror, canonical_root=packaged_ai_root()).written:
             rel = produced.relative_to(mirror)
             on_disk = repo_root / rel
             if not on_disk.is_file():
@@ -61,7 +79,7 @@ def check(repo_root: Path) -> None:
 
     if stale:
         raise DriftError(
-            "Generated AI-provider files are stale:\n  - "
+            "Toolkit-managed files are stale:\n  - "
             + "\n  - ".join(stale)
             + "\nRun `invoke sidecar.toolkit.sync` (or `download`) to regenerate."
         )
