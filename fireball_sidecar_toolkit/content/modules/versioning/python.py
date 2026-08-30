@@ -1,13 +1,16 @@
 """Update Python version to latest stable 3.x release."""
 
+import logging
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 from ..common import cli
-from ..common.utils import error, info, success, warning
-from ..setup.properties import get_repo_local
+from ..common.utils import error, info, success, version_tuple, warning
+from ..setup.properties import get_binary_version, get_repo_local, update_binary_version
+
+LOGGER = logging.getLogger(__name__)
 
 
 def get_latest_stable_python() -> tuple[int, int, int]:
@@ -129,16 +132,19 @@ def update_python_version_in_file(
         compiled_pattern = re.compile(pattern)
         num_groups = compiled_pattern.groups
 
-        # Handle pyproject.toml special cases
+        # Handle pyproject.toml special cases — both fields are major.minor only (a floor/target,
+        # not an exact pin), so always use new_version's floor here even when new_version itself
+        # carries a full x.y.z patch (e.g. from properties.yml's exact-pin caller).
+        new_floor = ".".join(new_version.split(".")[:2])
         if file_path.name == "pyproject.toml":
             if "requires-python" in pattern:
                 # Pattern: (requires-python\s*=\s*">=)(\d+\.\d+)(")
-                # Replace group 2 with new version, keep groups 1 and 3
-                content = re.sub(pattern, rf"\g<1>{new_version}\g<3>", content)
+                # Replace group 2 with the new floor, keep groups 1 and 3
+                content = re.sub(pattern, rf"\g<1>{new_floor}\g<3>", content)
             elif "target-version" in pattern:
                 # Pattern: (target-version\s*=\s*"py)(\d+)(")
-                # Replace group 2 with new version (no dots), keep groups 1 and 3
-                new_py = new_version.replace(".", "")
+                # Replace group 2 with the new floor, no dots (e.g. "314"), keep groups 1 and 3
+                new_py = new_floor.replace(".", "")
                 content = re.sub(pattern, rf"\g<1>{new_py}\g<3>", content)
         # Standard 2-group pattern: (prefix)(version)
         # Replace group 2 with new version, keep group 1
@@ -193,6 +199,24 @@ def update_all_python_references(
     return updated_count
 
 
+def update_properties_pin(new_version: str) -> bool:
+    """Rewrite properties.yml's `binary_versions.python` pin to `new_version` (full x.y.z — unlike
+    the other tracked files, which only pin major.minor). This is the pin `/upgrade python` reads
+    as its install target, so it needs to land here too, not just in pyproject.toml/.python-version.
+
+    Returns:
+        True if the pin was found and changed, False if already current or missing.
+    """
+    try:
+        current = get_binary_version("python")
+    except KeyError:
+        warning("properties.yml is missing binary_versions.python — skipping")
+        return False
+    if current == new_version:
+        return False
+    return update_binary_version("python", current, new_version)
+
+
 def get_runtime_python_version() -> str:
     """Return the current runtime Python version (major.minor.patch)."""
     return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -220,13 +244,15 @@ def main(dry_run: bool, no_confirm: bool) -> None:
     IMPORTANT: This only updates config files. Run /upgrade python to actually
     install the new Python version and rebuild .venv.
 
-    Checks for the latest stable Python 3.x minor version and updates
-    all configuration files:
+    Checks for the latest stable Python 3.x release and updates all configuration files,
+    including properties.yml's binary_versions.python pin — the exact version /upgrade python
+    installs:
     - pyproject.toml (requires-python, target-version)
     - .python-version
     - .pylintrc
     - setup.sh
     - .github/actions/setup_uv/action.yml
+    - properties.yml (binary_versions.python)
 
     Examples:
         /update python              # Interactive mode
@@ -250,9 +276,11 @@ def main(dry_run: bool, no_confirm: bool) -> None:
     cli.echo(f"   Current runtime: {current_runtime}")
     cli.echo(f"   Latest stable:   {latest_version}")
 
-    if current_minor >= latest_minor:
+    # Full x.y.z comparison, not just minor — properties.yml's binary_versions.python pins an
+    # exact patch (like binary_versions.cdk does), so a patch-only bump still needs applying.
+    if version_tuple(current_runtime) >= (latest_major, latest_minor, latest_patch):
         cli.echo()
-        success(f"Python {current_runtime} is already on the latest stable minor")
+        success(f"Python {current_runtime} is already on the latest stable version")
         raise SystemExit(3)
 
     display_python_update_table(current_runtime, latest_version)
@@ -261,6 +289,7 @@ def main(dry_run: bool, no_confirm: bool) -> None:
     cli.echo("\n🐍 Files that will be updated:")
     for config in get_files_to_update():
         cli.echo(f"   ✓ {config['file']}")
+    cli.echo("   ✓ properties.yml (binary_versions.python)")
 
     if dry_run:
         cli.echo("\n🔍 Dry-run mode: No changes made")
@@ -276,6 +305,10 @@ def main(dry_run: bool, no_confirm: bool) -> None:
     # Apply updates
     cli.echo(f"\n✏️  Updating Python version references to {latest_version}...")
     updated_count = update_all_python_references(repo_path, current_floor, latest_version)
+
+    if update_properties_pin(latest_version):
+        updated_count += 1
+        cli.echo("   ✓ properties.yml (binary_versions.python)")
 
     if updated_count > 0:
         success(f"Updated {updated_count} files with Python {latest_version}")

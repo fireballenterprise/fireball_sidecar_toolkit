@@ -13,6 +13,7 @@ Usage:
 
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 from pathlib import Path
@@ -20,6 +21,8 @@ from pathlib import Path
 from ..common import cli as click
 from ..common.utils import info, success
 from ..setup.properties import get_repo_root
+
+LOGGER = logging.getLogger(__name__)
 
 _USES_RE = re.compile(r"^(\s*(?:-\s+)?uses:\s*)([\w.-]+/[\w.-]+(?:/[\w./-]+)?)@([\w.-]+)\s*(?:#.*)?$")
 _MAJOR_TAG_RE = re.compile(r"^v?(\d+)$")

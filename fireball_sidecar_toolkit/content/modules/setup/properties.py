@@ -91,6 +91,36 @@ def get_repo_remote() -> str:
     return props["repo"]["remote"]
 
 
+def get_binary_version(name: str) -> str:
+    """Return a pinned tool version from ``binary_versions.<name>`` (e.g. "python", "cdk") — for
+    tools version-pinned outside pyproject.toml / uv. Raises ``KeyError`` if the pin isn't set.
+    """
+    return str(get_properties()["binary_versions"][name])
+
+
+def update_binary_version(name: str, old_value: str, new_value: str) -> bool:
+    """Rewrite ``binary_versions.<name>`` from ``old_value`` to ``new_value`` in place, preserving
+    formatting. Returns whether ``old_value`` was found and rewritten.
+    """
+    properties_file = get_repo_root() / "properties.yml"
+    text = properties_file.read_text()
+    updated, count = re.subn(rf"({re.escape(name)}:\s*){re.escape(old_value)}\b", rf"\g<1>{new_value}", text, count=1)
+    if count == 0:
+        return False
+    properties_file.write_text(updated)
+    get_properties.cache_clear()
+    return True
+
+
+def get_git_author() -> str:
+    """Return ``git config user.name`` (or "Unknown"), for stamping a changelog/version author
+    entry rather than a hand-typed name that drifts from who's actually committing.
+    """
+    result = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True, check=False)
+    name = result.stdout.strip()
+    return name if result.returncode == 0 and name else "Unknown"
+
+
 def is_icloud_enabled() -> bool:
     """
     Whether iCloud-Obsidian sync is turned on for /push and /pull.
