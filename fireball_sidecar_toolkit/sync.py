@@ -2,9 +2,9 @@
 
 The AI does the asking; this module only reports state and runs the primitive the caller chooses:
 
-1. :func:`inspect` — is ``.ai/shared/`` modified vs the last commit? Returns the diff so the caller
+1. :func:`inspect` — is ``.ai/toolkit/`` modified vs the last commit? Returns the diff so the caller
    can ask "upload these first, or discard?".
-2. :func:`run` — once resolved: ``download(force=True)`` (clobber ``.ai/shared/`` + regenerate).
+2. :func:`run` — once resolved: ``download(force=True)`` (clobber ``.ai/toolkit/`` + regenerate).
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ._git import dirty_tracked, tracked_diff
-from .download import SHARED_SUBPATH, download
+from .download import TOOLKIT_SUBPATH, download
 from .render import RenderResult
 
 
@@ -25,21 +25,21 @@ class SyncPlan:
 
 
 def inspect(repo_root: Path) -> SyncPlan:
-    """Report whether ``.ai/shared/`` has uncommitted edits, without changing anything."""
+    """Report whether ``.ai/toolkit/`` has uncommitted edits, without changing anything."""
     repo_root = repo_root.resolve()
-    status = dirty_tracked(repo_root, SHARED_SUBPATH)
+    status = dirty_tracked(repo_root, TOOLKIT_SUBPATH)
     if not status:
         return SyncPlan(
             dirty=False,
             shared_diff="",
-            message=f"{SHARED_SUBPATH}/ is clean — safe to `invoke sidecar.toolkit.download`.",
+            message=f"{TOOLKIT_SUBPATH}/ is clean — safe to `invoke sidecar.toolkit.download`.",
         )
-    diff = tracked_diff(repo_root, SHARED_SUBPATH)
+    diff = tracked_diff(repo_root, TOOLKIT_SUBPATH)
     return SyncPlan(
         dirty=True,
         shared_diff=diff,
         message=(
-            f"{SHARED_SUBPATH}/ has uncommitted edits:\n{status}\n\n"
+            f"{TOOLKIT_SUBPATH}/ has uncommitted edits:\n{status}\n\n"
             "Upload them to the toolkit first (`invoke sidecar.toolkit.upload`) or discard them, "
             "then download."
         ),
@@ -47,5 +47,5 @@ def inspect(repo_root: Path) -> SyncPlan:
 
 
 def run(repo_root: Path, *, force: bool = False) -> RenderResult:
-    """Clobber ``.ai/shared/`` from the package and regenerate. ``force`` skips the dirty guard."""
+    """Clobber ``.ai/toolkit/`` from the package and regenerate. ``force`` skips the dirty guard."""
     return download(repo_root, force=force)

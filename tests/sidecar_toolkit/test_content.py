@@ -1,4 +1,4 @@
-"""Parsing the canonical content trees and an .ai/local/ overlay."""
+"""Parsing the canonical content trees and a local overlay."""
 
 import pytest
 

@@ -4,7 +4,7 @@ description: Use for switching the active planning-topic workspace, or listing/c
 ---
 
 # Topic Workspace Workflow
-Use this file as source of truth: `.ai/shared/commands/topic.md`
+Use this file as source of truth: `.ai/toolkit/commands/topic.md`
 
 When the user asks to switch topics, list topics, create a new topic, or run a `/topic`
 equivalent, read that file and follow it.
@@ -18,7 +18,7 @@ equivalent, read that file and follow it.
 Run the router from the repo root:
 
 ```bash
-uv run --no-sync python -m modules.topic.route "<arguments>"
+uv run --no-sync python -m modules.toolkit.topic.route "<arguments>"
 ```
 
 Switching auto-saves any chat active in the outgoing topic first — see the `chat` skill for the

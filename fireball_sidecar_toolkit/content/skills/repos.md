@@ -14,10 +14,10 @@ hints:
 ---
 
 # Repos Trigger
-Use this file as source of truth: `.ai/shared/commands/repos.md`
+Use this file as source of truth: `.ai/toolkit/commands/repos.md`
 
 When the user says "related repos", "the repos", "other repos", "all of the repos", "pull all repos", or otherwise
 asks about this vault's repo family — even without running `/repos` — read
-`.ai/shared/instructions/repos.md` in full and follow it. It covers both the
+`.ai/toolkit/instructions/repos.md` in full and follow it. It covers both the
 `repos`/`lineage` map and the two-phase (apply, then checkpoint, then ship) Cross-Repo Change
 Workflow.

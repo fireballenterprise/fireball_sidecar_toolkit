@@ -5,4 +5,4 @@ argument-hint: no arguments required
 agent: agent
 ---
 
-!`uv run --no-sync python -m modules.repo.push`
+!`uv run --no-sync python -m modules.toolkit.repo.push`

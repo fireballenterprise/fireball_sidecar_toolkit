@@ -1,7 +1,7 @@
 """Render ``.sidecar/`` for Fireball Sidecar — pointer stubs.
 
 ``commands/``, ``instructions/``, ``skills/`` each carry the provider frontmatter Sidecar needs
-and a one-line pointer at the canonical ``.ai/shared/`` or ``.ai/local/`` file. Sidecar is Levon's
+and a one-line pointer at the canonical ``.ai/toolkit/`` or ``.ai/<repo>/`` file. Sidecar is Levon's
 own tool and is being taught to read the canonical ``.ai/`` tree directly; the target end state is
 a no-op renderer.
 """

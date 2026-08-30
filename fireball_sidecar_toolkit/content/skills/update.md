@@ -4,7 +4,7 @@ description: Use for checking dependency, Python, and workflow-action versions a
 ---
 
 # Update Workflow
-Use this file as source of truth: `.ai/shared/commands/update.md`
+Use this file as source of truth: `.ai/toolkit/commands/update.md`
 
 When the user asks for version checks, read that file and follow it — this only updates
 locks, it never installs anything or runs an upgrade.

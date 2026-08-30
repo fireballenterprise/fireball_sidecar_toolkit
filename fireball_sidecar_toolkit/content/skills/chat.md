@@ -4,7 +4,7 @@ description: Use for starting, ending, listing, or resuming a dated planning cha
 ---
 
 # Chat Session Workflow
-Use this file as source of truth: `.ai/shared/commands/chat.md`
+Use this file as source of truth: `.ai/toolkit/commands/chat.md`
 
 When the user asks to start/end/list/resume a chat, or run a `/chat` equivalent, read that file and follow it.
 
@@ -17,7 +17,7 @@ When the user asks to start/end/list/resume a chat, or run a `/chat` equivalent,
 Run the router from the repo root:
 
 ```bash
-uv run --no-sync python -m modules.chat.route "<arguments>"
+uv run --no-sync python -m modules.toolkit.chat.route "<arguments>"
 ```
 
 Operates on whichever topic is currently active — see the `topic` skill for `/topic switch`.

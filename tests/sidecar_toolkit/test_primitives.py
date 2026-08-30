@@ -32,8 +32,8 @@ def repo(tmp_path: Path) -> Path:
 def test_download_clobbers_shared_and_renders(repo: Path):
     result = download(repo)
     assert result.by_count > 20
-    assert (repo / ".ai" / "shared" / "commands").is_dir()
-    assert (repo / ".ai" / "shared" / "instructions").is_dir()
+    assert (repo / ".ai" / "toolkit" / "commands").is_dir()
+    assert (repo / ".ai" / "toolkit" / "instructions").is_dir()
     assert (repo / "AGENTS.md").exists()
     assert (repo / ".claude" / "commands").is_dir()
 
@@ -55,7 +55,7 @@ def test_check_raises_when_a_generated_file_is_edited(repo: Path):
 
 
 def test_check_raises_when_shared_is_missing(repo: Path):
-    with pytest.raises(DriftError, match=".ai/shared"):
+    with pytest.raises(DriftError, match=".ai/toolkit"):
         check(repo)
 
 
@@ -68,7 +68,7 @@ def test_download_refuses_dirty_shared(repo: Path):
     download(repo)
     _git(repo, "add", "-A")
     _git(repo, "commit", "-qm", "generated")
-    (repo / ".ai" / "shared" / "commands" / "fix.md").write_text("tampered\n")
+    (repo / ".ai" / "toolkit" / "commands" / "fix.md").write_text("tampered\n")
     with pytest.raises(DirtySharedError):
         download(repo)
     download(repo, force=True)  # force overrides
@@ -80,7 +80,7 @@ def test_sync_inspect_reports_clean_then_dirty(repo: Path):
     _git(repo, "commit", "-qm", "generated")
     assert sync.inspect(repo).dirty is False
 
-    (repo / ".ai" / "shared" / "commands" / "fix.md").write_text("tampered\n")
+    (repo / ".ai" / "toolkit" / "commands" / "fix.md").write_text("tampered\n")
     plan = sync.inspect(repo)
     assert plan.dirty is True
     assert "fix.md" in plan.shared_diff
