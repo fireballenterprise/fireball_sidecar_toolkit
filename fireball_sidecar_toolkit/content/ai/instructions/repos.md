@@ -1,10 +1,35 @@
 ---
-description: "Use for the properties.yml repos: registry and the 'related repos' / 'pull all repos' / 'apply this across the repos' trigger phrases."
-applyTo: "properties.yml,modules/setup/**"
+description: "Use for /repo (and its /pull /push /cleanup aliases), the properties.yml repos: registry, and the 'related repos' / 'pull all repos' / 'apply this across the repos' trigger phrases."
+applyTo: "properties.yml,modules/setup/**,modules/toolkit/repo/**"
 ---
-# Repos Instructions
-Rules for the `repos:` key in `properties.yml` — the registry of GitHub repos in this vault's
-family — and the `/repo` family commands built on it.
+# Repo & Repo-Family Instructions
+Everything about `/repo` — its subcommands, the `properties.yml` `repos:` registry it reads, the
+family fan-out, and the cross-repo change workflow.
+
+## Command surface
+`/repo` is the single entrypoint. `/pull`, `/push`, `/cleanup` are top-level aliases for the
+matching subcommand (and take the same scope tokens).
+
+| command | what |
+|---|---|
+| `/repo` (no args) | usage |
+| `/repo list` | the `repos:` family map — `parent` tree + each repo's attributes + local-clone state |
+| `/repo self` | this repo's own `repos:` row — `default_branch`, `pull_request`, `use_ci`, … |
+| `/repo pull [all\|ai\|dev_prd]` · `/pull` | `git pull` (this repo, or a family scope) |
+| `/repo push [all\|ai\|dev_prd]` · `/push` | fix + test + commit + push (this repo, or a family scope) |
+| `/repo cleanup [all\|ai\|dev_prd]` · `/cleanup` | post-merge branch cleanup **+ local-trash sweep** |
+| `/repo apply <description>` | the two-phase Cross-Repo Change Workflow (agent-driven) |
+
+## What folded into `/repo`
+- **`/repos`** (command + skill) — **deleted.** Its jobs are now `/repo list` (the map),
+  `/repo apply` (the cross-repo workflow), and the trailing scope tokens on `pull`/`push`/`cleanup`
+  (`all` replaced "pull all repos"). The natural-language triggers below still fire.
+- **`/pr-cleanup`** → **`/cleanup`** (`/repo cleanup`). Same merged-branch cleanup, now followed by
+  a local-trash sweep (regenerable caches + orphaned `modules/`/`tasks/`/`tests/` dirs; never
+  `topics/`, `tmp/`, or untracked new work).
+- **`managed_repos.yml`** (fireball_orchestrator) + its **`ai_repos:`** / **`dev_prd_repos:`**
+  sibling lists — retired. That per-repo metadata is now the `repos:` schema below (`ai`,
+  `default_branch` ⇒ dev_prd, `status`, `purpose`, `visibility`, …).
 
 ## Schema
 `repos:` is `org > repo_name > {attributes}`. Every repo carries the **same six keys** (no
@@ -15,9 +40,15 @@ omitting — a missing key must never be what a condition trips on):
 | `ai` | `true` \| `false` | shares the AI-agent tooling layout (`.ai/` + generated provider dirs). Scope for propagating agent skills/instructions, not product code. |
 | `default_branch` | `main` \| `development` | `development` ⇒ **two-branch dev→prd promotion** (feature work lands on `development`, `development`→`main` cuts a release). `main` ⇒ single-branch. |
 | `parent` | a bare repo name in this map, or `none` | the repo this one was template-stamped from. `none` = a root. Resolves across orgs. |
+| `pull_request` | `true` \| `false` | **how to ship a change.** `true` → feature branch + PR (assigned to the user), let CI run. `false` → commit straight to the default branch (or fast-forward the feature branch onto it) and push — **do not open a PR**. |
 | `purpose` | one line | what the repo is |
 | `status` | `active` \| `retired` | `retired` = shelved. Kept in the map (so it's known context, not a mystery repo) but **excluded from every family fan-out**. |
+| `use_ci` | `true` \| `false` | `true` → GitHub Actions run; wait for green. `false` → Actions don't run (no workflows, or the org's Actions are billing-blocked) — **test, build, promote, and release with local `invoke` tasks / the CLI**, and don't poll GitHub checks. |
 | `visibility` | `public` \| `private` | GitHub visibility |
+
+`/repo self` prints this repo's row (and spells out the `pull_request` / `use_ci` decision).
+Currently the private repos are `pull_request: false` + `use_ci: false`; the public ones are both
+`true`.
 
 `repos_local:` (sibling top-level key) maps each org name to its local base directory
 (`fireballenterprise: "$HOME/Development/fireballenterprise"`) — a repo's local path is
@@ -99,9 +130,18 @@ Once applied (uncommitted) in every repo, stop: "Made the changes in all N repos
 or more to add first?" Don't proceed until they confirm.
 
 ### Phase 2 — Ship
-For each repo (same order), run the equivalent of `/ship-it`: fix, test, commit, push, draft PR
-notes, open the PR (assigned to the user per `.ai/toolkit/instructions/git.md`). Report each PR
-URL. Never merge a PR yourself; never push to a shared/default branch across repos unasked.
+For each repo (same order), ship per its `repos:` flags:
+
+- **`pull_request: true`** — `/ship-it`: fix, test, push the feature branch, open the PR (assigned
+  to the user per `.ai/toolkit/instructions/git.md`). Report the PR URL. Never merge it yourself.
+- **`pull_request: false`** — no PR. `invoke fix` + `invoke test` locally (must pass), then
+  fast-forward the default branch to your work and `git push origin <default>`. Report the pushed
+  commit. Delete the feature branch.
+- **`use_ci: false`** (all `pull_request: false` repos right now) — don't wait on GitHub checks;
+  the local `invoke test` is the gate. Build / promote / release for these repos also run through
+  local `invoke` tasks (see `versioning.instructions.md`), not Actions.
+
+Never push to a shared/default branch across repos unless the user asked for exactly that.
 
 **Example:** "run `/update` on all the related repos" → Phase 1: per repo, cd in, stash/switch/
 pull, branch, `/update`. Checkpoint. Phase 2: ship each — one PR per repo showing that repo's own
