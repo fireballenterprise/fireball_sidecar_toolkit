@@ -6,12 +6,13 @@ uv run --no-sync python -m modules.toolkit.backlog.list [--repo vscode] [--type 
 from __future__ import annotations
 
 from ..common import cli
+from ..common.utils import error
 from .common import TYPE_LABELS, gh, nwo, resolve_repo_or_current
 
 
 @cli.command()
 @cli.option("--repo", default="", help="Family repo (fuzzy name; default: this repo)")
-@cli.option("--type", "issue_type", default="", type=cli.Choice(["bug", "feature", "task"]), help="Filter by type")
+@cli.option("--type", "issue_type", default="", help="Filter by type: bug | feature | task")
 @cli.option("--state", default="open", type=cli.Choice(["open", "closed", "all"]), help="Issue state")
 @cli.option("--limit", default=30, type=int, help="Max issues to show")
 @cli.option("--mine", is_flag=True, help="Only issues assigned to you")
@@ -25,6 +26,8 @@ def main(
     as_json: bool = False,
 ) -> None:
     """Print the issue list as gh's table, or the raw JSON with --json."""
+    if issue_type and issue_type not in TYPE_LABELS:
+        error(f"--type must be one of {', '.join(TYPE_LABELS)} (got {issue_type!r})")
     repo_nwo = nwo(resolve_repo_or_current(repo))
     args = ["issue", "list", "--state", state, "--limit", str(limit)]
     if issue_type:
