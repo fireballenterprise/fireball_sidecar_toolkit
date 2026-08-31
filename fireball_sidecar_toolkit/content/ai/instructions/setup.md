@@ -1,6 +1,6 @@
 ---
-description: "Use when setting up a repo for the first time, editing setup.sh / setup.local.sh, or working on the properties.yml bootstrap (modules/toolkit/setup/ + modules/setup/templates/)."
-applyTo: "setup.sh,setup.ps1,setup.local.sh,setup.local.ps1,modules/setup/**,modules/toolkit/setup/**"
+description: "Use when setting up a repo for the first time, editing setup.sh / setup.local.sh, editing properties.yml, or working on the properties.yml bootstrap (modules/toolkit/setup/ + modules/setup/templates/)."
+applyTo: "setup.sh,setup.ps1,setup.local.sh,setup.local.ps1,properties.yml,modules/setup/**,modules/toolkit/setup/**"
 ---
 # Setup
 ## First-time setup
@@ -40,3 +40,17 @@ PowerShell: `Setup-Local-Tools` / `Setup-Local-Post` in `setup.local.ps1`.
   `properties.yml` and re-run.
 - Gitignored in `template_*` repos; the ignore line is stripped on first real setup so a scaffolded
   repo commits its `properties.yml`.
+
+## `properties.yml` conventions
+Keep the file skimmable — a maintainer should find a section from the editor's minimap/fold gutter
+without scrolling.
+
+- **Wrap every top-level section in fold markers:** a `# region <Name>` line immediately before
+  the section's first key and a matching `# endregion <Name>` after its last line. One region per
+  concern (`Repositories`, `AWS`, `Shopify`, `Versions`, `CloudFormation`, …). Editors fold on
+  `# region` / `# endregion`, so this is the navigation index.
+- **Comments are one line + a pointer, not an essay.** A section gets at most a single `#` line
+  saying what it is and where the full explanation lives —
+  `# Default AWS_PROFILE for aws/cdk shell-outs — see .ai/<repo>/instructions/aws.md`. Rationale,
+  mechanism, and edge cases belong in that instruction doc, not woven into `properties.yml`.
+- Per-key comments only for a genuinely non-obvious value; still one line.
