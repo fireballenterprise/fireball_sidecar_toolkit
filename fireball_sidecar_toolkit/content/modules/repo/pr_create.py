@@ -6,7 +6,7 @@ import subprocess
 
 from ..common import cli as click
 from ..common.utils import error, success
-from ..setup.properties import get_repo_local
+from ..setup.properties import find_current_repo, get_repo_local
 from .pr_diff import current_branch, detect_base_branch
 
 
@@ -15,6 +15,12 @@ from .pr_diff import current_branch, detect_base_branch
 @click.option("--content", default=None, help="Pull request body (markdown)")
 def main(title: str | None = None, content: str | None = None) -> None:
     """Open a GitHub PR for the current branch against its detected base branch."""
+    self_repo = find_current_repo()
+    if self_repo is not None and not self_repo.pull_request:
+        error(
+            f"{self_repo.name} ships by direct push (pull_request: false in properties.yml) — "
+            "not opening a PR. Fast-forward the default branch to your work and push instead."
+        )
     if not title or not title.strip():
         error("PR title cannot be empty")
     if not content or not content.strip():
