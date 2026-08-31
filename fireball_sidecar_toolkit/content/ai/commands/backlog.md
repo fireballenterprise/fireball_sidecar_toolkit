@@ -7,17 +7,28 @@ agent: agent
 
 !`uv run --no-sync python -m modules.toolkit.backlog.route "$ARGUMENTS"`
 
-Issues are the tracker — no local bug/backlog markdown. Each issue carries the org-native GitHub
-**issue Type** (`Bug` / `Feature` / `Task`) **and** a matching label (`bug` / `enhancement` /
-`task`). `--repo` is a fuzzy token (name, unique substring, or a word from the repo's `purpose`);
-an ambiguous token makes the CLI print candidates — ask the user which, don't guess. `list`
-defaults to the current repo; every other verb needs `--repo`.
+Issues are the tracker — no local bug/backlog markdown. `--repo` is a fuzzy token (name, unique
+substring, or a word from the repo's `purpose`); an ambiguous token makes the CLI print
+candidates — ask the user which, don't guess. `list` defaults to the current repo; every other
+verb needs `--repo`.
+
+**Type vs. labels** — two axes, don't conflate them:
+
+- `--type bug|feature|task` sets the org-native GitHub **issue Type**. That's the whole
+  bug/feature/task classification — there is no `bug` label.
+- **Labels** carry *area* and *nature*. Every issue automatically gets its repo's area
+  (`Sidecar VSCode`, `Sidecar Toolkit`, …). Add finer ones with `--area` when you know them: the
+  affected **module, component, topic, or concept** (`--area backlog`, `--area router`,
+  `--area topics`, `--area verbs`), or "where it surfaces" when that differs from the fix's repo.
+  Add `--label` for *nature*: `Regression`, `Usage Failure`, `UI`, `Hallucination`,
+  `Performance`, `Docs`. Any label that doesn't exist is created automatically. **Propose the
+  `--area` / `--label` values at the confirm step** — don't file without showing them.
 
 ## Recognition — what the user says maps to what to run
 | user says | do |
 |---|---|
-| "file/log/track a bug in sidecar vscode: X", "feature request for the toolkit: Y", "add a task for chat: Z" | resolve the repo; craft a clean title + a body in the **issue format** below (ask if the report is thin). If an image was pasted, **read it and transcribe the relevant content into the body** — error text as fenced quotes, UI state as prose; note it came from a screenshot. Confirm, then `backlog.add --repo <t> --type <bug\|feature\|task> --title "..." --body "..."` |
-| "list / show the issues \| open bugs \| backlog for X", "what's left \| still open in X" | `backlog.list --repo <t>` (add `--state`/`--type` from the phrasing; `--state open` by default) |
+| "file/log/track a bug in sidecar vscode: X", "feature request for the toolkit: Y", "add a task for chat: Z" | resolve the repo; craft a clean title + a body in the **issue format** below (ask if the report is thin). If an image was pasted, **read it and transcribe the relevant content into the body** — error text as fenced quotes, UI state as prose; note it came from a screenshot. Work out `--area` (affected module/component/topic, from the "Where it likely lives" analysis) and any `--label` nature; **confirm title + Type + area + labels with the user**, then `backlog.add --repo <t> --type <bug\|feature\|task> --title "..." --body "..." [--area <m>] [--label <nature>]` |
+| "list / show the issues \| open bugs \| backlog for X", "what's left \| still open in X" | `backlog.list --repo <t>` (`--type bug` for bugs, `--label <area>` to scope to a module/topic; `--state open` by default) |
 | "work on / pick up / start / tackle issue N in X", "fix this bug" (issue in context) | `backlog.start --repo <t> --number N` then open the **target repo's** clone, branch per its ship rules (the command prints them), implement, run its `invoke fix && invoke test`, `/push` or `/pr`, then `backlog.close --repo <t> --number N --pr <n>` (or `--sha <sha>` for direct-push repos) |
 | "fix all the open bugs \| issues in X", "knock out the backlog for X" | `backlog.list --repo <t> --state open --json`, **show the list, confirm the batch**, work one at a time each on its own branch/commit, `backlog.close` each, report a summary; stop and surface any that need a decision |
 | "close issue N in X, fixed by PR M" | `backlog.close --repo <t> --number N --pr M` |
