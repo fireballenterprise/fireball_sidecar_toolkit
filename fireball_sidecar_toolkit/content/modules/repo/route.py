@@ -2,8 +2,9 @@
 
 ``/repo`` with no args prints usage. ``/repo list`` shows the ``repos:`` family map;
 ``/repo apply`` points at the agent-driven Cross-Repo Change Workflow. ``pull`` / ``push`` /
-``cleanup`` act on the current repo, or on the whole family when the ``all`` token is present
-(handled by :mod:`modules.toolkit.repo.family`). Everything else dispatches straight to its module.
+``cleanup`` act on the current repo, or on the family when a scope token follows — ``all`` (whole
+family), ``ai`` (``ai: true``), or ``dev_prd`` (``default_branch: development``); handled by
+:mod:`modules.toolkit.repo.family`. Everything else dispatches straight to its module.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import subprocess
 import sys
 
 from ..common.route_utils import build_env, find_repo_root
+from ..setup.properties import FAMILY_SCOPES
 from . import family
 
 _PREFIX = "modules.toolkit.repo"
@@ -31,23 +33,25 @@ _SUBCOMMAND_MODULES = {
 }
 
 _FAMILY_VERBS = ("pull", "push", "cleanup")
+_SCOPE_TOKENS = ("all", *FAMILY_SCOPES)
 
 _USAGE = """\
 /repo — repo and repo-family operations
 
-  /repo list                show the repos: / lineage: family map
-  /repo pull [all]          git pull (this repo | whole family)
-  /repo push [all]          fix + test + commit + push (this repo | whole family)
-  /repo cleanup [all]       post-merge branch cleanup + local-trash sweep
-  /repo apply <description>  port a change across the family (two-phase, agent-driven)
+  /repo list                    show the repos: family map (parent tree + attributes)
+  /repo pull [all|ai|dev_prd]    git pull (this repo | family scope)
+  /repo push [all|ai|dev_prd]    fix + test + commit + push (this repo | family scope)
+  /repo cleanup [all|ai|dev_prd] post-merge branch cleanup + local-trash sweep
+  /repo apply <description>      port a change across the family (two-phase, agent-driven)
 
-Aliases: /pull, /push, /cleanup — each also takes `all`.
+Scopes: all = whole family · ai = ai:true repos · dev_prd = default_branch development.
+Aliases: /pull, /push, /cleanup — each also takes a scope. Retired repos are always skipped.
 """
 
 _APPLY_POINTER = """\
 Cross-repo apply is agent-driven. Follow the Cross-Repo Change Workflow in
 .ai/toolkit/instructions/repos.md: apply the change on a feature branch in every family repo
-(root-to-leaf lineage order), stop at the checkpoint, then ship one PR per repo.
+(root-to-leaf parent order), stop at the checkpoint, then ship one PR per repo.
 """
 
 
@@ -82,8 +86,11 @@ def main() -> int:
         sys.stdout.write(_APPLY_POINTER)
         return 0
 
-    if first in _FAMILY_VERBS and "all" in rest:
-        return family.run_family(first, assume_yes="--yes" in rest or "-y" in rest)
+    if first in _FAMILY_VERBS:
+        scopes = [token for token in rest if token in _SCOPE_TOKENS]
+        if scopes:
+            scope = None if scopes[0] == "all" else scopes[0]
+            return family.run_family(first, assume_yes="--yes" in rest or "-y" in rest, scope=scope)
 
     module = _SUBCOMMAND_MODULES.get(first)
     if module is None:

@@ -18,13 +18,16 @@ dev = ["fireball_sidecar_toolkit @ git+https://github.com/fireballenterprise/fir
 # dev channel: ...@development
 ```
 ```sh
-uv run --no-sync invoke sidecar.toolkit.sync      # check .ai/toolkit/ -> offer upload -> download -> regenerate
-uv run --no-sync invoke sidecar.toolkit.download  # clobber .ai/toolkit/ from the package, regenerate
-uv run --no-sync invoke sidecar.toolkit.upload    # open a PR here with local .ai/toolkit/ changes
-uv run --no-sync invoke sidecar.toolkit.check     # read-only drift gate (wire into invoke test / CI)
-uv run --no-sync invoke sidecar.toolkit.mdfix     # normalise *.md (no blank after header, no stray ---); --check to gate
+uv run --no-sync invoke sidecar.toolkit.update      # uv lock --upgrade-package + uv sync (pull the newest release into the venv)
+uv run --no-sync invoke sidecar.toolkit.apply       # clobber .ai/toolkit/ etc. from the installed package, regenerate
+uv run --no-sync invoke sidecar.toolkit.upgrade     # update + apply — take the new toolkit in one step
+uv run --no-sync invoke sidecar.toolkit.sync        # apply, but stop first if .ai/toolkit/ has local hand-edits
+uv run --no-sync invoke sidecar.toolkit.contribute  # open a PR here with local .ai/toolkit/ changes
+uv run --no-sync invoke sidecar.toolkit.check       # read-only drift gate (wire into invoke test / CI)
+uv run --no-sync invoke sidecar.toolkit.mdfix       # normalise *.md (no blank after header, no stray ---); --check to gate
 ```
-No dependency wanted (non-Python repo): `uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit download`.
+`download` / `upload` are kept as deprecated aliases for `apply` / `contribute`.
+No dependency wanted (non-Python repo): `uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit apply`.
 
 ## Consuming-repo contract
 | path | rule |
@@ -37,7 +40,7 @@ No dependency wanted (non-Python repo): `uvx --from git+https://github.com/fireb
 | `.sidecar-toolkit.yml` (optional) | `vendor: [ai, scripts]` — take only some shipped trees (`ai`, `modules`, `tasks`, `tests`, `scripts`); absent = all |
 
 Fix shared behavior by editing `content/` here, or by editing `.ai/toolkit/` in a consuming repo and
-running `sidecar.toolkit.upload` to open a PR.
+running `sidecar.toolkit.contribute` to open a PR.
 
 ## Branch model
 `development` (integration, PRs merge here) → promoted to `main` (stable) via

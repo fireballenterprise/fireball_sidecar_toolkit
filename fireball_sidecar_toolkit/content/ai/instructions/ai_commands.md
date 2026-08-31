@@ -7,7 +7,7 @@ Standards for the slash commands / custom prompts. **Commands are authored once*
 `fireball_sidecar_toolkit`'s `content/commands/*.md` (mirrored into each consuming repo as
 `.ai/toolkit/commands/`; repo-specific ones in `.ai/<repo>/commands/`) and a generator renders one
 pointer stub per tool. **Never hand-edit a generated provider file** — edit the `.ai/` source and
-re-run `invoke sidecar.toolkit.download`.
+re-run `invoke sidecar.toolkit.apply`.
 
 ## Architecture
 Commands are the AI-facing entrypoint layer described in `.ai/toolkit/instructions/logic.md` (Core Principle +
@@ -54,7 +54,7 @@ Every generated file is a **pointer stub**: provider frontmatter + one line
    (argument dispatch only). See `.ai/toolkit/instructions/modules.md` for the router template.
 2. `.ai/toolkit/commands/<slug>.md` — the thin wrapper above.
 3. `.ai/toolkit/skills/<slug>.md` — the matching skill (see `.ai/toolkit/instructions/ai_skills.md`).
-4. `uv run --no-sync invoke sidecar.toolkit.download` to regenerate, then `invoke fix && invoke
+4. `uv run --no-sync invoke sidecar.toolkit.apply` to regenerate, then `invoke fix && invoke
    test` (must be 10/10 for `.py` changes).
 
 ## Authoring instruction files (`.ai/toolkit/instructions/<slug>.md`)
@@ -74,7 +74,7 @@ Every `uv run` call in a command MUST use `--no-sync`:
 ```
 
 ## Cache restart requirement
-AI tools cache command files at startup. After a `download` regenerates them, restart the AI tool
+AI tools cache command files at startup. After an `apply` regenerates them, restart the AI tool
 before testing.
 
 ## How a slash command routes

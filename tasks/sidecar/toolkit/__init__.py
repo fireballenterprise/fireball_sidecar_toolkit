@@ -1,18 +1,12 @@
 """`sidecar.toolkit` collection — the in-repo face of :mod:`fireball_sidecar_toolkit`.
 
-``sidecar.toolkit.download`` / ``.upload`` / ``.sync`` / ``.check`` operate on the repo they are
-run from. ``sidecar.toolkit.release`` promotes ``development`` -> ``main`` and cuts a tag. The
-console script ``sidecar-toolkit`` (see ``fireball_sidecar_toolkit/cli.py``) is the dependency-free
-equivalent for repos that only ``uvx`` the toolkit.
+Re-exports the task collection shipped inside the wheel (:mod:`fireball_sidecar_toolkit.tasks`)
+so there's one definition. `sidecar.toolkit.{update,apply,upgrade,sync,contribute,check,release,
+mdfix}` operate on the repo they're run from; `download`/`upload` are deprecated aliases. The
+console script `sidecar-toolkit` (see `fireball_sidecar_toolkit/cli.py`) is the dependency-free
+equivalent.
 """
 
-from invoke import Collection
+from fireball_sidecar_toolkit.tasks import collection as namespace
 
-from .main import check, download, release, sync, upload
-
-namespace = Collection(auto_dash_names=False)
-namespace.add_task(check, name="check")
-namespace.add_task(download, name="download")
-namespace.add_task(release, name="release")
-namespace.add_task(sync, name="sync")
-namespace.add_task(upload, name="upload")
+__all__ = ["namespace"]

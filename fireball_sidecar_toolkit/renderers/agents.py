@@ -23,7 +23,7 @@ _SOURCE_OF_TRUTH = (
     "**Source of truth: `.ai/toolkit/` and `.ai/{local}/`** — all rules, slash commands, and skills "
     "live there as tool-neutral markdown. Never hand-edit a generated provider file "
     "(`.github/`, `.claude/`, `.clinerules/`, `.sidecar/`, `AGENTS.md`, `CLAUDE.md`); edit the "
-    "`.ai/` source and run `invoke sidecar.toolkit.download`."
+    "`.ai/` source and run `invoke sidecar.toolkit.apply`."
 )
 
 _CLAUDE_MD = """# Claude Code Instructions

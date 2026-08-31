@@ -75,7 +75,7 @@ it delivers is the pointer — the tool is expected to follow it to the `.ai/` s
 
 **Never hand-edit a generated provider file** (`.github/`, `.claude/`, `.clinerules/`, `.sidecar/`,
 `AGENTS.md`, `CLAUDE.md`). Edit `.ai/toolkit/` (via the toolkit) or `.ai/<repo>/` and run
-`invoke sidecar.toolkit.download`; `invoke sidecar.toolkit.check` (inside `invoke test`) fails on
+`invoke sidecar.toolkit.apply`; `invoke sidecar.toolkit.check` (inside `invoke test`) fails on
 drift.
 
 ### Providers

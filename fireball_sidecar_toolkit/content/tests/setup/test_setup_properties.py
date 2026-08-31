@@ -179,3 +179,39 @@ class TestBackfillMissingSections:
             ),
         )
         assert setup_props.backfill_missing_sections() == []
+
+    def test_leaves_a_nested_schema_repos_block_untouched(self, tmp_path, monkeypatch):
+        """A `repos:` block already migrated to `org > name > {attrs}` is never rewritten by the
+        legacy-schema tier-fragment merge — it would flatten the attrs away."""
+        nested = (
+            "---\n\nrepos:\n"
+            "  acme:\n"
+            "    template_python:\n"
+            "      ai: false\n"
+            "      default_branch: main\n"
+            "      parent: none\n"
+            "      purpose: base\n"
+            "      status: active\n"
+            "      visibility: public\n"
+        )
+        self._setup(
+            tmp_path,
+            monkeypatch,
+            fragments={"template_python": "repos:\n  acme:\n    - template_python\n"},
+            existing=nested,
+        )
+        assert "repos" not in setup_props.backfill_missing_sections()
+        assert (tmp_path / "properties.yml").read_text() == nested
+
+
+class TestNestedRepoSchema:
+    """`_is_nested_repos_schema` — legacy list vs. attribute-map detection."""
+
+    def test_detects_nested(self):
+        assert setup_props._is_nested_repos_schema({"acme": {"repo": {"ai": True}}}) is True  # pylint: disable=protected-access
+
+    def test_legacy_list_is_not_nested(self):
+        assert setup_props._is_nested_repos_schema({"acme": ["a", "b"], "lineage": {}}) is False  # pylint: disable=protected-access
+
+    def test_empty_is_not_nested(self):
+        assert setup_props._is_nested_repos_schema(None) is False  # pylint: disable=protected-access

@@ -12,14 +12,14 @@ Full project plan and history: `ai_vault` repo →
 | GitHub repo | `fireballenterprise/fireball_sidecar_toolkit` |
 | PyPI / dist name | `fireball_sidecar_toolkit` (unique, brand-scoped) |
 | import package | `fireball_sidecar_toolkit` |
-| invoke namespace | `sidecar.toolkit.{download,upload,sync,check,release}` |
+| invoke namespace | `sidecar.toolkit.{update,apply,upgrade,sync,contribute,check,release}` |
 | console script | `sidecar-toolkit` (for the `uvx`, no-dependency path) |
-| slash commands | `/toolkit_sync`, `/toolkit_download`, `/toolkit_upload` (naming TBC) |
+| slash commands | n/a — invoke tasks + the `sidecar-toolkit` console script |
 
 ## Repository layout
 ```
 fireball_sidecar_toolkit/        <- THE distributable package (the only thing in the wheel)
-  content/                       <- everything shipped, as package data. download clobber-copies:
+  content/                       <- everything shipped, as package data. apply clobber-copies:
     ai/{commands,instructions,skills}/*.md   -> .ai/toolkit/  (then rendered into every provider dir)
     modules/                                 -> modules/toolkit/   (shared Python, modules.toolkit.*)
     tasks/                                   -> tasks/toolkit/
@@ -30,9 +30,9 @@ fireball_sidecar_toolkit/        <- THE distributable package (the only thing in
   catalog.py        parse content/ai/ (+ a repo's .ai/<repo>/) -> ContentBundle; CLOBBER_TREES/FILES map
   render.py         run every renderer over the bundle
   renderers/        one per target: agents, claude, cline, copilot, prompts, sidecar
-  download.py       clobber every content/ tree into the repo, then render
-  upload.py         diff every clobbered path vs content/ -> PR against this repo
-  sync.py           check clobbered paths -> offer upload -> download -> render
+  apply.py         clobber every content/ tree into the repo, then render
+  contribute.py    diff every clobbered path vs content/ -> PR against this repo
+  sync.py          check clobbered paths -> stop on local edits -> apply
   check.py          read-only drift gate (every clobbered path + every rendered file)
   mdfix.py          normalise *.md house style (no blank after header; no stray --- in instructions)
   release.py        `gh workflow run release.yml`
@@ -102,9 +102,9 @@ dev = ["fireball_sidecar_toolkit @ git+https://github.com/fireballenterprise/fir
 ```
 `uv.lock` captures the exact commit; updates are deliberate
 (`uv lock --upgrade-package fireball_sidecar_toolkit`). The wheel bundles `content/` as package
-data, so `download` clobbers every managed path straight from the install — no network, no Copier,
+data, so `apply` clobbers every managed path straight from the install — no network, no Copier,
 no submodule. Non-Python / day-job repo:
-`uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit download`.
+`uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit apply`.
 
 ## Consuming-repo contract
 ```
@@ -119,17 +119,17 @@ modules/ tasks/ tests/ (root)   this repo's own code — never touched
             .sidecar/ AGENTS.md CLAUDE.md — NEVER hand-edited; each file is a pointer stub back
             to .ai/toolkit/ or .ai/<repo>/ (provider frontmatter + one "Source of truth:" line)
 ```
-- `sidecar.toolkit.download` — clobber every managed path from the package, render every provider
+- `sidecar.toolkit.apply` — clobber every managed path from the package, render every provider
   stub (with `.ai/<repo>/` layered on top).
 - **Partial vendoring** — `.sidecar-toolkit.yml` at the repo root, `vendor: [ai, scripts]`, limits
   which shipped trees a repo takes (`ai`, `modules`, `tasks`, `tests`, `scripts`; absent file =
   all of them). For a repo whose shared Python has diverged too far to clobber: take `.ai/` +
-  `setup.sh` now, reconcile the rest into `content/` over time, then widen the list. `download` /
-  `check` / `sync` / `upload` all honour it; without `ai` in the list the render step is skipped.
-- `sidecar.toolkit.upload` — diff every managed path vs `content/`, open a PR against this repo
+  `setup.sh` now, reconcile the rest into `content/` over time, then widen the list. `apply` /
+  `check` / `sync` / `contribute` all honour it; without `ai` in the list the render step is skipped.
+- `sidecar.toolkit.contribute` — diff every managed path vs `content/`, open a PR against this repo
   (refuses edits outside the managed set, and `.ai/<repo>/` / generated output).
 - `sidecar.toolkit.sync` — check the managed paths for uncommitted edits -> surface them and ask
-  whether to upload first -> then download -> render. What `/toolkit_sync` and the skill call.
+  whether to contribute first -> then apply -> render. What `/toolkit_sync` and the skill call.
 - `sidecar.toolkit.check` — read-only drift gate for `invoke fix` / `invoke test` and CI.
 - `sidecar.toolkit.mdfix` — normalise every `*.md` to the house style (`invoke fix` writes,
   `invoke test` runs `--check`). Enforces the rules AI tools keep dropping mid-generation.
@@ -139,7 +139,7 @@ modules/ tasks/ tests/ (root)   this repo's own code — never touched
 ## Open design questions
 1. **Shared vs local content split.** The initial port copied *all* of ai_vault's
    `.github/instructions/` and `.github/prompts/`. See the plan's Shared-vs-Local table for the
-   agreed division. ai_vault-specific files move to `.ai/<repo>/` before the first real `download`.
+   agreed division. ai_vault-specific files move to `.ai/<repo>/` before the first real `apply`.
 2. **`.ai/<repo>/` merge semantics** — additive-only, or per-file override of an `.ai/toolkit/` file?
 3. **Circular dependency** — this repo is scaffolded from `template_python`; once `template_python`
    also consumes the toolkit, keep the toolkit free of its own dependency (it *is* the source) and
@@ -150,5 +150,5 @@ modules/ tasks/ tests/ (root)   this repo's own code — never touched
 5. **Slash-command names** — `/toolkit_*` vs `/devkit_*` vs `/sidecar_*` (the last collides with
    the Sidecar product name).
 6. **Shared release wrapper** — item 3 from the chat: ship `sidecar.toolkit.release` (and
-   `.upload`) as part of the toolkit's own shared task set so every repo can
-   `sidecar.toolkit.upload && sidecar.toolkit.release` easily.
+   `.contribute`) as part of the toolkit's own shared task set so every repo can
+   `sidecar.toolkit.contribute && sidecar.toolkit.release` easily.
