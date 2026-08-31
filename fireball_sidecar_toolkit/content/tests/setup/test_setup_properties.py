@@ -165,8 +165,7 @@ class TestBackfillMissingSections:
             fragments={
                 "template_python": "repos:\n  LevonBecker:\n    - template_python\n",
                 "orchestrator": (
-                    "repos:\n  acme:\n    - orchestrator\n"
-                    "  lineage:\n    template_ai_python:\n      - orchestrator\n"
+                    "repos:\n  acme:\n    - orchestrator\n  lineage:\n    template_ai_python:\n      - orchestrator\n"
                 ),
             },
             existing=(
