@@ -21,8 +21,8 @@ def _run(context, verb, *pairs, flags=()):
 
 
 @task(help={"repo": "target family repo (fuzzy name)", "type": "bug | feature | task", "title": "issue title"})
-def add(context, repo=None, type=None, title=None, body="", images="", label="", web=False):  # noqa: A002
-    """Open a GitHub Issue on a family repo (native Type + label)"""
+def add(context, repo=None, type=None, title=None, body="", images="", area="", label="", web=False):  # noqa: A002
+    """Open a GitHub Issue on a family repo (native Type + area/nature labels)"""
     _run(
         context,
         "add",
@@ -31,6 +31,7 @@ def add(context, repo=None, type=None, title=None, body="", images="", label="",
         ("title", title),
         ("body", body),
         ("images", images),
+        ("area", area),
         ("label", label),
         flags=["web"] if web else [],
     )
@@ -58,13 +59,14 @@ def comment(context, repo=None, number=None, body=None, images=""):
 
 
 @task(name="list")
-def list_issues(context, repo="", type="", state="open", limit=30, mine=False, json=False):  # noqa: A002
+def list_issues(context, repo="", type="", label="", state="open", limit=30, mine=False, json=False):  # noqa: A002
     """List a repo's issues (defaults to this repo)"""
     _run(
         context,
         "list",
         ("repo", repo),
         ("type", type),
+        ("label", label),
         ("state", state),
         ("limit", limit),
         flags=[flag for flag, on in (("mine", mine), ("json", json)) if on],
