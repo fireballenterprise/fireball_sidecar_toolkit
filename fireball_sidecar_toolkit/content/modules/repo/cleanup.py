@@ -107,26 +107,44 @@ def _find_caches(repo_path: Path) -> list[Path]:
     return hits
 
 
-def _scan_orphans(repo_path: Path, directory: Path, tracked: set[str], found: list[Path]) -> None:
-    """Record dirs under an orphan root that git tracks no file in. Cache dirs are skipped —
-    ``_find_caches`` owns those, so the "orphaned directory" list stays meaningful."""
+def _has_real_files(directory: Path) -> bool:
+    """True if ``directory`` holds any file that isn't cache junk (ignoring cache/skip subdirs).
+
+    Guards the sweep against deleting a directory of *new, uncommitted* work — which also has zero
+    tracked files, but isn't leftover residue.
+    """
+    for _root, dirnames, filenames in os.walk(directory):
+        dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS and not _is_cache_dir(d)]
+        if any(name not in _CACHE_FILES for name in filenames):
+            return True
+    return False
+
+
+def _scan_orphans(
+    repo_path: Path, directory: Path, tracked: set[str], orphans: list[Path], suspects: list[Path]
+) -> None:
+    """Classify dirs under an orphan root that git tracks no file in: pure cache/empty residue →
+    ``orphans`` (safe to delete); anything holding non-cache untracked files → ``suspects``
+    (reported, never deleted). Cache-named dirs are left to ``_find_caches``."""
     rel = directory.relative_to(repo_path).as_posix() + "/"
     if not any(path.startswith(rel) for path in tracked):
-        found.append(directory)
+        (suspects if _has_real_files(directory) else orphans).append(directory)
         return
     for child in sorted(directory.iterdir()):
         if child.is_dir() and child.name not in _SKIP_DIRS and not _is_cache_dir(child.name):
-            _scan_orphans(repo_path, child, tracked, found)
+            _scan_orphans(repo_path, child, tracked, orphans, suspects)
 
 
-def _find_orphan_dirs(repo_path: Path) -> list[Path]:
+def _find_orphan_dirs(repo_path: Path) -> tuple[list[Path], list[Path]]:
+    """Return ``(orphans, suspects)`` under the orphan roots — see :func:`_scan_orphans`."""
     tracked = {line.strip() for line in _git(["ls-files"], repo_path).stdout.splitlines() if line.strip()}
-    found: list[Path] = []
+    orphans: list[Path] = []
+    suspects: list[Path] = []
     for root in _ORPHAN_ROOTS:
         root_path = repo_path / root
         if root_path.is_dir():
-            _scan_orphans(repo_path, root_path, tracked, found)
-    return found
+            _scan_orphans(repo_path, root_path, tracked, orphans, suspects)
+    return orphans, suspects
 
 
 def _size(path: Path) -> int:
@@ -156,11 +174,17 @@ def _remove(path: Path) -> int:
 
 
 def _sweep_trash(repo_path: Path) -> None:
-    orphans = _find_orphan_dirs(repo_path)
+    orphans, suspects = _find_orphan_dirs(repo_path)
     caches = [c for c in _find_caches(repo_path) if not any(c == o or o in c.parents for o in orphans)]
     targets = sorted(set(orphans) | set(caches))
 
     click.echo()
+    if suspects:
+        warning("Directories git tracks nothing in, but holding untracked files — NOT removing:")
+        for path in suspects:
+            click.echo(f"   {path.relative_to(repo_path).as_posix()}/  (delete by hand if it's stale)")
+        click.echo()
+
     if not targets:
         success("No local trash to sweep")
         return
