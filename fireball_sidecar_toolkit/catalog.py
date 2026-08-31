@@ -78,6 +78,7 @@ def vendored_files(repo_root: Path) -> dict[str, str]:
     """:data:`CLOBBER_FILES` filtered to what this repo vendors (all under the ``scripts`` key)."""
     return dict(CLOBBER_FILES) if "scripts" in read_vendor(repo_root) else {}
 
+
 _EXEC_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
 _H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 

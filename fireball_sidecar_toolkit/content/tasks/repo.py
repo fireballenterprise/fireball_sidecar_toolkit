@@ -9,16 +9,39 @@ from invoke import task
 
 
 @task
-def pull(context):
-    """Pull updates from git remote (stash → pull --rebase → restore)"""
-    context.run("python -m modules.toolkit.repo.pull")
+def pull(context, family=False):
+    """Pull updates from git remote (stash → pull --rebase → restore); --family for the whole family"""
+    target = "pull all" if family else "pull"
+    context.run(f'python -m modules.toolkit.repo.route "{target}"')
 
 
 @task
-def push(context, no_confirm=False):
-    """Push to git remote and iCloud Obsidian folder (fix → test → commit → push)"""
+def push(context, no_confirm=False, family=False):
+    """Push to git remote and iCloud (fix → test → commit → push); --family for the whole family"""
+    if family:
+        context.run('python -m modules.toolkit.repo.route "push all"')
+        return
     flag = " --no-confirm" if no_confirm else ""
     context.run(f"python -m modules.toolkit.repo.push{flag}")
+
+
+@task
+def cleanup(context, family=False):
+    """Clean up a merged feature branch, then sweep local build/cache trash; --family for the family"""
+    target = "cleanup all" if family else "cleanup"
+    context.run(f'python -m modules.toolkit.repo.route "{target}"')
+
+
+@task
+def pr_cleanup(context):
+    """Deprecated alias for `cleanup`"""
+    cleanup(context)
+
+
+@task
+def list_family(context):
+    """Show the repos:/lineage: family map from properties.yml"""
+    context.run('python -m modules.toolkit.repo.route "list"')
 
 
 @task
@@ -62,9 +85,3 @@ def pr_create(context, title=None, content=None):
     if content:
         flags += f' --content="{content}"'
     context.run(f"python -m modules.toolkit.repo.pr_create{flags}")
-
-
-@task
-def pr_cleanup(context):
-    """Switch to the default branch, pull, and delete the merged local feature branch"""
-    context.run("python -m modules.toolkit.repo.pr_cleanup")

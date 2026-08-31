@@ -3,6 +3,7 @@
 import os
 import re
 import subprocess
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -93,6 +94,50 @@ def get_repo_remote() -> str:
     """
     props = get_properties()
     return props["repo"]["remote"]
+
+
+@dataclass(frozen=True)
+class FamilyRepo:
+    """One repo in this vault's ``repos:`` family, resolved to a local clone path."""
+
+    org: str
+    name: str
+    path: Path
+    is_self: bool
+
+
+def get_family_repos(*, include_self: bool = False) -> list[FamilyRepo]:
+    """Resolve ``properties.yml`` ``repos:`` + ``repos_local:`` into local clone paths.
+
+    Ordered root-to-leaf by ``lineage:`` depth (then name). Only repos with a local ``.git``
+    clone are returned. The entry matching :func:`get_repo_local` is flagged ``is_self`` and
+    dropped unless ``include_self``. Returns ``[]`` when there is no ``repos:`` map — the caller
+    treats that as "singleton repo, no family".
+    """
+    props = get_properties()
+    repos = props.get("repos") or {}
+    repos_local = props.get("repos_local") or {}
+    lineage = _normalize_lineage(repos.get("lineage", {}))
+    self_path = get_repo_local().resolve()
+
+    found: list[FamilyRepo] = []
+    for org, names in repos.items():
+        if org == "lineage":
+            continue
+        base = next((value for key, value in repos_local.items() if key.lower() == org.lower()), None)
+        if not base:
+            continue
+        base_path = _expand_path(base)
+        for name in names:
+            path = (base_path / name).resolve()
+            if not (path / ".git").exists():
+                continue
+            found.append(FamilyRepo(org=org, name=name, path=path, is_self=path == self_path))
+
+    found.sort(key=lambda repo: (_lineage_depth(repo.name, lineage), repo.name))
+    if not include_self:
+        found = [repo for repo in found if not repo.is_self]
+    return found
 
 
 def get_binary_version(name: str) -> str:
