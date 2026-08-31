@@ -5,6 +5,10 @@ argument-hint: no arguments required
 agent: agent
 ---
 
+If this repo is `pull_request: false` in `properties.yml` (`/repo self`), it ships by direct push,
+not PRs — `pr_create` will refuse. Tell the user to use `/ship-it` (or push the default branch)
+instead.
+
 Gather the branch and diff context:
 
 !`uv run --no-sync python -m modules.toolkit.repo.route "pr_diff"`

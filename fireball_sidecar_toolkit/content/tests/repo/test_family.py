@@ -17,8 +17,10 @@ _NESTED = {
             "ai": False,
             "default_branch": "main",
             "parent": "none",
+            "pull_request": True,
             "purpose": "r",
             "status": "active",
+            "use_ci": True,
             "visibility": "public",
         },
         "midtool": {
@@ -97,6 +99,21 @@ def test_dev_prd_property_from_default_branch(nested):
     assert app.dev_prd is True
     root = next(r for r in properties.get_family_repos() if r.name == "root")
     assert root.dev_prd is False
+
+
+def test_ci_and_pr_flags_default_false(nested):
+    by_name = {r.name: r for r in properties.get_family_repos(include_self=True, include_retired=True)}
+    assert by_name["root"].use_ci is True and by_name["root"].pull_request is True
+    assert by_name["me"].use_ci is False and by_name["me"].pull_request is False  # keys absent → False
+
+
+def test_find_current_repo_and_print_self(nested, capsys):
+    me = properties.find_current_repo()
+    assert me is not None and me.name == "me" and me.pull_request is False
+    assert family.print_self() == 0
+    out = capsys.readouterr().out
+    assert "acme/me" not in out and "lb/me" in out
+    assert "no PR" in out and "local invoke tasks" in out
 
 
 def test_legacy_list_plus_lineage_still_parses(tmp_path, monkeypatch):

@@ -120,6 +120,8 @@ class FamilyRepo:
     status: str  # "active" | "retired"
     visibility: str  # "public" | "private" | ""
     ai: bool
+    use_ci: bool  # GitHub Actions run for this repo — else test/build/promote/release run locally
+    pull_request: bool  # ship changes via a PR — else commit straight to the default branch
     purpose: str
 
     @property
@@ -221,6 +223,8 @@ def get_family_repos(
                 status=status,
                 visibility=str(attrs.get("visibility", "")),
                 ai=bool(attrs.get("ai", False)),
+                use_ci=bool(attrs.get("use_ci", False)),
+                pull_request=bool(attrs.get("pull_request", False)),
                 purpose=str(attrs.get("purpose", "")),
             )
         )
@@ -229,6 +233,19 @@ def get_family_repos(
     if not include_self:
         found = [repo for repo in found if not repo.is_self]
     return found
+
+
+def find_current_repo() -> FamilyRepo | None:
+    """This repo's own ``FamilyRepo`` record from the ``repos:`` map (``None`` if it isn't listed).
+
+    Use ``.pull_request`` / ``.use_ci`` to decide how to ship a change:
+    ``pull_request`` false → commit straight to the default branch, no PR; ``use_ci`` false →
+    test/build/promote/release with local ``invoke`` tasks, don't wait on GitHub checks.
+    """
+    for repo in get_family_repos(include_self=True, include_retired=True, include_missing=True):
+        if repo.is_self:
+            return repo
+    return None
 
 
 def get_binary_version(name: str) -> str:

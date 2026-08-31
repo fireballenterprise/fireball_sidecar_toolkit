@@ -34,6 +34,13 @@ def test_list_delegates_to_family(monkeypatch):
     assert calls == ["map"]
 
 
+def test_self_delegates_to_family(monkeypatch):
+    calls = []
+    monkeypatch.setattr(route.family, "print_self", lambda: calls.append("self") or 0)
+    assert _main(monkeypatch, "self") == 0
+    assert calls == ["self"]
+
+
 @pytest.mark.parametrize(
     ("arg", "verb", "scope"),
     [("pull all", "pull", None), ("push ai", "push", "ai"), ("cleanup dev_prd", "cleanup", "dev_prd")],
