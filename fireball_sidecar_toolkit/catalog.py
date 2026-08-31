@@ -25,8 +25,8 @@ import yaml
 # repo's `.ai/<repo>/` overlay.
 LAYERS = ("shared", "local")
 
-# Everything the toolkit ships lives under `content/`. `download` clobber-copies each of these into
-# the consuming repo verbatim; `check` drift-gates them; `upload` maps repo edits back.
+# Everything the toolkit ships lives under `content/`. `apply` clobber-copies each of these into
+# the consuming repo verbatim; `check` drift-gates them; `contribute` maps repo edits back.
 #   content/<key>/  ->  <repo path>/
 CLOBBER_TREES = {
     "ai": ".ai/toolkit",  # commands/ instructions/ skills/ — then rendered into every provider dir
@@ -199,7 +199,7 @@ def local_layer_name(repo_root: Path) -> str:
     The repo's folder name (``.ai/ai_vault/``) when that dir exists; else — if the repo was cloned
     to a different folder name — the sole non-``toolkit`` child of ``.ai/``. Falls back to the
     stable literal ``"local"`` when there is no local dir yet (must be deterministic: ``check``
-    renders in a temp mirror and has to match what ``download`` wrote).
+    renders in a temp mirror and has to match what ``apply`` wrote).
     """
     ai = repo_root / ".ai"
     if (ai / repo_root.name).is_dir():

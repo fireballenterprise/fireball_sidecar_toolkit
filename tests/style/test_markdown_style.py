@@ -1,7 +1,7 @@
 """The packaged canonical content tree is normalised to the house Markdown style.
 
 `fireball_sidecar_toolkit.mdfix` (blank-line-after-header, stray `---` divider in instruction
-bodies) is the enforcement; this test keeps `content/` itself clean so a `download` never
+bodies) is the enforcement; this test keeps `content/` itself clean so an `apply` never
 introduces drift. See `content/instructions/markdown.md`.
 """
 

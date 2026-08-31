@@ -5,6 +5,16 @@
 
 Every task operates on the repo it is run from (``Path.cwd()``). Logic lives in the sibling
 modules; these wrappers stay thin.
+
+Verbs (apt-style):
+  update      pull the newest toolkit release into the venv (uv lock --upgrade + uv sync)
+  apply       clobber .ai/toolkit/ + modules/toolkit/ + … from the installed package, then render
+  upgrade     update, then apply — the whole "take the new toolkit" in one
+  sync        apply, but stop first if .ai/toolkit/ has local hand-edits
+  contribute  open a PR to the toolkit with this repo's .ai/toolkit/ edits
+  check       read-only drift gate (wired into `invoke test`)
+  release     dispatch the toolkit's own development -> main release
+  mdfix       normalise markdown house style
 """
 
 from __future__ import annotations
@@ -13,20 +23,71 @@ from pathlib import Path
 
 from invoke import Collection, task
 
+from . import contribute as _contribute
 from . import sync as _sync
-from . import upload as _upload
+from .apply import apply as _apply
 from .check import check as _check
-from .download import download as _download
 from .mdfix import check_tree as _md_check
 from .mdfix import fix_tree as _md_fix
 from .release import release as _release
 
+_PACKAGE = "fireball-sidecar-toolkit"
+
 
 @task
-def download(context):  # noqa: ARG001
-    """Clobber .ai/toolkit/ from the installed toolkit, then regenerate every provider view."""
-    result = _download(Path.cwd())
+def update(context):
+    """Pull the newest toolkit release into the venv (uv lock --upgrade + uv sync).
+
+    Nothing in the repo tree changes yet — follow with `apply` (or run `upgrade`).
+    """
+    context.run(f"uv lock --upgrade-package {_PACKAGE}")
+    context.run("uv sync")
+
+
+@task
+def apply(context):  # noqa: ARG001
+    """Clobber .ai/toolkit/ + modules/toolkit/ + … from the installed package, then render."""
+    result = _apply(Path.cwd())
     print(f"Rendered {result.by_count} files.")
+
+
+@task
+def upgrade(context, force=False):
+    """update, then apply — pull the newest toolkit and take it into this repo.
+
+    Stops if .ai/toolkit/ has local hand-edits (pass --force to clobber them).
+    """
+    update(context)
+    plan = _sync.inspect(Path.cwd())
+    print(plan.message)
+    if plan.dirty and not force:
+        raise SystemExit(2)
+    result = _sync.run(Path.cwd(), force=True)
+    print(f"Rendered {result.by_count} files.")
+
+
+@task
+def sync(context, force=False):  # noqa: ARG001
+    """Inspect .ai/toolkit/ for local edits; if clean (or --force), apply (clobber + render)."""
+    plan = _sync.inspect(Path.cwd())
+    print(plan.message)
+    if plan.dirty and not force:
+        raise SystemExit(2)
+    result = _sync.run(Path.cwd(), force=True)
+    print(f"Rendered {result.by_count} files.")
+
+
+@task
+def contribute(context, branch=None, toolkit_repo=None):  # noqa: ARG001
+    """Open a PR against fireball_sidecar_toolkit with this repo's .ai/toolkit/ edits.
+
+    The toolkit checkout is found via --toolkit-repo, then $FIREBALL_SIDECAR_TOOLKIT_REPO,
+    then a sibling ../fireball_sidecar_toolkit dir.
+    """
+    kwargs = {"branch": branch}
+    if toolkit_repo:
+        kwargs["toolkit_repo"] = Path(toolkit_repo)
+    print(_contribute.contribute(Path.cwd(), **kwargs))
 
 
 @task
@@ -53,35 +114,25 @@ def mdfix(context, check=False, exclude=""):  # noqa: ARG001
 
 
 @task
-def sync(context, force=False):  # noqa: ARG001
-    """Inspect .ai/toolkit/ for local edits; if clean (or force), clobber + regenerate."""
-    plan = _sync.inspect(Path.cwd())
-    print(plan.message)
-    if plan.dirty and not force:
-        raise SystemExit(2)
-    result = _sync.run(Path.cwd(), force=True)
-    print(f"Rendered {result.by_count} files.")
-
-
-@task
-def upload(context, branch=None, toolkit_repo=None):  # noqa: ARG001
-    """Open a PR against fireball_sidecar_toolkit with this repo's .ai/toolkit/ edits.
-
-    The toolkit checkout is found via --toolkit-repo, then $FIREBALL_SIDECAR_TOOLKIT_REPO,
-    then a sibling ../fireball_sidecar_toolkit dir.
-    """
-    kwargs = {"branch": branch}
-    if toolkit_repo:
-        kwargs["toolkit_repo"] = Path(toolkit_repo)
-    print(_upload.upload(Path.cwd(), **kwargs))
-
-
-@task
 def release(context):  # noqa: ARG001
     """Dispatch the toolkit's development -> main release workflow."""
     print(_release(Path.cwd()))
 
 
+@task
+def download(context):
+    """Deprecated alias for `apply`."""
+    print("note: `sidecar.toolkit.download` is now `sidecar.toolkit.apply`")
+    apply(context)
+
+
+@task
+def upload(context, branch=None, toolkit_repo=None):
+    """Deprecated alias for `contribute`."""
+    print("note: `sidecar.toolkit.upload` is now `sidecar.toolkit.contribute`")
+    contribute(context, branch=branch, toolkit_repo=toolkit_repo)
+
+
 collection = Collection("toolkit")
-for _task in (download, check, mdfix, sync, upload, release):
+for _task in (update, apply, upgrade, sync, contribute, check, mdfix, release, download, upload):
     collection.add_task(_task)

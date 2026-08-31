@@ -1,7 +1,7 @@
 ---
 name: cleanup
-description: Clean up a merged feature branch (switch to default, pull, delete it), then sweep local build/cache trash. `all` does it across the family.
-argument-hint: "[all]"
+description: Clean up a merged feature branch (switch to default, pull, delete it), then sweep local build/cache trash. A scope (all|ai|dev_prd) does it across that slice of the family.
+argument-hint: "[all|ai|dev_prd]"
 agent: agent
 ---
 
@@ -17,4 +17,5 @@ Two phases, in order:
    `tests/` (dirs git tracks no file in — the residue a module move leaves behind). Lists
    everything and asks before deleting. Never touches `topics/` or `tmp/`.
 
-`/cleanup all` runs both phases in every repo in `properties.yml`'s `repos:` family.
+`/cleanup all` (or `ai` / `dev_prd`) runs both phases in each repo of that scope of
+`properties.yml`'s `repos:` family.
