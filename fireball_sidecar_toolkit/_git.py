@@ -1,4 +1,4 @@
-"""Thin ``git``/``gh`` subprocess helpers shared by download / sync / upload."""
+"""Thin ``git``/``gh`` subprocess helpers shared by apply / sync / contribute."""
 
 from __future__ import annotations
 

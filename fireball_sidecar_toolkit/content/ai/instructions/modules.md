@@ -93,7 +93,7 @@ if __name__ == "__main__":
 ## AI Provider Files
 Commands, instructions, and skills are authored in `.ai/toolkit/` (via `fireball_sidecar_toolkit`'s
 `content/`) or this repo's `.ai/<repo>/`, and rendered as pointer stubs into every provider dir by
-`invoke sidecar.toolkit.download`. There are no per-repo sync modules —
+`invoke sidecar.toolkit.apply`. There are no per-repo sync modules —
 `invoke sidecar.toolkit.check` (inside `invoke test`) is the drift gate. See
 `.ai/toolkit/instructions/ai_commands.md`.
 

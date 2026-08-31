@@ -1,4 +1,4 @@
-"""modules.toolkit.repo.family + get_family_repos — resolution, ordering, singleton fallback."""
+"""modules.toolkit.repo.family + get_family_repos — nested + legacy schema, scope, retired."""
 
 import pytest
 from modules.toolkit.repo import family
@@ -9,35 +9,108 @@ pytestmark = pytest.mark.repo
 
 def _clone(base, name):
     (base / name / ".git").mkdir(parents=True)
-    return base / name
+
+
+_NESTED = {
+    "acme": {
+        "root": {
+            "ai": False,
+            "default_branch": "main",
+            "parent": "none",
+            "purpose": "r",
+            "status": "active",
+            "visibility": "public",
+        },
+        "midtool": {
+            "ai": True,
+            "default_branch": "main",
+            "parent": "root",
+            "purpose": "m",
+            "status": "active",
+            "visibility": "public",
+        },
+        "app": {
+            "ai": False,
+            "default_branch": "development",
+            "parent": "root",
+            "purpose": "a",
+            "status": "active",
+            "visibility": "private",
+        },
+        "old": {
+            "ai": False,
+            "default_branch": "main",
+            "parent": "none",
+            "purpose": "o",
+            "status": "retired",
+            "visibility": "private",
+        },
+    },
+    "lb": {
+        "me": {
+            "ai": True,
+            "default_branch": "main",
+            "parent": "midtool",
+            "purpose": "mine",
+            "status": "active",
+            "visibility": "private",
+        },
+    },
+}
 
 
 @pytest.fixture
-def family_props(tmp_path, monkeypatch):
-    org = tmp_path / "org"
-    for name in ("template_python", "template_ai_python", "ai_vault"):
-        _clone(org, name)
+def nested(tmp_path, monkeypatch):
+    for org, repos in _NESTED.items():
+        for name in repos:
+            _clone(tmp_path / org, name)
     props = {
-        "repos": {
-            "acme": ["template_python", "template_ai_python", "ai_vault", "ghost_repo"],
-            "lineage": {"template_python": [{"template_ai_python": ["ai_vault"]}]},
-        },
-        "repos_local": {"acme": str(org)},
-        "repo": {"local": str(org / "ai_vault")},
+        "repos": _NESTED,
+        "repos_local": {"acme": str(tmp_path / "acme"), "lb": str(tmp_path / "lb")},
+        "repo": {"local": str(tmp_path / "lb" / "me")},
     }
     monkeypatch.setattr(properties, "get_properties", lambda: props)
-    monkeypatch.setattr(properties, "get_repo_local", lambda: org / "ai_vault")
-    return org
+    monkeypatch.setattr(properties, "get_repo_local", lambda: tmp_path / "lb" / "me")
+    return tmp_path
 
 
-def test_orders_root_to_leaf_and_drops_self_and_missing(family_props):
-    assert [r.name for r in properties.get_family_repos()] == ["template_python", "template_ai_python"]
+def test_nested_schema_parent_depth_order_and_self(nested):
+    repos = properties.get_family_repos(include_self=True, include_retired=True)
+    # depth 0: old, root · depth 1: app, midtool · depth 2: me
+    assert [r.name for r in repos] == ["old", "root", "app", "midtool", "me"]
+    me = repos[-1]
+    assert me.is_self and me.parent == "midtool" and me.ai is True
 
 
-def test_include_self_appends_self_last_and_flags_it(family_props):
+def test_retired_excluded_by_default(nested):
+    assert "old" not in {r.name for r in properties.get_family_repos(include_retired=False)}
+    assert "old" in {r.name for r in properties.get_family_repos(include_retired=True)}
+
+
+def test_scope_ai_and_dev_prd(nested):
+    assert {r.name for r in properties.get_family_repos(scope="ai")} == {"midtool"}  # me is self
+    assert {r.name for r in properties.get_family_repos(scope="dev_prd")} == {"app"}
+
+
+def test_dev_prd_property_from_default_branch(nested):
+    app = next(r for r in properties.get_family_repos() if r.name == "app")
+    assert app.dev_prd is True
+    root = next(r for r in properties.get_family_repos() if r.name == "root")
+    assert root.dev_prd is False
+
+
+def test_legacy_list_plus_lineage_still_parses(tmp_path, monkeypatch):
+    _clone(tmp_path / "acme", "template_python")
+    _clone(tmp_path / "acme", "proj")
+    props = {
+        "repos": {"acme": ["template_python", "proj"], "lineage": {"template_python": ["proj"]}},
+        "repos_local": {"acme": str(tmp_path / "acme")},
+        "repo": {"local": str(tmp_path / "acme" / "template_python")},
+    }
+    monkeypatch.setattr(properties, "get_properties", lambda: props)
+    monkeypatch.setattr(properties, "get_repo_local", lambda: tmp_path / "acme" / "template_python")
     repos = properties.get_family_repos(include_self=True)
-    assert [r.name for r in repos] == ["template_python", "template_ai_python", "ai_vault"]
-    assert repos[-1].is_self and not repos[0].is_self
+    assert [(r.name, r.parent) for r in repos] == [("template_python", None), ("proj", "template_python")]
 
 
 def test_no_repos_key_returns_empty(tmp_path, monkeypatch):
@@ -47,15 +120,15 @@ def test_no_repos_key_returns_empty(tmp_path, monkeypatch):
 
 
 def test_run_family_singleton_fallback(monkeypatch, capsys):
-    monkeypatch.setattr(family, "get_family_repos", lambda *, include_self: [])
+    monkeypatch.setattr(family, "get_family_repos", lambda **_kw: [])
     dispatched = []
     monkeypatch.setattr(family, "_dispatch_single", lambda verb: dispatched.append(verb) or 0)
-    assert family.run_family("pull") == 0
+    assert family.run_family("pull", scope="ai") == 0
     assert dispatched == ["pull"]
-    assert "no repos: family map" in capsys.readouterr().out
+    assert "family run requested" in capsys.readouterr().out
 
 
 def test_print_map_without_family(monkeypatch, capsys):
-    monkeypatch.setattr(family, "get_properties", lambda: {"repos": {}})
+    monkeypatch.setattr(family, "get_family_repos", lambda **_kw: [])
     assert family.print_map() == 0
     assert "no related-repo family" in capsys.readouterr().out

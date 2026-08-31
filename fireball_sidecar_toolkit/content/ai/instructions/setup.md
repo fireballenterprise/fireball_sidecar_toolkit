@@ -12,7 +12,7 @@ Both install `uv` (user-local, no sudo/admin), run the repo-local hook, create `
 then hand off to `uv run --no-sync invoke setup.properties` to write `properties.yml`.
 
 ## `setup.sh` / `setup.ps1` are clobbered
-They come from `fireball_sidecar_toolkit` (`content/scripts/`) — `invoke sidecar.toolkit.download`
+They come from `fireball_sidecar_toolkit` (`content/scripts/`) — `invoke sidecar.toolkit.apply`
 overwrites them. **Never edit them.** Anything repo-specific goes in `setup.local.sh` /
 `setup.local.ps1` (git-tracked, never clobbered). The base script sources it once and calls two
 optional phase functions:

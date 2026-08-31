@@ -1,4 +1,4 @@
-"""``sidecar-toolkit upload`` — promote local edits to a toolkit-managed path back as a PR.
+"""``sidecar-toolkit contribute`` — promote local edits to a toolkit-managed path back as a PR.
 
 1. Diff every clobbered tree/file (``.ai/toolkit/``, ``modules/toolkit/``, ``tasks/toolkit/``,
    ``tests/toolkit/``, ``setup.sh``, ``setup.ps1``) against the packaged ``content/``.
@@ -26,8 +26,12 @@ _REPO_ENV_VAR = "FIREBALL_SIDECAR_TOOLKIT_REPO"
 _IGNORE_PARTS = {"__pycache__"}
 
 
-class UploadError(RuntimeError):
-    """Preconditions for an upload were not met."""
+class ContributeError(RuntimeError):
+    """Preconditions for a contribute run were not met."""
+
+
+#: Deprecated alias — use :class:`ContributeError`.
+UploadError = ContributeError
 
 
 def _resolve_toolkit(repo_root: Path, override: Path | None) -> Path:
@@ -35,7 +39,7 @@ def _resolve_toolkit(repo_root: Path, override: Path | None) -> Path:
     candidate = (override or (Path(env) if env else repo_root.parent / _PACKAGE_NAME)).expanduser().resolve()
     pyproject = candidate / "pyproject.toml"
     if not pyproject.is_file() or f'name = "{_PACKAGE_NAME}"' not in pyproject.read_text(encoding="utf-8"):
-        raise UploadError(
+        raise ContributeError(
             f"No {_PACKAGE_NAME} checkout at {candidate}. Pass toolkit_repo=... "
             f"or set {_REPO_ENV_VAR}=/path/to/fireball_sidecar_toolkit."
         )
@@ -64,7 +68,7 @@ def _changed(repo_root: Path, content: Path) -> list[tuple[Path, Path]]:
     return out
 
 
-def upload(repo_root: Path, *, branch: str | None = None, toolkit_repo: Path | None = None) -> str:
+def contribute(repo_root: Path, *, branch: str | None = None, toolkit_repo: Path | None = None) -> str:
     """Open a PR against the toolkit with this repo's toolkit-managed edits; return the PR URL."""
     repo_root = repo_root.resolve()
     managed = (*vendored_trees(repo_root).values(), *vendored_files(repo_root).values())
@@ -72,16 +76,16 @@ def upload(repo_root: Path, *, branch: str | None = None, toolkit_repo: Path | N
     excludes = [f":(exclude){p}" for p in managed]
     outside = is_git_repo(repo_root) and git("status", "--porcelain", "--", ".", *excludes, cwd=repo_root, check=False)
     if outside:
-        raise UploadError("Uncommitted changes outside the toolkit-managed paths — commit or stash them first.")
+        raise ContributeError("Uncommitted changes outside the toolkit-managed paths — commit or stash them first.")
 
     content = packaged_content_root()
     changed = _changed(repo_root, content)
     if not changed:
-        return "Toolkit-managed paths match canonical content — nothing to upload."
+        return "Toolkit-managed paths match canonical content — nothing to contribute."
 
     toolkit = _resolve_toolkit(repo_root, toolkit_repo)
     if git("status", "--porcelain", cwd=toolkit, check=False):
-        raise UploadError(f"{toolkit} has uncommitted changes — clean it first.")
+        raise ContributeError(f"{toolkit} has uncommitted changes — clean it first.")
 
     branch = branch or "sync_shared_content"
     git("fetch", "origin", "development", cwd=toolkit)
@@ -103,3 +107,7 @@ def upload(repo_root: Path, *, branch: str | None = None, toolkit_repo: Path | N
         text=True,
     )
     return result.stdout.strip()
+
+
+#: Deprecated alias — use :func:`contribute`.
+upload = contribute

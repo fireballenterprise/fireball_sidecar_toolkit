@@ -34,17 +34,24 @@ def test_list_delegates_to_family(monkeypatch):
     assert calls == ["map"]
 
 
-@pytest.mark.parametrize("verb", ["pull", "push", "cleanup"])
-def test_all_token_routes_to_family(monkeypatch, verb):
+@pytest.mark.parametrize(
+    ("arg", "verb", "scope"),
+    [("pull all", "pull", None), ("push ai", "push", "ai"), ("cleanup dev_prd", "cleanup", "dev_prd")],
+)
+def test_scope_token_routes_to_family(monkeypatch, arg, verb, scope):
     seen = {}
-    monkeypatch.setattr(route.family, "run_family", lambda v, *, assume_yes: seen.update(verb=v, yes=assume_yes) or 0)
-    assert _main(monkeypatch, f"{verb} all") == 0
-    assert seen == {"verb": verb, "yes": False}
+    monkeypatch.setattr(
+        route.family,
+        "run_family",
+        lambda v, *, assume_yes, scope: seen.update(verb=v, yes=assume_yes, scope=scope) or 0,
+    )
+    assert _main(monkeypatch, arg) == 0
+    assert seen == {"verb": verb, "yes": False, "scope": scope}
 
 
 def test_all_with_yes_flag(monkeypatch):
     seen = {}
-    monkeypatch.setattr(route.family, "run_family", lambda v, *, assume_yes: seen.update(yes=assume_yes) or 0)
+    monkeypatch.setattr(route.family, "run_family", lambda v, *, assume_yes, scope: seen.update(yes=assume_yes) or 0)
     _main(monkeypatch, "push all --yes")
     assert seen["yes"] is True
 
