@@ -1,7 +1,13 @@
 ---
-description: "Use when creating a git branch or drafting a Pull Request for this repo. Covers branch naming convention and PR description format."
+description: "Use when creating a git branch or drafting a Pull Request for this repo. Covers PR-vs-direct-push, branch naming, and PR description format."
 ---
 # Git & PR Instructions
+## PR or direct push?
+Check the repo's `pull_request` flag in `properties.yml`'s `repos:` map (`/repo self`). `false` →
+this repo ships by committing straight to the default branch, **no PR** — run `invoke fix` +
+`invoke test`, fast-forward the default branch to your work, push. `true` → the feature-branch + PR
+flow below. `pr_create.py` refuses on a `pull_request: false` repo.
+
 ## Branch Naming
 - All lowercase, `snake_case` (words separated by `_`)
 - 2-4 words describing the change — not a ticket number, not a filename

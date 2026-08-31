@@ -1,19 +1,27 @@
 ---
 name: ship-it
-description: Push the current feature branch, then draft PR notes and open a Pull Request via gh.
+description: Ship the current branch — PR + push for pull_request:true repos, or fast-forward + direct push to the default branch for pull_request:false.
 argument-hint: no arguments required
 agent: agent
 ---
 
-Run the push workflow:
+First check how this repo ships:
+
+!`uv run --no-sync python -m modules.toolkit.repo.route "self"`
+
+**If `pull_request: false`** — this repo does **not** use PRs. Run `invoke fix` + `invoke test`
+(must pass), then switch to the default branch, `git merge --ff-only <your feature branch>`,
+`git push origin <default>`, and delete the feature branch. Report the pushed commit. Stop here.
+
+**If `pull_request: true`** — run the push workflow:
 
 !`uv run --no-sync python -m modules.toolkit.repo.route "pr_push"`
 
-If it fails, show the full output to the user, explain which stage failed, and ask how they'd like
-to proceed — do not continue to the PR steps below.
+If it fails, show the full output, explain which stage failed, and ask how to proceed — do not
+continue to the PR steps below.
 
 Then follow the `/pr` steps: gather the branch/diff context via
 `uv run --no-sync python -m modules.toolkit.repo.route "pr_diff"`, write a `## Summary` and `## Changes`
 description, then create the PR with
 `uv run --no-sync python -m modules.toolkit.repo.route "pr_create --title=\"<title>\" --content=\"<notes>\""`.
-Report the PR URL to the user.
+Report the PR URL. If `use_ci: false`, CI won't run — the local `invoke test` was the gate.

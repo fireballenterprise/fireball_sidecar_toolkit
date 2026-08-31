@@ -15,7 +15,7 @@ from pathlib import Path
 
 from ..common import cli
 from ..common.route_utils import REPO_ROOT_ENV, build_env
-from ..setup.properties import FamilyRepo, get_family_repos, get_repo_local
+from ..setup.properties import FamilyRepo, find_current_repo, get_family_repos, get_repo_local
 
 _SINGLETON_NOTE = (
     "ℹ  family run requested, but properties.yml has no repos: family map (or none are cloned) —\n"
@@ -178,9 +178,34 @@ def _tags(repo: FamilyRepo) -> str:
         parts.append("ai")
     if repo.dev_prd:
         parts.append("dev→prd")
+    parts.append("PR" if repo.pull_request else "direct-push")
+    if not repo.use_ci:
+        parts.append("no-CI")
     if repo.status != "active":
         parts.append(repo.status.upper())
     return ", ".join(parts)
+
+
+def print_self() -> int:
+    """Print this repo's own ``repos:`` attributes — the ship flags especially."""
+    repo = find_current_repo()
+    if repo is None:
+        cli.echo("This repo isn't listed in properties.yml's repos: map.")
+        return 0
+    ship = (
+        "open a PR (assigned to you); let CI run"
+        if repo.pull_request
+        else "commit straight to the default branch — no PR"
+    )
+    test = "GitHub Actions" if repo.use_ci else "local invoke tasks / CLI (no GitHub Actions)"
+    cli.echo(f"{repo.org}/{repo.name}")
+    cli.echo(f"  default_branch : {repo.default_branch or '?'}")
+    cli.echo(f"  visibility     : {repo.visibility or '?'}")
+    cli.echo(f"  parent         : {repo.parent or 'none'}")
+    cli.echo(f"  ai / dev_prd    : {repo.ai} / {repo.dev_prd}")
+    cli.echo(f"  pull_request   : {repo.pull_request}  → ship: {ship}")
+    cli.echo(f"  use_ci         : {repo.use_ci}  → test/build/promote/release via {test}")
+    return 0
 
 
 def _print_tree(parent: str | None, depth: int, by_parent: dict[str | None, list[FamilyRepo]]) -> None:
