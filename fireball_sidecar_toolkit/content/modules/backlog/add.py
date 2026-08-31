@@ -7,7 +7,11 @@ from __future__ import annotations
 
 from ..common import cli
 from ..common.utils import success
-from .common import TYPE_LABELS, create_issue, gh, nwo, resolve_repo, scrub, with_images
+from .common import area_for_repo, create_issue, gh, nwo, resolve_repo, scrub, with_images
+
+
+def _split(value: str) -> list[str]:
+    return [part.strip() for part in value.split(",") if part.strip()]
 
 
 @cli.command()
@@ -18,7 +22,15 @@ from .common import TYPE_LABELS, create_issue, gh, nwo, resolve_repo, scrub, wit
 @cli.option("--title", required=True, help="Issue title")
 @cli.option("--body", default="", help="Issue body (markdown)")
 @cli.option("--images", default="", help="Space-separated image paths to upload + embed")
-@cli.option("--label", "extra_labels", default="", help="Comma-separated extra labels")
+@cli.option(
+    "--area",
+    "areas",
+    default="",
+    help="Comma-separated area labels — module / component / topic (added to the repo's own area)",
+)
+@cli.option(
+    "--label", "extra_labels", default="", help="Comma-separated nature labels (e.g. Regression, Usage Failure, UI)"
+)
 @cli.option("--web", is_flag=True, help="Open the browser create form instead of filing directly")
 def main(
     repo: str,
@@ -26,13 +38,15 @@ def main(
     title: str,
     body: str = "",
     images: str = "",
+    areas: str = "",
     extra_labels: str = "",
     web: bool = False,
 ) -> None:
-    """File the issue and print its URL."""
+    """File the issue and print its URL. The native issue Type carries bug/feature/task; labels
+    are the repo's area plus any finer area / nature you pass."""
     target = resolve_repo(repo)
     repo_nwo = nwo(target)
-    labels = [TYPE_LABELS[issue_type], *(part.strip() for part in extra_labels.split(",") if part.strip())]
+    labels = list(dict.fromkeys([area_for_repo(target), *_split(areas), *_split(extra_labels)]))
 
     if web:
         gh(["issue", "create", "--web", "--title", title, "--label", ",".join(labels)], repo=repo_nwo)
@@ -40,7 +54,7 @@ def main(
 
     body = with_images(repo_nwo, scrub(body), images)
     url = create_issue(repo_nwo, title=title, body=body or title, issue_type=issue_type, labels=labels)
-    success(f"filed {repo_nwo} ({issue_type}): {url}")
+    success(f"filed {repo_nwo} ({issue_type}) [{', '.join(labels)}]: {url}")
 
 
 if __name__ == "__main__":
