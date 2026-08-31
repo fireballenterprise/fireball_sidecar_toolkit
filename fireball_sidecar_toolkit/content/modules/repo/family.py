@@ -1,10 +1,10 @@
-"""Fan a ``/repo`` verb across the whole ``repos:`` family (pull / push / cleanup).
+"""Fan a ``/repo`` verb across the ``repos:`` family (pull / push / cleanup).
 
-``/repo <verb>`` acts on the current repo; ``/repo <verb> all`` routes here and runs the verb
-against every repo in ``properties.yml``'s ``repos:`` map, in root-to-leaf ``lineage:`` order.
+``/repo <verb>`` acts on the current repo; ``/repo <verb> all`` (or ``<verb> ai`` / ``<verb>
+dev_prd``) routes here and runs the verb against the family in root-to-leaf ``parent`` order.
 ``pull`` is done inline (switch to the verified default branch + ``--ff-only``); ``push`` and
 ``cleanup`` shell out to each repo's own vendored module so the target's real ``invoke test`` /
-``gh`` calls run in its own checkout.
+``gh`` calls run in its own checkout. ``status: retired`` repos are always skipped.
 """
 
 from __future__ import annotations
@@ -15,12 +15,11 @@ from pathlib import Path
 
 from ..common import cli
 from ..common.route_utils import REPO_ROOT_ENV, build_env
-from ..common.utils import expand_path
-from ..setup.properties import FamilyRepo, get_family_repos, get_properties, get_repo_local
+from ..setup.properties import FamilyRepo, get_family_repos, get_repo_local
 
 _SINGLETON_NOTE = (
-    "ℹ  'all' requested, but properties.yml has no repos: family map — running just this repo.\n"
-    "   Add a repos: key (see .ai/toolkit/instructions/repos.md) to enable family-wide runs."
+    "ℹ  family run requested, but properties.yml has no repos: family map (or none are cloned) —\n"
+    "   running just this repo. See .ai/toolkit/instructions/repos.md to set up a repos: map."
 )
 
 
@@ -131,27 +130,29 @@ def _dispatch_single(verb: str) -> int:
 _STATUS_MARK = {"updated": "✓", "current": "·", "ok": "✓", "error": "✗"}
 
 
-def _print_summary(verb: str, results: list[tuple[str, str, str]]) -> None:
-    cli.echo(f"\n─── /repo {verb} all — summary ───")
-    width = max(len(label) for label, _, _ in results)
-    for label, status, detail in results:
+def _print_summary(label: str, results: list[tuple[str, str, str]]) -> None:
+    cli.echo(f"\n─── {label} — summary ───")
+    width = max(len(name) for name, _, _ in results)
+    for name, status, detail in results:
         mark = _STATUS_MARK.get(status, " ")
-        cli.echo(f"  {mark} {label.ljust(width)}  {status}{f'  {detail}' if detail else ''}")
-    failed = [label for label, status, _ in results if status == "error"]
+        cli.echo(f"  {mark} {name.ljust(width)}  {status}{f'  {detail}' if detail else ''}")
+    failed = [name for name, status, _ in results if status == "error"]
     if failed:
         cli.echo(f"\n{len(failed)} failed: {', '.join(failed)}")
 
 
-def run_family(verb: str, *, assume_yes: bool = False) -> int:
-    """Run ``verb`` (``pull`` | ``push`` | ``cleanup``) across the whole family."""
-    repos = get_family_repos(include_self=True)
+def run_family(verb: str, *, assume_yes: bool = False, scope: str | None = None) -> int:
+    """Run ``verb`` (``pull`` | ``push`` | ``cleanup``) across the family (optionally a ``scope``:
+    ``ai`` or ``dev_prd``)."""
+    label = f"/repo {verb} {scope or 'all'}"
+    repos = get_family_repos(include_self=True, scope=scope)
     if len(repos) <= 1:
         cli.echo(_SINGLETON_NOTE)
         cli.echo()
         return _dispatch_single(verb)
 
     if verb in ("push", "cleanup") and not assume_yes:
-        cli.echo(f"/repo {verb} all — {len(repos)} repos:")
+        cli.echo(f"{label} — {len(repos)} repos:")
         for repo in repos:
             cli.echo(f"  • {repo.org}/{repo.name}")
         if verb == "push":
@@ -162,57 +163,46 @@ def run_family(verb: str, *, assume_yes: bool = False) -> int:
 
     results: list[tuple[str, str, str]] = []
     for repo in repos:
-        label = f"{repo.org}/{repo.name}"
-        cli.echo(f"\n═══ {label} ═══")
+        name = f"{repo.org}/{repo.name}"
+        cli.echo(f"\n═══ {name} ═══")
         status, detail = _pull_one(repo) if verb == "pull" else _run_module(repo, verb)
-        results.append((label, status, detail))
+        results.append((name, status, detail))
 
-    _print_summary(verb, results)
+    _print_summary(label, results)
     return 0 if all(status != "error" for _, status, _ in results) else 1
 
 
-def _lineage_lines(node: object, indent: int) -> list[str]:
-    """Render a nested ``lineage:`` value (list of names / single-key dicts) as an indented tree."""
-    lines: list[str] = []
-    for item in node or []:
-        if isinstance(item, dict):
-            name, kids = next(iter(item.items()))
-            lines.append(" " * indent + str(name))
-            lines.extend(_lineage_lines(kids, indent + 2))
-        else:
-            lines.append(" " * indent + str(item))
-    return lines
+def _tags(repo: FamilyRepo) -> str:
+    parts = [repo.visibility or "?", repo.default_branch or "?"]
+    if repo.ai:
+        parts.append("ai")
+    if repo.dev_prd:
+        parts.append("dev→prd")
+    if repo.status != "active":
+        parts.append(repo.status.upper())
+    return ", ".join(parts)
+
+
+def _print_tree(parent: str | None, depth: int, by_parent: dict[str | None, list[FamilyRepo]]) -> None:
+    for repo in by_parent.get(parent, []):
+        marker = " ← this repo" if repo.is_self else (" [no local clone]" if not repo.exists else "")
+        cli.echo(f"{'  ' * depth}{repo.org}/{repo.name}  ({_tags(repo)}){marker}")
+        _print_tree(repo.name, depth + 1, by_parent)
 
 
 def print_map() -> int:
-    """Print the ``repos:`` / ``lineage:`` family map + which clones exist locally."""
-    props = get_properties()
-    repos = props.get("repos") or {}
-    if not repos or set(repos) <= {"lineage"}:
+    """Print the ``repos:`` family map as a ``parent`` → child tree with per-repo attributes and
+    local-clone state (retired repos included, tagged)."""
+    repos = get_family_repos(include_self=True, include_retired=True, include_missing=True)
+    if not repos:
         cli.echo("No repos: family map in properties.yml — this repo has no related-repo family.")
         return 0
 
-    repos_local = props.get("repos_local") or {}
-    self_path = get_repo_local().resolve()
+    names = {repo.name for repo in repos}
+    by_parent: dict[str | None, list[FamilyRepo]] = {}
+    for repo in repos:
+        by_parent.setdefault(repo.parent if repo.parent in names else None, []).append(repo)
 
-    cli.echo("Repo family (properties.yml → repos:)\n")
-    for org, names in repos.items():
-        if org == "lineage":
-            continue
-        base = next((value for key, value in repos_local.items() if key.lower() == org.lower()), None)
-        cli.echo(f"{org}/")
-        for name in sorted(names):
-            path = (expand_path(base) / name).resolve() if base else None
-            here = "  ← this repo" if path == self_path else ""
-            missing = "" if path and (path / ".git").exists() else "  [no local clone]"
-            cli.echo(f"  {name}{here}{missing}")
-        cli.echo()
-
-    lineage = repos.get("lineage")
-    if lineage:
-        cli.echo("lineage (parent → stamped child):")
-        for root, kids in lineage.items():
-            cli.echo(f"  {root}")
-            for line in _lineage_lines(kids, 4):
-                cli.echo(line)
+    cli.echo("Repo family — parent → stamped child (visibility, default_branch, flags)\n")
+    _print_tree(None, 0, by_parent)
     return 0

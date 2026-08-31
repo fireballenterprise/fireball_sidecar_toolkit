@@ -1,6 +1,8 @@
-"""``sidecar-toolkit download`` — clobber every shipped tree from the installed package, then render.
+"""``sidecar-toolkit apply`` — clobber every shipped tree from the installed package, then render.
 
-Everything under the package's ``content/`` is copied verbatim into the consuming repo:
+Nothing is downloaded here — ``uv`` already fetched the package (``sidecar.toolkit.update``).
+This applies that installed version to the repo. Everything under the package's ``content/`` is
+copied verbatim into the consuming repo:
 
 * ``content/ai/``       → ``.ai/toolkit/`` (then rendered into every provider dir)
 * ``content/modules/``  → ``modules/toolkit/``  (shared Python, imported as ``modules.toolkit.*``)
@@ -10,6 +12,8 @@ Everything under the package's ``content/`` is copied verbatim into the consumin
 
 Refuses if any of those paths has uncommitted local modifications (unless ``force``) — the caller
 should route through :mod:`fireball_sidecar_toolkit.sync`, which asks the user what to do.
+
+``download`` is kept as a deprecated alias for :func:`apply`.
 """
 
 from __future__ import annotations
@@ -25,7 +29,7 @@ TOOLKIT_SUBPATH = CLOBBER_TREES["ai"]  # ".ai/toolkit" — kept as a name for ba
 
 
 class DirtySharedError(RuntimeError):
-    """A clobbered path has uncommitted edits — resolve them (upload or discard) before a clobber."""
+    """A clobbered path has uncommitted edits — resolve them (contribute or discard) before a clobber."""
 
 
 def _ignore_pycache(_dir: str, names: list[str]) -> set[str]:
@@ -46,7 +50,7 @@ def clobber_shared(repo_root: Path, *, force: bool = False) -> Path:
         if dirty:
             raise DirtySharedError(
                 f"Uncommitted changes in a toolkit-managed path: {', '.join(dirty)}. Run "
-                "`invoke sidecar.toolkit.sync` to upload or discard them first, or pass force=True."
+                "`invoke sidecar.toolkit.sync` to review or discard them first, or pass force=True."
             )
 
     for key, rel in trees.items():
@@ -69,8 +73,9 @@ def clobber_shared(repo_root: Path, *, force: bool = False) -> Path:
     return repo_root / TOOLKIT_SUBPATH
 
 
-def download(repo_root: Path, *, force: bool = False) -> RenderResult:
-    """Clobber every shipped (vendored) tree from the package, then render every provider view.
+def apply(repo_root: Path, *, force: bool = False) -> RenderResult:
+    """Clobber every shipped (vendored) tree from the installed package, then render every provider
+    view.
 
     A repo that does not vendor ``ai`` (``.sidecar-toolkit.yml``) skips the render step — its
     provider files are its own.
@@ -80,3 +85,7 @@ def download(repo_root: Path, *, force: bool = False) -> RenderResult:
     if "ai" not in read_vendor(repo_root):
         return RenderResult(written=[])
     return render_repo(repo_root, canonical_root=ai_root)
+
+
+#: Deprecated alias — use :func:`apply`.
+download = apply

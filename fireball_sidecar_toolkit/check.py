@@ -33,7 +33,7 @@ class DriftError(RuntimeError):
 
 
 _DRIFT_MSG = (
-    "Toolkit-managed files are stale:\n  - {items}\nRun `invoke sidecar.toolkit.sync` (or `download`) to regenerate."
+    "Toolkit-managed files are stale:\n  - {items}\nRun `invoke sidecar.toolkit.sync` (or `apply`) to regenerate."
 )
 
 
@@ -49,7 +49,7 @@ def _tree_mismatches(expected: Path, actual: Path, *, label: str) -> list[str]:
     if not expected.is_dir():
         return []
     if not actual.is_dir():
-        return [f"{label}/ (missing — run `invoke sidecar.toolkit.download`)"]
+        return [f"{label}/ (missing — run `invoke sidecar.toolkit.apply`)"]
     out: list[str] = []
     expected_files, actual_files = _files(expected), _files(actual)
     out += [f"{label}/{rel} (missing)" for rel in sorted(expected_files - actual_files)]

@@ -3,6 +3,7 @@
 import os
 import re
 import subprocess
+from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -96,45 +97,135 @@ def get_repo_remote() -> str:
     return props["repo"]["remote"]
 
 
+#: `status:` values that keep a repo out of every family fan-out (still shown by `/repo list`).
+RETIRED = "retired"
+#: Directory names skipped when walking a `repos_local` org base dir (retired local-only clones).
+ARCHIVE_DIRS = frozenset({"_archive", "archive", "tmp"})
+#: `scope` tokens accepted by `get_family_repos` / `/repo <verb> <scope>`.
+FAMILY_SCOPES = ("ai", "dev_prd")
+
+
 @dataclass(frozen=True)
 class FamilyRepo:
-    """One repo in this vault's ``repos:`` family, resolved to a local clone path."""
+    """One repo in this vault's ``repos:`` family (``properties.yml`` ``repos:`` — the nested
+    ``org > name > {attrs}`` schema, or the legacy ``org: [names]`` + ``lineage:`` one)."""
 
     org: str
     name: str
     path: Path
     is_self: bool
+    exists: bool  # a local `.git` clone is present at `path`
+    default_branch: str  # "main" | "development" | "" (unknown, legacy)
+    parent: str | None  # bare name of the repo it was template-stamped from
+    status: str  # "active" | "retired"
+    visibility: str  # "public" | "private" | ""
+    ai: bool
+    purpose: str
+
+    @property
+    def dev_prd(self) -> bool:
+        """Two-branch development→main promotion — inferred from ``default_branch``."""
+        return self.default_branch == "development"
 
 
-def get_family_repos(*, include_self: bool = False) -> list[FamilyRepo]:
-    """Resolve ``properties.yml`` ``repos:`` + ``repos_local:`` into local clone paths.
+def _repo_entries(repos: dict[str, Any]) -> Iterator[tuple[str, str, dict[str, Any]]]:
+    """Yield ``(org, name, attrs)`` for every repo, tolerating both schemas."""
+    for org, block in repos.items():
+        if org == "lineage" or not block:
+            continue
+        if isinstance(block, dict):
+            for name, attrs in block.items():
+                yield org, name, attrs if isinstance(attrs, dict) else {}
+        else:
+            for name in block:
+                yield org, name, {}
 
-    Ordered root-to-leaf by ``lineage:`` depth (then name). Only repos with a local ``.git``
-    clone are returned. The entry matching :func:`get_repo_local` is flagged ``is_self`` and
-    dropped unless ``include_self``. Returns ``[]`` when there is no ``repos:`` map — the caller
-    treats that as "singleton repo, no family".
+
+def _resolve_parents(entries: dict[str, dict[str, Any]], legacy_lineage: dict[str, list[str]]) -> dict[str, str | None]:
+    """``name -> parent bare name`` from each entry's ``parent:`` key, falling back to the legacy
+    ``lineage:`` adjacency."""
+    child_to_parent = {child: parent for parent, kids in legacy_lineage.items() for child in kids}
+    resolved: dict[str, str | None] = {}
+    for name, attrs in entries.items():
+        parent = attrs.get("parent")
+        if parent == "none":
+            resolved[name] = None
+        elif parent:
+            resolved[name] = str(parent)
+        else:
+            resolved[name] = child_to_parent.get(name)
+    return resolved
+
+
+def _parent_depth(name: str, parents: dict[str, str | None]) -> int:
+    depth, current, seen = 0, name, set()
+    while (parent := parents.get(current)) and current not in seen:
+        seen.add(current)
+        current, depth = parent, depth + 1
+    return depth
+
+
+def get_family_repos(
+    *,
+    include_self: bool = False,
+    include_retired: bool = False,
+    include_missing: bool = False,
+    scope: str | None = None,
+) -> list[FamilyRepo]:
+    """Resolve ``properties.yml`` ``repos:`` + ``repos_local:`` into ``FamilyRepo`` records,
+    ordered root-to-leaf by ``parent`` depth (then name).
+
+    - ``status: retired`` repos are excluded unless ``include_retired``.
+    - repos with no local ``.git`` clone are excluded unless ``include_missing``.
+    - ``scope="ai"`` keeps only ``ai: true``; ``scope="dev_prd"`` keeps only
+      ``default_branch: development``.
+    - the :func:`get_repo_local` entry is flagged ``is_self`` and dropped unless ``include_self``.
+
+    Returns ``[]`` when there is no ``repos:`` map — the caller treats that as "singleton, no
+    family".
     """
     props = get_properties()
     repos = props.get("repos") or {}
     repos_local = props.get("repos_local") or {}
-    lineage = _normalize_lineage(repos.get("lineage", {}))
+    legacy_lineage = _normalize_lineage(repos.get("lineage", {}))
     self_path = get_repo_local().resolve()
 
-    found: list[FamilyRepo] = []
-    for org, names in repos.items():
-        if org == "lineage":
-            continue
-        base = next((value for key, value in repos_local.items() if key.lower() == org.lower()), None)
-        if not base:
-            continue
-        base_path = _expand_path(base)
-        for name in names:
-            path = (base_path / name).resolve()
-            if not (path / ".git").exists():
-                continue
-            found.append(FamilyRepo(org=org, name=name, path=path, is_self=path == self_path))
+    rows = list(_repo_entries(repos))
+    parents = _resolve_parents({name: attrs for _org, name, attrs in rows}, legacy_lineage)
 
-    found.sort(key=lambda repo: (_lineage_depth(repo.name, lineage), repo.name))
+    found: list[FamilyRepo] = []
+    for org, name, attrs in rows:
+        status = str(attrs.get("status", "active"))
+        if status == RETIRED and not include_retired:
+            continue
+        if scope == "ai" and not bool(attrs.get("ai", False)):
+            continue
+        if scope == "dev_prd" and str(attrs.get("default_branch", "")) != "development":
+            continue
+
+        base = next((value for key, value in repos_local.items() if key.lower() == org.lower()), None)
+        path = (_expand_path(base) / name).resolve() if base else Path(name)
+        exists = bool(base) and (path / ".git").exists()
+        if not exists and not include_missing:
+            continue
+
+        found.append(
+            FamilyRepo(
+                org=org,
+                name=name,
+                path=path,
+                is_self=path == self_path,
+                exists=exists,
+                default_branch=str(attrs.get("default_branch", "")),
+                parent=parents.get(name),
+                status=status,
+                visibility=str(attrs.get("visibility", "")),
+                ai=bool(attrs.get("ai", False)),
+                purpose=str(attrs.get("purpose", "")),
+            )
+        )
+
+    found.sort(key=lambda repo: (_parent_depth(repo.name, parents), repo.name))
     if not include_self:
         found = [repo for repo in found if not repo.is_self]
     return found
@@ -300,6 +391,15 @@ def _extract_repos_block(text: str) -> tuple[str, dict[str, Any] | None]:
     return text, None
 
 
+def _is_nested_repos_schema(repos: dict[str, Any] | None) -> bool:
+    """True when ``repos:`` uses the ``org > name > {attrs}`` schema rather than the legacy
+    ``org: [names]`` + ``lineage:`` one. The tier-fragment builder only speaks the legacy schema,
+    so ``backfill_missing_sections`` must leave an already-migrated ``repos:`` block untouched."""
+    if not repos:
+        return False
+    return any(isinstance(block, dict) for org, block in repos.items() if org != "lineage")
+
+
 def _merge_repos(accumulated: dict[str, Any], addition: dict[str, Any]) -> dict[str, Any]:
     """Deep-merge one tier's repos contribution into the map accumulated from earlier tiers.
 
@@ -428,7 +528,7 @@ def backfill_missing_sections() -> list[str]:
 
     added: list[str] = []
 
-    if fragment_repos:
+    if fragment_repos and not _is_nested_repos_schema(existing_repos):
         merged_repos = _merge_repos(existing_repos or {}, fragment_repos)
         if merged_repos != (existing_repos or {}):
             text = _replace_repos_block(text, _render_repos_block(merged_repos))
