@@ -27,8 +27,12 @@ files.
 
 - `instructions:` / `commands:` are lists of **repo-relative paths**, written verbatim
   (`.ai/toolkit/…` for toolkit content, `.ai/<repo>/…` for a repo's own).
-- Every canonical command (`.ai/toolkit/commands/<slug>.md`) has a matching
-  `.ai/toolkit/skills/<slug>.md` whose `commands:` list includes at least itself.
+- Every canonical command (`.ai/toolkit/commands/<slug>.md`) is wired to at least one skill —
+  it appears in some skill's `commands:` list. Most commands have a same-named skill that lists
+  itself; **alias / sub-verb commands ride on a parent skill instead** and get no skill of their
+  own (`add_bug` / `add_feature` / `add_task` → `backlog`; `pr-notes` → `pr`). Bundle a command
+  onto a parent skill only when it is the same *intent* as that skill (a phrasing, an alias, or an
+  earlier stopping point) — distinct-effect operations keep their own skill.
 
 ## Rendered stubs (generated — never hand-edit)
 | Location | Tool | Frontmatter | Body the generator writes |
