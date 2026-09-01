@@ -100,22 +100,36 @@ def test_sidecar_files_point_at_canonical_ai_paths(tmp_path):
 
 def test_skill_stubs_written_for_claude_and_github(tmp_path):
     render_repo(tmp_path, canonical_root=_mini_content(tmp_path))
-    for dest in (
-        ".claude/skills/repos/SKILL.md",
-        ".github/skills/repos/SKILL.md",
-        ".sidecar/skills/repos.md",
-    ):
+    for dest in (".claude/skills/repos/SKILL.md", ".github/skills/repos/SKILL.md"):
         text = (tmp_path / dest).read_text()
         assert "Source of truth: `.ai/toolkit/skills/repos.md`" in text
         assert GENERATED_HEADER in text
-        # the frontmatter path lists are expanded into the body
-        assert "**Instructions**" in text
-        assert "- `.ai/toolkit/instructions/git.md`" in text
-        assert "**Commands**" in text
-        assert "- `.ai/toolkit/commands/repos.md`" in text
-        # discovery frontmatter still present
-        assert "description: Repo map skill" in text
-        assert "- the repos" in text
+        fm, body = text.split("---")[1], text.split("---", 2)[2]
+        # Claude / Copilot reject unknown keys: name + description only
+        assert "name: repos" in fm
+        assert "description: Repo map skill" in fm
+        assert "hints" not in fm
+        assert "instructions" not in fm
+        assert "commands" not in fm
+        # everything else is materialised into the body
+        assert "**Trigger phrases**" in body
+        assert "- the repos" in body
+        assert "**Instructions**" in body
+        assert "- `.ai/toolkit/instructions/git.md`" in body
+        assert "**Commands**" in body
+        assert "- `.ai/toolkit/commands/repos.md`" in body
+
+
+def test_sidecar_skill_stub_mirrors_the_canonical_header(tmp_path):
+    render_repo(tmp_path, canonical_root=_mini_content(tmp_path))
+    text = (tmp_path / ".sidecar" / "skills" / "repos.md").read_text()
+    fm = text.split("---")[1]
+    assert "hints:\n  - the repos" in fm
+    assert "instructions:\n  - .ai/toolkit/instructions/git.md" in fm
+    assert "commands:\n  - .ai/toolkit/commands/repos.md" in fm
+    assert "Source of truth: `.ai/toolkit/skills/repos.md`" in text
+    assert "**Trigger phrases**" not in text
+    assert "**Instructions**" not in text
 
 
 def test_no_canonical_body_is_inlined(tmp_path):

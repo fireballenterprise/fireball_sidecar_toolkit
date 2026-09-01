@@ -1,9 +1,11 @@
 """Render ``.sidecar/`` for Fireball Sidecar — pointer stubs.
 
 ``commands/``, ``instructions/``, ``skills/`` each carry the provider frontmatter Sidecar needs
-and a one-line pointer at the canonical ``.ai/toolkit/`` or ``.ai/<repo>/`` file. Sidecar is Levon's
-own tool and is being taught to read the canonical ``.ai/`` tree directly; the target end state is
-a no-op renderer.
+and a pointer at the canonical ``.ai/toolkit/`` or ``.ai/<repo>/`` file. Skill stubs keep the
+canonical header verbatim — ``hints`` / ``instructions`` / ``commands`` all stay as frontmatter
+keys (Sidecar reads them directly), so the body is only the pointer. Sidecar is Levon's own tool
+and is being taught to read the canonical ``.ai/`` tree directly; the target end state is a no-op
+renderer.
 """
 
 from __future__ import annotations
@@ -11,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..catalog import ContentBundle
-from ._common import canonical_pointer, clean_dir, skill_stub_body, write_doc
+from ._common import canonical_pointer, clean_dir, write_doc
 
 _AGENT = "sidecar-agent"
 
@@ -49,17 +51,21 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
     clean_dir(inst_dir, inst_files)
     written += inst_files
 
+    # Skill stubs mirror the canonical header verbatim — Sidecar reads `hints` / `instructions` /
+    # `commands` straight off the frontmatter — with only the pointer in the body.
     skill_dir = root / "skills"
     skill_files = []
     for skill in bundle.skills:
         skill_files.append(
             write_doc(
                 skill_dir / f"{skill.name}.md",
-                skill_stub_body(bundle, skill),
+                canonical_pointer(bundle, skill.name, "skills"),
                 frontmatter={
                     "name": skill.name,
                     "description": skill.description,
                     "hints": skill.hints,
+                    "instructions": skill.instructions,
+                    "commands": skill.commands,
                 },
             )
         )

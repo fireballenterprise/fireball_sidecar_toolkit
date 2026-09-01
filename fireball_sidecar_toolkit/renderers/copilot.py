@@ -5,9 +5,10 @@
   ``applyTo`` auto-injection then delivers the pointer; whether Copilot follows it to the real
   rules is a known tradeoff of the pointer-only model.
 * ``.github/copilot-instructions.md`` — the always-on index.
-* ``.github/skills/<name>/SKILL.md`` — ``name``/``description``/``hints`` frontmatter in the
+* ``.github/skills/<name>/SKILL.md`` — ``name``/``description`` frontmatter only in the
   ``<name>/SKILL.md`` shape Copilot requires, body the pointer at ``.ai/toolkit|local/skills/<name>.md``
-  plus the skill's ``instructions`` / ``commands`` path lists expanded into a "read and follow" block.
+  plus the skill's trigger phrases and its ``instructions`` / ``commands`` path lists expanded into
+  a "read and follow" block.
 """
 
 from __future__ import annotations
@@ -47,12 +48,8 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
         written.append(
             write_doc(
                 skills_dir / skill.name / "SKILL.md",
-                skill_stub_body(bundle, skill),
-                frontmatter={
-                    "name": skill.name,
-                    "description": skill.description,
-                    "hints": skill.hints,
-                },
+                skill_stub_body(bundle, skill, include_hints=True),
+                frontmatter={"name": skill.name, "description": skill.description},
             )
         )
     clean_subdirs(skills_dir, [s.name for s in bundle.skills])

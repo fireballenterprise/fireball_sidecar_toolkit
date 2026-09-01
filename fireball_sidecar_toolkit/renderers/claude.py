@@ -4,10 +4,10 @@
   ``agent: general``, ``slash_command: /<slug>``, and an ``allowed-tools`` glob still derived from
   the canonical body's ``!`...``` exec line so the command runs without a permission prompt), body
   a one-line pointer at ``.ai/toolkit|local/commands/<slug>.md``.
-* ``.claude/skills/<name>/SKILL.md`` — ``name``/``description``/``hints`` frontmatter in the
-  ``<name>/SKILL.md`` shape Claude Code requires, body the pointer at
-  ``.ai/toolkit|local/skills/<name>.md`` plus the skill's ``instructions`` / ``commands`` path
-  lists expanded into a "read and follow" block.
+* ``.claude/skills/<name>/SKILL.md`` — ``name``/``description`` frontmatter only (Claude Code
+  rejects unknown keys), body the pointer at ``.ai/toolkit|local/skills/<name>.md`` plus the
+  skill's trigger phrases and its ``instructions`` / ``commands`` path lists expanded into a
+  "read and follow" block.
 """
 
 from __future__ import annotations
@@ -52,12 +52,8 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
         written.append(
             write_doc(
                 skills_dir / skill.name / "SKILL.md",
-                skill_stub_body(bundle, skill),
-                frontmatter={
-                    "name": skill.name,
-                    "description": skill.description,
-                    "hints": skill.hints,
-                },
+                skill_stub_body(bundle, skill, include_hints=True),
+                frontmatter={"name": skill.name, "description": skill.description},
             )
         )
     clean_subdirs(skills_dir, [s.name for s in bundle.skills])
