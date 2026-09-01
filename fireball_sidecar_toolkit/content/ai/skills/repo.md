@@ -2,6 +2,7 @@
 name: repo
 description: Use for /repo — the family map (/repo list), pull/push/cleanup on this repo or the whole family (add `all`), or /repo apply to port a change across the family. Equivalent to /repo. Also the "related repos" / "pull all repos" trigger.
 hints:
+  - repo
   - related repos
   - the repos
   - other repos
