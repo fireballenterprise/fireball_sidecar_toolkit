@@ -13,23 +13,11 @@ hints:
   - pull every repo
   - push all repos
   - the repo family
+instructions:
+  - .ai/toolkit/instructions/repos.md
+commands:
+  - .ai/toolkit/commands/repo.md
+  - .ai/toolkit/commands/pull.md
+  - .ai/toolkit/commands/push.md
+  - .ai/toolkit/commands/cleanup.md
 ---
-
-# Repo + Repo-Family Workflow
-Use this file as source of truth: `.ai/toolkit/commands/repo.md`, and
-`.ai/toolkit/instructions/repos.md` for the family map and the Cross-Repo Change Workflow.
-
-- `/repo list` — show the `repos:` / `lineage:` family map.
-- `/repo pull [all]`, `/repo push [all]`, `/repo cleanup [all]` — act on the current repo, or on
-  every repo in the `repos:` family when `all` is given. `/pull`, `/push`, `/cleanup` are the
-  short aliases and also take `all`.
-- `/repo apply <description>` — the two-phase Cross-Repo Change Workflow.
-
-When the user says "related repos", "the repos", "pull all repos", or similar about this vault's
-repo family — even without running `/repo` — read `.ai/toolkit/instructions/repos.md` and act on
-it. `push all` runs the real `/push` (fix + test + commit + push) per repo: confirm the list
-first, never skip a repo's tests, and report every failure.
-
-```bash
-uv run --no-sync python -m modules.toolkit.repo.route "list"        # or "pull all", "push all", ...
-```

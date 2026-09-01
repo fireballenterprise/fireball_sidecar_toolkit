@@ -6,16 +6,8 @@ hints:
   - clean up local trash
   - sweep stale caches
   - remove orphaned dirs
+instructions:
+  - .ai/toolkit/instructions/repos.md
+commands:
+  - .ai/toolkit/commands/cleanup.md
 ---
-
-# Cleanup Workflow
-Use this file as source of truth: `.ai/toolkit/commands/cleanup.md`
-
-When the user asks to clean up after a merged PR, or to clear out local build/cache junk and
-leftover directories from a refactor, read that file and follow it. Two phases: branch cleanup
-(warn-and-skip if not applicable), then a local-trash sweep that lists everything and asks before
-deleting. Never touches `topics/` or `tmp/`.
-
-```bash
-uv run --no-sync invoke repo.cleanup          # add --family for /cleanup all
-```
