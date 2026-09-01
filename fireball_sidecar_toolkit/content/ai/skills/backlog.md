@@ -2,6 +2,7 @@
 name: backlog
 description: Use for tracking bugs / features / tasks as GitHub Issues on any repo in the family — filing, listing, viewing, working, commenting, closing. Equivalent to /backlog (and the /add_bug, /add_feature, /add_task aliases).
 hints:
+  - backlog
   - file a bug
   - log a bug
   - track a bug
