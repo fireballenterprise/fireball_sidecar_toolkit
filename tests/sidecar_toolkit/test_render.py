@@ -39,8 +39,9 @@ def _mini_content(root: Path) -> Path:
         '---\ndescription: "Python rules"\napplyTo: "**/*.py"\n---\n# Python\n\nType hints everywhere.\n'
     )
     (content / "skills" / "repos.md").write_text(
-        "---\nname: repos\ndescription: Repo map skill\nhints:\n  - the repos\n---\n\n"
-        "# Repos Trigger\n\nUse this file as source of truth: `.ai/toolkit/commands/repos.md`\n"
+        "---\nname: repos\ndescription: Repo map skill\nhints:\n  - the repos\n"
+        "instructions:\n  - .ai/toolkit/instructions/git.md\n"
+        "commands:\n  - .ai/toolkit/commands/repos.md\n---\n"
     )
     return content
 
@@ -99,11 +100,22 @@ def test_sidecar_files_point_at_canonical_ai_paths(tmp_path):
 
 def test_skill_stubs_written_for_claude_and_github(tmp_path):
     render_repo(tmp_path, canonical_root=_mini_content(tmp_path))
-    for dest in (".claude/skills/repos/SKILL.md", ".github/skills/repos/SKILL.md"):
+    for dest in (
+        ".claude/skills/repos/SKILL.md",
+        ".github/skills/repos/SKILL.md",
+        ".sidecar/skills/repos.md",
+    ):
         text = (tmp_path / dest).read_text()
-        assert "# Repos Trigger" not in text  # body is NOT inlined
         assert "Source of truth: `.ai/toolkit/skills/repos.md`" in text
         assert GENERATED_HEADER in text
+        # the frontmatter path lists are expanded into the body
+        assert "**Instructions**" in text
+        assert "- `.ai/toolkit/instructions/git.md`" in text
+        assert "**Commands**" in text
+        assert "- `.ai/toolkit/commands/repos.md`" in text
+        # discovery frontmatter still present
+        assert "description: Repo map skill" in text
+        assert "- the repos" in text
 
 
 def test_no_canonical_body_is_inlined(tmp_path):

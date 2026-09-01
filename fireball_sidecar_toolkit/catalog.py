@@ -180,14 +180,31 @@ class Skill:
 
     Flat one-file-per-skill — the ``<name>/SKILL.md`` directory shape is a *rendered* artifact
     (Claude / Copilot require it), never the canonical source.
+
+    A canonical skill file is a **header only** — no body. ``hints`` are extra trigger phrases;
+    ``instructions`` / ``commands`` are lists of repo-relative paths (``.ai/toolkit/…`` or
+    ``.ai/<repo>/…``) that the renderers expand into each provider stub's body so the agent knows
+    what to read and follow when the skill fires.
     """
 
     name: str
     path: Path
+    description: str = ""
+    hints: tuple[str, ...] = ()
+    instructions: tuple[str, ...] = ()
+    commands: tuple[str, ...] = ()
 
-    def read(self) -> tuple[dict, str]:
-        """``(frontmatter, body)`` of this skill's markdown file."""
-        return _split_frontmatter(self.path.read_text(encoding="utf-8"))
+    @classmethod
+    def from_file(cls, path: Path) -> Skill:
+        fm, _ = _split_frontmatter(path.read_text(encoding="utf-8"))
+        return cls(
+            name=path.stem,
+            path=path,
+            description=str(fm.get("description", "")),
+            hints=tuple(_as_list(fm.get("hints"))),
+            instructions=tuple(_as_list(fm.get("instructions"))),
+            commands=tuple(_as_list(fm.get("commands"))),
+        )
 
 
 TOOLKIT_DIRNAME = "toolkit"
@@ -286,7 +303,7 @@ def load_bundle(
             instructions[path.stem] = Instruction.from_file(path)
             origin[path.stem] = layer_name
         for path in _collect(root, "skills"):
-            skills[path.stem] = Skill(name=path.stem, path=path)
+            skills[path.stem] = Skill.from_file(path)
             origin[path.stem] = layer_name
 
     return ContentBundle(

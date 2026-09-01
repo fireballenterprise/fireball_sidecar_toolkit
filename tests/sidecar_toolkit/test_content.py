@@ -17,6 +17,31 @@ def test_packaged_bundle_parses():
     assert all(origin == "shared" for origin in bundle.origin.values())
 
 
+def test_every_command_has_a_skill_that_points_back_at_it():
+    bundle = load_bundle(canonical_root=packaged_ai_root())
+    skills = {s.name: s for s in bundle.skills}
+    for command in bundle.commands:
+        # alias commands ride on their parent skill's `commands:` list
+        if command.slug in {"add_bug", "add_feature", "add_task"}:
+            assert f".ai/toolkit/commands/{command.slug}.md" in skills["backlog"].commands
+            continue
+        assert command.slug in skills, f"command {command.slug!r} has no matching skill"
+        assert f".ai/toolkit/commands/{command.slug}.md" in skills[command.slug].commands
+
+
+def test_skill_instruction_and_command_paths_resolve():
+    """Every path in a canonical skill's `instructions:` / `commands:` list is a real file."""
+    ai_root = packaged_ai_root()
+    bundle = load_bundle(canonical_root=ai_root)
+    missing = []
+    for skill in bundle.skills:
+        for path in (*skill.instructions, *skill.commands):
+            rel = path.removeprefix(".ai/toolkit/")
+            if not (ai_root / rel).is_file():
+                missing.append(f"{skill.name}: {path}")
+    assert not missing, "skill paths that do not resolve:\n" + "\n".join(missing)
+
+
 def test_command_exec_line_extracted():
     bundle = load_bundle(canonical_root=packaged_ai_root())
     push = next((c for c in bundle.commands if c.slug == "push"), None)
