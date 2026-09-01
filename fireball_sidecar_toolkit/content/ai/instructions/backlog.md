@@ -32,6 +32,12 @@ to "which repo did this check": a bare `/backlog list` lists **this** repo, so r
 offer `--repo <name>` for another. An empty result is a real answer ("no open issues"), not a
 failure — say so plainly rather than reporting the exit code.
 
+`list --all` aggregates every active family repo, grouped `<org/repo> — <n> <state>` with the rows
+indented beneath and repos with nothing collapsed to `<org/repo> — none`, then a family total.
+Use it for "the whole backlog" / "what's open anywhere"; narrow with `--scope ai|dev_prd`. The
+per-repo `--type` / `--label` / `--state` / `--mine` / `--limit` filters still apply. `--all` and
+`--repo` are mutually exclusive.
+
 ## Issue body format
 Written for an AI to pick up and work — err verbose, but lead with a human summary:
 
