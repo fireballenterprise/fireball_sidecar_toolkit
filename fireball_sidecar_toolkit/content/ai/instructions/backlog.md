@@ -25,6 +25,13 @@ Fuzzy token — a name, a unique substring, or a word from the repo's `purpose`.
 makes the CLI print candidates: ask the user which, don't guess. `list` defaults to the current
 repo; every other verb needs `--repo`.
 
+## Reading `list` output
+`list` prints a header line naming the resolved repo and any active filters, then the issue rows —
+or `No <state> issues in <org/repo> (<filters>).` when nothing matches. That header is the answer
+to "which repo did this check": a bare `/backlog list` lists **this** repo, so relay the header and
+offer `--repo <name>` for another. An empty result is a real answer ("no open issues"), not a
+failure — say so plainly rather than reporting the exit code.
+
 ## Issue body format
 Written for an AI to pick up and work — err verbose, but lead with a human summary:
 

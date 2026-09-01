@@ -32,15 +32,29 @@ def main(
         error(f"--type must be one of {', '.join(ISSUE_TYPES)} (got {issue_type!r})")
     repo_nwo = nwo(resolve_repo_or_current(repo))
     args = ["issue", "list", "--state", state, "--limit", str(limit)]
+    filters: list[str] = []
     if issue_type:
         args += ["--search", f"type:{ISSUE_TYPES[issue_type]}"]
+        filters.append(f"type:{issue_type}")
     if label_filter:
         args += ["--label", label_filter]
+        filters.append(f"label:{label_filter}")
     if mine:
         args += ["--assignee", "@me"]
+        filters.append("assigned to you")
+    scope = f" ({', '.join(filters)})" if filters else ""
     if as_json:
-        args += ["--json", "number,title,state,labels,url,createdAt,updatedAt"]
-    cli.echo(gh(args, repo=repo_nwo).stdout.rstrip())
+        cli.echo(
+            gh([*args, "--json", "number,title,state,labels,url,createdAt,updatedAt"], repo=repo_nwo).stdout.strip()
+            or "[]"
+        )
+        return
+    rows = gh(args, repo=repo_nwo).stdout.strip()
+    if not rows:
+        cli.echo(f"No {state} issues in {repo_nwo}{scope}.")
+        return
+    cli.echo(f"{state.capitalize()} issues in {repo_nwo}{scope}:")
+    cli.echo(rows)
 
 
 if __name__ == "__main__":
