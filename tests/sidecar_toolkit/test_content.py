@@ -17,16 +17,20 @@ def test_packaged_bundle_parses():
     assert all(origin == "shared" for origin in bundle.origin.values())
 
 
-def test_every_command_has_a_skill_that_points_back_at_it():
+def test_every_command_is_wired_to_a_skill():
+    """Every canonical command appears in at least one skill's `commands:` list.
+
+    Most commands have a same-named skill; alias / sub-verb commands (``add_bug``,
+    ``pr-notes``, …) ride on a parent skill's list instead.
+    """
     bundle = load_bundle(canonical_root=packaged_ai_root())
     skills = {s.name: s for s in bundle.skills}
+    wired = {path for skill in bundle.skills for path in skill.commands}
     for command in bundle.commands:
-        # alias commands ride on their parent skill's `commands:` list
-        if command.slug in {"add_bug", "add_feature", "add_task"}:
-            assert f".ai/toolkit/commands/{command.slug}.md" in skills["backlog"].commands
-            continue
-        assert command.slug in skills, f"command {command.slug!r} has no matching skill"
-        assert f".ai/toolkit/commands/{command.slug}.md" in skills[command.slug].commands
+        ref = f".ai/toolkit/commands/{command.slug}.md"
+        assert ref in wired, f"command {command.slug!r} is in no skill's commands: list"
+        if command.slug in skills:
+            assert ref in skills[command.slug].commands
 
 
 def test_skill_instruction_and_command_paths_resolve():
