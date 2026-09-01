@@ -6,7 +6,8 @@
   rules is a known tradeoff of the pointer-only model.
 * ``.github/copilot-instructions.md`` — the always-on index.
 * ``.github/skills/<name>/SKILL.md`` — ``name``/``description``/``hints`` frontmatter in the
-  ``<name>/SKILL.md`` shape Copilot requires, body a pointer at ``.ai/toolkit|local/skills/<name>.md``.
+  ``<name>/SKILL.md`` shape Copilot requires, body the pointer at ``.ai/toolkit|local/skills/<name>.md``
+  plus the skill's ``instructions`` / ``commands`` path lists expanded into a "read and follow" block.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..catalog import ContentBundle
-from ._common import canonical_pointer, clean_dir, clean_subdirs, write_doc
+from ._common import canonical_pointer, clean_dir, clean_subdirs, skill_stub_body, write_doc
 
 _INDEX = """# Copilot Instructions
 
@@ -43,15 +44,14 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
 
     skills_dir = github / "skills"
     for skill in bundle.skills:
-        frontmatter, _ = skill.read()
         written.append(
             write_doc(
                 skills_dir / skill.name / "SKILL.md",
-                canonical_pointer(bundle, skill.name, "skills"),
+                skill_stub_body(bundle, skill),
                 frontmatter={
                     "name": skill.name,
-                    "description": str(frontmatter.get("description", "")),
-                    "hints": frontmatter.get("hints") or (),
+                    "description": skill.description,
+                    "hints": skill.hints,
                 },
             )
         )
