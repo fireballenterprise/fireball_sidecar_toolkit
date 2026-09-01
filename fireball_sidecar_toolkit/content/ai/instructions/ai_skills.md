@@ -31,24 +31,25 @@ files.
   `.ai/toolkit/skills/<slug>.md` whose `commands:` list includes at least itself.
 
 ## Rendered stubs (generated — never hand-edit)
-| Location | Tool | Body the generator writes |
-|---|---|---|
-| `.claude/skills/<name>/SKILL.md` | Claude Code | `Source of truth:` pointer + the `instructions`/`commands` paths expanded into a "read and follow" block |
-| `.github/skills/<name>/SKILL.md` | GitHub Copilot (VS Code) | same; discovery is driven by `description` + `hints` |
-| `.sidecar/skills/<name>.md` | Fireball Sidecar | same, flat file |
+| Location | Tool | Frontmatter | Body the generator writes |
+|---|---|---|---|
+| `.claude/skills/<name>/SKILL.md` | Claude Code | `name` + `description` only | pointer + **Trigger phrases** + **Instructions** / **Commands** lists |
+| `.github/skills/<name>/SKILL.md` | GitHub Copilot (VS Code) | `name` + `description` only | same |
+| `.sidecar/skills/<name>.md` | Fireball Sidecar | the whole canonical header (`name` + `description` + `hints` + `instructions` + `commands`) | pointer only |
 
-The generator **synthesises** that body from the frontmatter path lists — no canonical body text
-is inlined (there is none). The `<name>/SKILL.md` directory shape is a rendered artifact Claude
-Code / Copilot require; the canonical source is always the flat `.ai/…/skills/<name>.md`.
-
-Claude Code and Copilot only natively interpret `name` + `description` (for discovery) and load
-the SKILL.md **body** on trigger — arbitrary frontmatter keys are inert. That is why the renderer
-materialises `instructions:` / `commands:` into the body instead of leaving them in YAML.
+Claude Code and Copilot reject unknown frontmatter keys, so their stubs carry only `name` +
+`description` and everything else — the trigger phrases (as a **Trigger phrases** list) and the
+`instructions:` / `commands:` paths — is materialised into the body. `.sidecar/` stubs are a
+near-verbatim copy of the canonical header (Sidecar reads those keys straight off the
+frontmatter). No canonical body text is inlined anywhere — there is none. The `<name>/SKILL.md`
+directory shape is a rendered artifact Claude Code / Copilot require; the canonical source is
+always the flat `.ai/…/skills/<name>.md`.
 
 ## Trigger phrases
 Add a `hints:` entry (or spell the phrase out in `description`) for any trigger beyond the slash
-name — e.g. `ship-it` also responds to "punch it" / "ship it". That is Copilot's discovery
-surface; an implied phrase is not discovered.
+name — e.g. `ship-it` also responds to "punch it" / "ship it". Every skill also gets its own
+name spelled out (`_` / `-` → spaces) as a hint. An implied phrase that is written down nowhere
+is not discovered.
 
 Uses the Agent Skills open spec, but treat it as Claude Code-specific until other targeted tools
 adopt it — hence `.claude/` rather than a vendor-neutral `.agents/`.

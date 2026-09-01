@@ -37,13 +37,21 @@ def canonical_pointer(bundle: ContentBundle, slug: str, kind: str) -> str:
     return f"Source of truth: `.ai/{layer}/{kind}/{slug}.md`"
 
 
-def skill_stub_body(bundle: ContentBundle, skill: Skill) -> str:
+def skill_stub_body(bundle: ContentBundle, skill: Skill, *, include_hints: bool = False) -> str:
     """The body of a rendered ``SKILL.md`` stub.
 
     A canonical skill file is a header only; this synthesises the readable body every provider
-    needs from its ``instructions`` / ``commands`` path lists — no canonical body text is inlined.
+    needs from its ``hints`` / ``instructions`` / ``commands`` lists — no canonical body text is
+    inlined.
+
+    ``include_hints`` lists the trigger phrases in the body. Claude Code and Copilot reject
+    unknown frontmatter keys, so their renderers pass ``True`` and drop the ``hints`` key;
+    ``.sidecar/`` keeps ``hints`` in the frontmatter and passes ``False``.
     """
     lines = [canonical_pointer(bundle, skill.name, "skills")]
+    if include_hints and skill.hints:
+        lines += ["", "**Trigger phrases**"]
+        lines += [f"- {hint}" for hint in skill.hints]
     if skill.instructions or skill.commands:
         lines += ["", "When this skill fires, read and follow:"]
         if skill.instructions:
