@@ -20,15 +20,11 @@ hints:
   - knock out the backlog
   - close issue
   - mark it shipped
+instructions:
+  - .ai/toolkit/instructions/backlog.md
+commands:
+  - .ai/toolkit/commands/backlog.md
+  - .ai/toolkit/commands/add_bug.md
+  - .ai/toolkit/commands/add_feature.md
+  - .ai/toolkit/commands/add_task.md
 ---
-
-# Backlog (GitHub Issues)
-Source of truth: [.ai/toolkit/commands/backlog.md](.ai/toolkit/commands/backlog.md).
-
-Fires when the user wants to file, list, view, work, comment on, or close a bug / feature / task
-for **any repo in the family** — "file a bug in sidecar vscode", "list the open issues for the
-toolkit", "work on issue 12 in vscode", "fix all the open bugs in chat". Read the command file
-and follow its **Recognition** table, **Issue body format**, and **Guardrails** (scrub secrets
-before any write; confirm batches; honour each repo's `properties.yml` ship rules; one issue per
-branch). The `invoke backlog.*` tasks are the CRUD layer; this skill carries the
-resolve-repo then work then ship then close flow.

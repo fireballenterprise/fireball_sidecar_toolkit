@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..catalog import ContentBundle
-from ._common import canonical_pointer, clean_dir, write_doc
+from ._common import canonical_pointer, clean_dir, skill_stub_body, write_doc
 
 _AGENT = "sidecar-agent"
 
@@ -52,15 +52,14 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
     skill_dir = root / "skills"
     skill_files = []
     for skill in bundle.skills:
-        frontmatter, _ = skill.read()
         skill_files.append(
             write_doc(
                 skill_dir / f"{skill.name}.md",
-                canonical_pointer(bundle, skill.name, "skills"),
+                skill_stub_body(bundle, skill),
                 frontmatter={
                     "name": skill.name,
-                    "description": str(frontmatter.get("description", "")),
-                    "hints": frontmatter.get("hints") or (),
+                    "description": skill.description,
+                    "hints": skill.hints,
                 },
             )
         )

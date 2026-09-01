@@ -5,8 +5,9 @@
   the canonical body's ``!`...``` exec line so the command runs without a permission prompt), body
   a one-line pointer at ``.ai/toolkit|local/commands/<slug>.md``.
 * ``.claude/skills/<name>/SKILL.md`` — ``name``/``description``/``hints`` frontmatter in the
-  ``<name>/SKILL.md`` shape Claude Code requires, body a pointer at
-  ``.ai/toolkit|local/skills/<name>.md``.
+  ``<name>/SKILL.md`` shape Claude Code requires, body the pointer at
+  ``.ai/toolkit|local/skills/<name>.md`` plus the skill's ``instructions`` / ``commands`` path
+  lists expanded into a "read and follow" block.
 """
 
 from __future__ import annotations
@@ -14,7 +15,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..catalog import ContentBundle
-from ._common import canonical_pointer, clean_dir, clean_subdirs, derive_allowed_tools, write_doc
+from ._common import (
+    canonical_pointer,
+    clean_dir,
+    clean_subdirs,
+    derive_allowed_tools,
+    skill_stub_body,
+    write_doc,
+)
 
 
 def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
@@ -41,15 +49,14 @@ def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
 
     skills_dir = claude / "skills"
     for skill in bundle.skills:
-        frontmatter, _ = skill.read()
         written.append(
             write_doc(
                 skills_dir / skill.name / "SKILL.md",
-                canonical_pointer(bundle, skill.name, "skills"),
+                skill_stub_body(bundle, skill),
                 frontmatter={
                     "name": skill.name,
-                    "description": str(frontmatter.get("description", "")),
-                    "hints": frontmatter.get("hints") or (),
+                    "description": skill.description,
+                    "hints": skill.hints,
                 },
             )
         )
