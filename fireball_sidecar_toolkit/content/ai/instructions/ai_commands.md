@@ -65,6 +65,24 @@ Every generated file is a **pointer stub**: provider frontmatter + one line
 - Keep instructions actionable and example-driven — prefer short code blocks over prose
 - No standalone `---` dividers in the body — see `.ai/toolkit/instructions/markdown.md`
 
+## Verbatim output blocks
+A command whose job is to *show the user* an already-formatted answer (a Markdown table, a report)
+should fence that answer so the Sidecar chat client renders it as-is instead of routing it through
+the model for a paraphrase. Wrap it with `modules.common.utils.verbatim()`:
+
+```python
+from ..common.utils import verbatim
+
+cli.echo(verbatim("\n".join(lines)))  # lines = the finished Markdown
+```
+
+This emits HTML-comment markers (`<!--sidecar:verbatim-->` … `<!--sidecar:/verbatim-->`) — invisible
+in a plain terminal or any Markdown renderer that does not know the convention, so nothing is lost
+for other consumers. Sidecar renders each fenced region as its own card in the transcript; when a
+slash command's entire successful output is verbatim block(s) it also ends the turn with no cloud
+round (zero tokens, no hallucination surface). Never fence `--json` / machine output. `backlog.list`
+is the reference example.
+
 ## uv --no-sync flag
 Every `uv run` call in a command MUST use `--no-sync`:
 

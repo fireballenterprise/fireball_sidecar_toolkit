@@ -102,7 +102,24 @@ def test_pipe_in_a_title_is_escaped(capsys):
 
 def test_single_repo_empty_state(capsys):
     backlog_list.main(repo="orchestrator")
-    assert capsys.readouterr().out.strip() == "*No open issues in fireball_orchestrator.*"
+    out = capsys.readouterr().out
+    assert "*No open issues in fireball_orchestrator.*" in out
+    assert out.strip().startswith("<!--sidecar:verbatim-->")
+    assert out.strip().endswith("<!--sidecar:/verbatim-->")
+
+
+def test_human_output_is_verbatim_fenced(capsys):
+    backlog_list.main(all_repos=True)
+    out = capsys.readouterr().out.strip()
+    assert out.startswith("<!--sidecar:verbatim-->\n")
+    assert out.endswith("\n<!--sidecar:/verbatim-->")
+    # exactly one fenced block wrapping the whole answer
+    assert out.count("<!--sidecar:verbatim-->") == 1
+
+
+def test_json_output_is_never_fenced(capsys):
+    backlog_list.main(all_repos=True, as_json=True)
+    assert "sidecar:verbatim" not in capsys.readouterr().out
 
 
 def test_all_groups_by_repo_and_collapses_empty(capsys):
