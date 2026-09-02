@@ -2,6 +2,9 @@
 
 uv run --no-sync python -m modules.toolkit.backlog.list [--repo vscode] [--type bug] [--label backlog]
 uv run --no-sync python -m modules.toolkit.backlog.list --all [--scope ai|dev_prd]
+
+The human output is Markdown: a `### <repo> · <count>` heading per repo followed by a
+`# / Title / Labels` table (issue numbers linked, titles truncated). `--json` is unchanged.
 """
 
 from __future__ import annotations
@@ -10,10 +13,12 @@ import json
 
 from ..common import cli
 from ..common.utils import error
-from ..setup.properties import FAMILY_SCOPES, get_family_repos
-from .common import ISSUE_TYPES, gh, nwo, resolve_repo_or_current
+from ..setup.properties import FAMILY_SCOPES, FamilyRepo, get_family_repos
+from .common import ISSUE_TYPES, area_for_repo, gh, nwo, resolve_repo_or_current
 
 _JSON_FIELDS = "number,title,state,labels,url,createdAt,updatedAt"
+_TABLE_FIELDS = "number,title,labels,url"
+_TITLE_WIDTH = 55
 
 
 def _list_args(state: str, limit: int, issue_type: str, label_filter: str, mine: bool) -> list[str]:
@@ -28,19 +33,55 @@ def _list_args(state: str, limit: int, issue_type: str, label_filter: str, mine:
     return args
 
 
-def _scope_suffix(issue_type: str, label_filter: str, mine: bool) -> str:
-    """`" (type:bug, label:backlog, assigned to you)"` for the header line — `""` when unfiltered."""
-    filters: list[str] = []
+def _filter_note(issue_type: str, label_filter: str, mine: bool) -> str:
+    """`"type:bug, label:backlog, assigned to you"` — `""` when nothing is filtered."""
+    parts: list[str] = []
     if issue_type:
-        filters.append(f"type:{issue_type}")
+        parts.append(f"type:{issue_type}")
     if label_filter:
-        filters.append(f"label:{label_filter}")
+        parts.append(f"label:{label_filter}")
     if mine:
-        filters.append("assigned to you")
-    return f" ({', '.join(filters)})" if filters else ""
+        parts.append("assigned to you")
+    return ", ".join(parts)
 
 
-def _family_repos(scope: str) -> list:
+def _issues(repo_nwo: str, args: list[str]) -> list[dict]:
+    """The repo's matching issues as dicts (`number`, `title`, `labels`, `url`)."""
+    raw = gh([*args, "--json", _TABLE_FIELDS], repo=repo_nwo).stdout.strip()
+    return json.loads(raw or "[]")
+
+
+def _truncate_title(title: str) -> str:
+    """Collapse whitespace, clip to `_TITLE_WIDTH` with an ellipsis, and pipe-escape for a table cell."""
+    flat = " ".join(title.split())
+    if len(flat) > _TITLE_WIDTH:
+        flat = f"{flat[: _TITLE_WIDTH - 1].rstrip()}…"
+    return flat.replace("|", "\\|")
+
+
+def _labels_cell(issue: dict, area: str) -> str:
+    """Comma-joined label names minus the repo's own area label (redundant once grouped by repo)."""
+    names = [lbl["name"] for lbl in issue.get("labels", []) if lbl.get("name") and lbl["name"] != area]
+    return ", ".join(names).replace("|", "\\|") or "—"
+
+
+def _table(issues: list[dict], repo: FamilyRepo) -> list[str]:
+    """The Markdown table lines for one repo's issues."""
+    area = area_for_repo(repo)
+    lines = ["| # | Title | Labels |", "|---|---|---|"]
+    for issue in issues:
+        lines.append(
+            f"| [#{issue['number']}]({issue['url']}) | {_truncate_title(issue['title'])} | {_labels_cell(issue, area)} |"
+        )
+    return lines
+
+
+def _repo_section(repo: FamilyRepo, issues: list[dict]) -> list[str]:
+    """`### <repo> · <count>` heading + a blank line + the table."""
+    return [f"### {repo.name} · {len(issues)}", "", *_table(issues, repo)]
+
+
+def _family_repos(scope: str) -> list[FamilyRepo]:
     """Every active family repo (self included, missing clones included), root-to-leaf."""
     repos = get_family_repos(include_self=True, include_missing=True, scope=scope or None)
     if not repos:
@@ -48,35 +89,45 @@ def _family_repos(scope: str) -> list:
     return repos
 
 
-def _list_one_repo(repo_nwo: str, args: list[str], state: str, suffix: str) -> None:
-    """Print a single repo's list: a header line then the rows, or an empty-state line."""
-    rows = gh(args, repo=repo_nwo).stdout.strip()
-    if not rows:
-        cli.echo(f"No {state} issues in {repo_nwo}{suffix}.")
+def _list_one_repo(repo: FamilyRepo, args: list[str], state: str, note: str) -> None:
+    """Print one repo's issues: a `### <repo> · <n>` heading + table, or an italic empty-state line."""
+    issues = _issues(nwo(repo), args)
+    if not issues:
+        cli.echo(f"*No {state} issues in {repo.name}{f' ({note})' if note else ''}.*")
         return
-    cli.echo(f"{state.capitalize()} issues in {repo_nwo}{suffix}:")
-    cli.echo(rows)
+    lines = [f"### {repo.name} · {len(issues)}"]
+    if note:
+        lines += ["", f"*filtered: {note}*"]
+    lines += ["", *_table(issues, repo)]
+    cli.echo("\n".join(lines))
 
 
-def _list_family(args: list[str], state: str, suffix: str, scope: str) -> None:
-    """Print every family repo's issues, grouped — empty repos collapse to one `none` line."""
+def _list_family(args: list[str], state: str, note: str, scope: str) -> None:
+    """Print every family repo's issues as grouped Markdown tables — empty repos collapse to a
+    single trailing `*N other repos: none*` line."""
     repos = _family_repos(scope)
-    header = f"{state.capitalize()} issues across the family{suffix}"
+    per_repo = [(repo, _issues(nwo(repo), args)) for repo in repos]
+    total = sum(len(issues) for _, issues in per_repo)
+
+    subtitle = f"**{total} {state} across {len(repos)} repos**"
     if scope:
-        header += f" [scope: {scope}]"
-    cli.echo(f"{header}:\n")
-    total = 0
-    for repo in repos:
-        repo_nwo = nwo(repo)
-        lines = [line for line in gh(args, repo=repo_nwo).stdout.strip().splitlines() if line.strip()]
-        if not lines:
-            cli.echo(f"{repo_nwo} — none")
-            continue
-        total += len(lines)
-        cli.echo(f"{repo_nwo} — {len(lines)} {state}")
-        for line in lines:
-            cli.echo(f"  {line}")
-    cli.echo(f"\n{total} {state} issue(s) across {len(repos)} repos.")
+        subtitle += f" · scope:{scope}"
+    if note:
+        subtitle += f" · {note}"
+    lines = [f"## {state.capitalize()} issues — family", "", subtitle]
+
+    empty = 0
+    for repo, issues in per_repo:
+        if issues:
+            lines += ["", "", *_repo_section(repo, issues)]
+        else:
+            empty += 1
+
+    if total == 0:
+        lines += ["", f"*No {state} issues in any family repo.*"]
+    elif empty:
+        lines += ["", "", f"*{empty} other repo{'' if empty == 1 else 's'}: none*"]
+    cli.echo("\n".join(lines))
 
 
 def _list_family_json(args: list[str], scope: str) -> None:
@@ -110,7 +161,7 @@ def main(
     mine: bool = False,
     as_json: bool = False,
 ) -> None:
-    """Print the issue list as gh's table, or the raw JSON with --json."""
+    """Print the issue list as grouped Markdown tables, or the raw JSON with --json."""
     if issue_type and issue_type not in ISSUE_TYPES:
         error(f"--type must be one of {', '.join(ISSUE_TYPES)} (got {issue_type!r})")
     if all_repos and repo:
@@ -121,16 +172,16 @@ def main(
         error(f"--scope must be one of {', '.join(FAMILY_SCOPES)} (got {scope!r})")
 
     args = _list_args(state, limit, issue_type, label_filter, mine)
-    suffix = _scope_suffix(issue_type, label_filter, mine)
+    note = _filter_note(issue_type, label_filter, mine)
 
     if all_repos and as_json:
         _list_family_json(args, scope)
     elif all_repos:
-        _list_family(args, state, suffix, scope)
+        _list_family(args, state, note, scope)
     elif as_json:
         cli.echo(gh([*args, "--json", _JSON_FIELDS], repo=nwo(resolve_repo_or_current(repo))).stdout.strip() or "[]")
     else:
-        _list_one_repo(nwo(resolve_repo_or_current(repo)), args, state, suffix)
+        _list_one_repo(resolve_repo_or_current(repo), args, state, note)
 
 
 if __name__ == "__main__":
