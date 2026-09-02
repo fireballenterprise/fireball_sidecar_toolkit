@@ -1,11 +1,13 @@
-"""Parse the canonical content tree (and a consuming repo's ``_local/``) into structured records.
+"""Parse the canonical content tree (and a consuming repo's local overlay) into structured records.
 
 Two content roots feed every renderer:
 
-* ``_shared`` — the packaged canonical tree (``content/`` in this repo, shipped as package data)
-* ``_local`` — an optional per-repo overlay in the consuming repo
+* ``shared`` — the packaged canonical tree (``content/`` in this repo, shipped as package data;
+  mirrored into a consuming repo as ``.ai/toolkit/``)
+* ``local`` — an optional per-repo overlay in the consuming repo (``.ai/<repo>/``, e.g.
+  ``.ai/ai_vault/``)
 
-``load_bundle()`` merges them (``_local`` wins on a slug collision) and returns a
+``load_bundle()`` merges them (``local`` wins on a slug collision) and returns a
 :class:`ContentBundle` the renderers consume. Nothing here writes files or knows about any
 specific AI tool — that is the renderers' job.
 """
@@ -19,10 +21,75 @@ from pathlib import Path
 import yaml
 
 # Content layers, lowest-priority first. A slug defined in a later layer overrides the earlier one.
-# `_shared` is the packaged canonical tree; `_local` is the consuming repo's overlay.
-LAYERS = ("_shared", "_local")
+# `shared` is the packaged canonical tree (rendered as `.ai/toolkit/`); `local` is the consuming
+# repo's `.ai/<repo>/` overlay.
+LAYERS = ("shared", "local")
+
+# Everything the toolkit ships lives under `content/`. `apply` clobber-copies each of these into
+# the consuming repo verbatim; `check` drift-gates them; `contribute` maps repo edits back.
+#   content/<key>/  ->  <repo path>/
+CLOBBER_TREES = {
+    "ai": ".ai/toolkit",  # commands/ instructions/ skills/ — then rendered into every provider dir
+    "modules": "modules/toolkit",  # shared Python — imported as modules.toolkit.*
+    "tasks": "tasks/toolkit",  # shared invoke tasks
+    "tests": "tests/toolkit",  # tests for the shared modules
+}
+#   content/<key>  ->  <repo file>
+CLOBBER_FILES = {
+    "scripts/setup.sh": "setup.sh",
+    "scripts/setup.ps1": "setup.ps1",
+}
+
+# A consuming repo may vendor only a subset of what the toolkit ships — a repo whose shared Python
+# has diverged too far to clobber can still take the `.ai/` content and `setup.sh` while it
+# reconciles. `.sidecar-toolkit.yml` at the repo root, `vendor: [ai, scripts]`; absent = all of it.
+#   ai      -> content/ai/      (.ai/toolkit/ + every regenerated provider file)
+#   modules -> content/modules/ (modules/toolkit/)
+#   tasks   -> content/tasks/   (tasks/toolkit/)
+#   tests   -> content/tests/   (tests/toolkit/)
+#   scripts -> content/scripts/ (setup.sh, setup.ps1)
+VENDOR_KEYS = ("ai", "modules", "tasks", "tests", "scripts")
+_VENDOR_CONFIG = ".sidecar-toolkit.yml"
+
+
+def read_vendor(repo_root: Path) -> tuple[str, ...]:
+    """Which shipped trees this repo vendors, in :data:`VENDOR_KEYS` order. All of them by default."""
+    cfg = repo_root / _VENDOR_CONFIG
+    if not cfg.is_file():
+        return VENDOR_KEYS
+    data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+    if "vendor" not in data:
+        return VENDOR_KEYS
+    picked = set(_as_list(data.get("vendor")))
+    unknown = picked - set(VENDOR_KEYS)
+    if unknown:
+        msg = f"{_VENDOR_CONFIG}: unknown vendor keys {sorted(unknown)} (valid: {list(VENDOR_KEYS)})"
+        raise ValueError(msg)
+    return tuple(k for k in VENDOR_KEYS if k in picked)
+
+
+def vendored_trees(repo_root: Path) -> dict[str, str]:
+    """:data:`CLOBBER_TREES` filtered to what this repo vendors."""
+    vendor = read_vendor(repo_root)
+    return {k: v for k, v in CLOBBER_TREES.items() if k in vendor}
+
+
+def vendored_files(repo_root: Path) -> dict[str, str]:
+    """:data:`CLOBBER_FILES` filtered to what this repo vendors (all under the ``scripts`` key)."""
+    return dict(CLOBBER_FILES) if "scripts" in read_vendor(repo_root) else {}
+
 
 _EXEC_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
+_H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
+
+
+def _as_list(value: object) -> list[str]:
+    """Normalise a frontmatter scalar/list into a list of stripped strings."""
+    if isinstance(value, (list, tuple)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if value in (None, ""):
+        return []
+    return [part.strip() for part in str(value).split(",") if part.strip()]
 
 
 def _split_frontmatter(text: str) -> tuple[dict, str]:
@@ -47,12 +114,19 @@ class Command:
     argument_hint: str
     body: str
     source: Path
+    agent: str = "agent"
+    allowed_tools: tuple[str, ...] = ()
+
+    @property
+    def exec_lines(self) -> list[str]:
+        """Every ``!`...``` execution line in the body, in order."""
+        return [match.group(1).strip() for match in _EXEC_RE.finditer(self.body)]
 
     @property
     def exec_line(self) -> str:
-        """The ``!`...``` execution line from the body, or ``""`` if the command has none."""
-        match = _EXEC_RE.search(self.body)
-        return match.group(1).strip() if match else ""
+        """The first ``!`...``` execution line from the body, or ``""`` if the command has none."""
+        lines = self.exec_lines
+        return lines[0] if lines else ""
 
     @classmethod
     def from_file(cls, path: Path) -> Command:
@@ -63,6 +137,8 @@ class Command:
             argument_hint=str(fm.get("argument-hint", "")),
             body=body,
             source=path,
+            agent=str(fm.get("agent", "agent")),
+            allowed_tools=tuple(_as_list(fm.get("allowed-tools"))),
         )
 
 
@@ -75,6 +151,7 @@ class Instruction:
     apply_to: str
     body: str
     source: Path
+    label: str = ""
 
     @classmethod
     def from_file(cls, path: Path) -> Instruction:
@@ -85,34 +162,91 @@ class Instruction:
             apply_to=str(fm.get("applyTo", "")),
             body=body,
             source=path,
+            label=str(fm.get("label", "")) or _derive_label(path.stem, body),
         )
+
+
+def _derive_label(slug: str, body: str) -> str:
+    """A human label for the AGENTS.md / copilot index: frontmatter ``label`` → body H1 → slug."""
+    match = _H1_RE.search(body)
+    if match:
+        return re.sub(r"\s+(Instructions|Workflow)$", "", match.group(1).strip())
+    return slug.replace("_", " ").replace("-", " ").title()
 
 
 @dataclass(frozen=True)
 class Skill:
-    """One canonical skill directory (``content/skills/<name>/``)."""
+    """One canonical skill file (``content/skills/<name>.md``).
+
+    Flat one-file-per-skill — the ``<name>/SKILL.md`` directory shape is a *rendered* artifact
+    (Claude / Copilot require it), never the canonical source.
+
+    A canonical skill file is a **header only** — no body. ``hints`` are extra trigger phrases;
+    ``instructions`` / ``commands`` are lists of repo-relative paths (``.ai/toolkit/…`` or
+    ``.ai/<repo>/…``) that the renderers expand into each provider stub's body so the agent knows
+    what to read and follow when the skill fires.
+    """
 
     name: str
-    root: Path
+    path: Path
+    description: str = ""
+    hints: tuple[str, ...] = ()
+    instructions: tuple[str, ...] = ()
+    commands: tuple[str, ...] = ()
+
+    @classmethod
+    def from_file(cls, path: Path) -> Skill:
+        fm, _ = _split_frontmatter(path.read_text(encoding="utf-8"))
+        return cls(
+            name=path.stem,
+            path=path,
+            description=str(fm.get("description", "")),
+            hints=tuple(_as_list(fm.get("hints"))),
+            instructions=tuple(_as_list(fm.get("instructions"))),
+            commands=tuple(_as_list(fm.get("commands"))),
+        )
+
+
+TOOLKIT_DIRNAME = "toolkit"
+
+
+def local_layer_name(repo_root: Path) -> str:
+    """Name of the ``.ai/<name>/`` dir holding this repo's own (non-toolkit) content.
+
+    The repo's folder name (``.ai/ai_vault/``) when that dir exists; else — if the repo was cloned
+    to a different folder name — the sole non-``toolkit`` child of ``.ai/``. Falls back to the
+    stable literal ``"local"`` when there is no local dir yet (must be deterministic: ``check``
+    renders in a temp mirror and has to match what ``apply`` wrote).
+    """
+    ai = repo_root / ".ai"
+    if (ai / repo_root.name).is_dir():
+        return repo_root.name
+    if ai.is_dir():
+        others = [d.name for d in sorted(ai.iterdir()) if d.is_dir() and d.name != TOOLKIT_DIRNAME]
+        if len(others) == 1:
+            return others[0]
+    return "local"
 
 
 @dataclass(frozen=True)
 class ContentBundle:
-    """Everything the renderers need: the merged ``_shared`` + ``_vault`` + ``_local`` content."""
+    """Everything the renderers need: the merged ``shared`` + ``local`` content."""
 
     commands: list[Command] = field(default_factory=list)
     instructions: list[Instruction] = field(default_factory=list)
     skills: list[Skill] = field(default_factory=list)
-    # slug -> layer name it was resolved from (e.g. "_shared", "_vault", "_local")
+    # slug -> layer name it was resolved from ("shared" or "local")
     origin: dict[str, str] = field(default_factory=dict)
+    # the consuming repo's `.ai/<local_name>/` dir name (e.g. "ai_vault"); "local" as a bare default
+    local_name: str = "local"
 
     def layer_of(self, slug: str) -> str | None:
         """Which layer a slug was resolved from, or ``None`` if unknown."""
         return self.origin.get(slug)
 
     def is_local(self, slug: str) -> bool:
-        """True when ``slug`` was resolved from the consuming repo's ``_local/`` overlay."""
-        return self.origin.get(slug) == "_local"
+        """True when ``slug`` was resolved from the consuming repo's ``.ai/<local_name>/`` overlay."""
+        return self.origin.get(slug) == "local"
 
 
 def _collect(root: Path, subdir: str, suffix: str = ".md") -> list[Path]:
@@ -123,31 +257,36 @@ def _collect(root: Path, subdir: str, suffix: str = ".md") -> list[Path]:
 
 
 def packaged_content_root() -> Path:
-    """Absolute path to the ``content/`` tree bundled inside this package."""
+    """Absolute path to the ``content/`` tree bundled inside this package (all shipped trees)."""
     return (Path(__file__).resolve().parent / "content").resolve()
 
 
-def _skill_dirs(root: Path) -> list[Path]:
-    skills_root = root / "skills"
-    if not skills_root.is_dir():
-        return []
-    return sorted(p for p in skills_root.glob("*/") if p.is_dir())
+def packaged_ai_root() -> Path:
+    """Absolute path to ``content/ai/`` — the commands/instructions/skills bundle the renderers read."""
+    return packaged_content_root() / "ai"
 
 
-def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None = None) -> ContentBundle:
+def load_bundle(
+    *,
+    canonical_root: Path | None = None,
+    local_root: Path | None = None,
+    local_name: str = "local",
+) -> ContentBundle:
     """Merge the content layers into a :class:`ContentBundle`.
 
-    Layers apply lowest-priority first: ``canonical_root`` (``_shared``, defaults to the packaged
-    tree) → ``local_root`` (``_local``). A slug present in a later layer replaces the earlier one;
+    Layers apply lowest-priority first: ``canonical_root`` (``shared``, defaults to the packaged
+    tree) → ``local_root`` (``local``). A slug present in a later layer replaces the earlier one;
     :attr:`ContentBundle.origin` records which layer won.
 
     Args:
-        canonical_root: the toolkit ``content/`` root. Defaults to the packaged tree.
-        local_root: consuming repo's ``_local/`` root. Optional.
+        canonical_root: the ``ai/`` bundle root (``content/ai/`` packaged, ``.ai/toolkit/`` in a
+            consuming repo). Defaults to the packaged ``content/ai/``.
+        local_root: consuming repo's ``.ai/<local_name>/`` root. Optional.
+        local_name: the local dir's name, recorded on the bundle for the renderers' pointers.
     """
-    layers: list[tuple[str, Path]] = [("_shared", (canonical_root or packaged_content_root()).resolve())]
+    layers: list[tuple[str, Path]] = [("shared", (canonical_root or packaged_ai_root()).resolve())]
     if local_root is not None:
-        layers.append(("_local", local_root.resolve()))
+        layers.append(("local", local_root.resolve()))
 
     commands: dict[str, Command] = {}
     instructions: dict[str, Instruction] = {}
@@ -163,13 +302,14 @@ def load_bundle(*, canonical_root: Path | None = None, local_root: Path | None =
         for path in _collect(root, "instructions"):
             instructions[path.stem] = Instruction.from_file(path)
             origin[path.stem] = layer_name
-        for skill_dir in _skill_dirs(root):
-            skills[skill_dir.name] = Skill(name=skill_dir.name, root=skill_dir)
-            origin[skill_dir.name] = layer_name
+        for path in _collect(root, "skills"):
+            skills[path.stem] = Skill.from_file(path)
+            origin[path.stem] = layer_name
 
     return ContentBundle(
         commands=[commands[k] for k in sorted(commands)],
         instructions=[instructions[k] for k in sorted(instructions)],
         skills=[skills[k] for k in sorted(skills)],
         origin=origin,
+        local_name=local_name,
     )

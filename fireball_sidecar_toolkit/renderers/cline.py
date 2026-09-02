@@ -1,8 +1,7 @@
-"""Render ``.clinerules/workflows/*.md`` for Cline.
+"""Render ``.clinerules/workflows/*.md`` for Cline — pointer stubs.
 
-Cline workflows are plain-markdown body only — no frontmatter. Cline cannot run inline ``!`...```
-execution, so the canonical exec line is rewritten into an explicit "Run this terminal command:"
-block wrapping the same command.
+Cline workflows are body-only (no frontmatter). Each is a one-line pointer at the canonical
+``.ai/toolkit|local/commands/<slug>.md``.
 """
 
 from __future__ import annotations
@@ -10,7 +9,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..catalog import ContentBundle
+from ._common import canonical_pointer, clean_dir, write_doc
 
 
-def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:  # noqa: ARG001
-    raise NotImplementedError("cline renderer — see DESIGN.md")
+def render(bundle: ContentBundle, repo_root: Path) -> list[Path]:
+    out_dir = repo_root / ".clinerules" / "workflows"
+    written = [
+        write_doc(out_dir / f"{c.slug}.md", canonical_pointer(bundle, c.slug, "commands")) for c in bundle.commands
+    ]
+    clean_dir(out_dir, written)
+    return written

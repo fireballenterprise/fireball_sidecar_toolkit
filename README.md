@@ -3,9 +3,10 @@
 
 Single source of truth for the shared AI-agent tooling. Canonical slash commands, agent
 instructions, and skills live here as tool-neutral markdown under
-`fireball_sidecar_toolkit/content/`; a generator renders them into every AI tool's native format
-(`.claude/`, `.github/prompts/`, `.github/instructions/`, `.clinerules/`, `.opencode/`,
-`.sidecar/`, `AGENTS.md`) inside each consuming repo.
+`fireball_sidecar_toolkit/content/`; each consuming repo mirrors that into `.ai/toolkit/` (its own
+repo-specific additions live in `.ai/<repo>/`). A generator renders a pointer stub for every AI tool
+(`.claude/`, `.github/prompts/`, `.github/instructions/`, `.clinerules/`, `.sidecar/`, `AGENTS.md`)
+back to the `.ai/` source.
 
 See [DESIGN.md](DESIGN.md) for the architecture, branch model, and open questions.
 
@@ -17,22 +18,29 @@ dev = ["fireball_sidecar_toolkit @ git+https://github.com/fireballenterprise/fir
 # dev channel: ...@development
 ```
 ```sh
-uv run --no-sync invoke sidecar.toolkit.sync      # check _shared/ -> offer upload -> download -> regenerate
-uv run --no-sync invoke sidecar.toolkit.download  # clobber _shared/ from the package, regenerate
-uv run --no-sync invoke sidecar.toolkit.upload    # open a PR here with local _shared/ changes
-uv run --no-sync invoke sidecar.toolkit.check     # read-only drift gate (wire into invoke test / CI)
+uv run --no-sync invoke sidecar.toolkit.update      # uv lock --upgrade-package + uv sync (pull the newest release into the venv)
+uv run --no-sync invoke sidecar.toolkit.apply       # clobber .ai/toolkit/ etc. from the installed package, regenerate
+uv run --no-sync invoke sidecar.toolkit.upgrade     # update + apply — take the new toolkit in one step
+uv run --no-sync invoke sidecar.toolkit.sync        # apply, but stop first if .ai/toolkit/ has local hand-edits
+uv run --no-sync invoke sidecar.toolkit.contribute  # open a PR here with local .ai/toolkit/ changes
+uv run --no-sync invoke sidecar.toolkit.check       # read-only drift gate (wire into invoke test / CI)
+uv run --no-sync invoke sidecar.toolkit.mdfix       # normalise *.md (no blank after header, no stray ---); --check to gate
 ```
-No dependency wanted (non-Python repo): `uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit download`.
+`download` / `upload` are kept as deprecated aliases for `apply` / `contribute`.
+No dependency wanted (non-Python repo): `uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit apply`.
 
 ## Consuming-repo contract
 | path | rule |
 |------|------|
-| `_shared/` | clobbered copy of the toolkit's `content/` — never hand-edit |
-| `_local/` | this repo's own `instructions/ commands/ skills/` — never synced |
-| `.claude/`, `.github/{prompts,instructions,copilot-instructions.md}`, `.clinerules/`, `.opencode/`, `.sidecar/`, `AGENTS.md`, `CLAUDE.md` | generated — never hand-edit |
+| `.ai/toolkit/` | clobbered copy of the toolkit's `content/` — never hand-edit |
+| `.ai/<repo>/` | this repo's own `instructions/ commands/ skills/` — never synced |
+| `modules/toolkit/`, `tasks/toolkit/`, `tests/toolkit/` | clobbered copies of `content/{modules,tasks,tests}/` — shared Python (`modules.toolkit.*`) |
+| `setup.sh`, `setup.ps1` | clobbered from `content/scripts/` — repo extras go in `setup.local.sh` (never clobbered) |
+| `.claude/`, `.github/{prompts,instructions,skills,copilot-instructions.md}`, `.clinerules/`, `.sidecar/`, `AGENTS.md`, `CLAUDE.md` | generated pointer stubs → `.ai/` — never hand-edit |
+| `.sidecar-toolkit.yml` (optional) | `vendor: [ai, scripts]` — take only some shipped trees (`ai`, `modules`, `tasks`, `tests`, `scripts`); absent = all |
 
-Fix shared behavior by editing `content/` here, or by editing `_shared/` in a consuming repo and
-running `sidecar.toolkit.upload` to open a PR.
+Fix shared behavior by editing `content/` here, or by editing `.ai/toolkit/` in a consuming repo and
+running `sidecar.toolkit.contribute` to open a PR.
 
 ## Branch model
 `development` (integration, PRs merge here) → promoted to `main` (stable) via

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from .catalog import ContentBundle, load_bundle, packaged_content_root
+from .catalog import ContentBundle, load_bundle, local_layer_name, packaged_ai_root
 from .renderers import ALL
 
 
@@ -24,10 +24,10 @@ def render_repo(
     canonical_root: Path | None = None,
     only: list[str] | None = None,
 ) -> RenderResult:
-    """Regenerate every provider view in ``repo_root`` from ``_shared`` + ``_local``.
+    """Regenerate every provider view in ``repo_root`` from ``.ai/toolkit`` + ``.ai/<repo>``.
 
-    ``_shared/`` comes from the packaged canonical tree (or ``canonical_root``); ``_local/`` is
-    read from ``repo_root`` when that directory exists.
+    ``.ai/toolkit/`` comes from the packaged canonical tree (or ``canonical_root``); the local
+    overlay ``.ai/<repo>/`` is read from ``repo_root`` when that directory exists.
 
     Args:
         repo_root: consuming repo root.
@@ -35,10 +35,12 @@ def render_repo(
         only: restrict to a subset of renderer names (``renderers.ALL`` keys).
     """
     repo_root = repo_root.resolve()
-    local_dir = repo_root / "_local"
+    local_name = local_layer_name(repo_root)
+    local_dir = repo_root / ".ai" / local_name
     bundle: ContentBundle = load_bundle(
-        canonical_root=canonical_root or packaged_content_root(),
+        canonical_root=canonical_root or packaged_ai_root(),
         local_root=local_dir if local_dir.is_dir() else None,
+        local_name=local_name,
     )
 
     names = only or list(ALL)

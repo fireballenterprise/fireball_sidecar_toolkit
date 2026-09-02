@@ -2,7 +2,7 @@
 
 Thin argparse shell over the primitives so the toolkit works with **no dependency added** via
 ``uvx --from git+https://github.com/fireballenterprise/fireball_sidecar_toolkit sidecar-toolkit <cmd>`` (e.g. the day-job repo).
-The ``invoke sidecar.toolkit.*`` tasks in :mod:`tasks.sidecar.toolkit` are the in-repo equivalents.
+The ``invoke sidecar.toolkit.*`` tasks in :mod:`fireball_sidecar_toolkit.tasks` are the in-repo equivalents.
 """
 
 from __future__ import annotations
@@ -11,10 +11,12 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import download as _download
+from . import contribute as _contribute
 from . import sync as _sync
-from . import upload as _upload
+from .apply import apply as _apply
 from .check import check as _check
+
+_ALIASES = {"download": "apply", "upload": "contribute"}
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -22,31 +24,36 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo", type=Path, default=Path.cwd(), help="Consuming repo root (default: cwd)")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_sync = sub.add_parser("sync", help="check _shared/ -> offer upload -> download -> render")
-    p_sync.add_argument("--yes", action="store_true", help="non-interactive: discard _shared/ edits")
+    p_sync = sub.add_parser("sync", help="check .ai/toolkit/ -> stop on local edits -> apply")
+    p_sync.add_argument("--yes", action="store_true", help="non-interactive: discard .ai/toolkit/ edits")
 
-    sub.add_parser("download", help="clobber _shared/ from the package, then render")
-    sub.add_parser("upload", help="open a PR against fireball_sidecar_toolkit with local _shared/ changes")
+    sub.add_parser("apply", help="clobber .ai/toolkit/ etc. from the installed package, then render")
+    sub.add_parser("contribute", help="open a PR against fireball_sidecar_toolkit with local .ai/toolkit/ changes")
     sub.add_parser("check", help="read-only drift gate")
+    sub.add_parser("download", help="deprecated alias for `apply`")
+    sub.add_parser("upload", help="deprecated alias for `contribute`")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     repo: Path = args.repo.resolve()
+    command = _ALIASES.get(args.command, args.command)
+    if command != args.command:
+        print(f"note: `{args.command}` is now `{command}`", file=sys.stderr)
 
-    if args.command == "download":
-        _download.download(repo)
-    elif args.command == "upload":
-        print(_upload.upload(repo))
-    elif args.command == "check":
+    if command == "apply":
+        _apply(repo)
+    elif command == "contribute":
+        print(_contribute.contribute(repo))
+    elif command == "check":
         _check(repo)
-    elif args.command == "sync":
+    elif command == "sync":
         plan = _sync.inspect(repo)
         print(plan.message)
         if plan.dirty and not args.yes:
             return 2
-        _download.download(repo, force=True)
+        _sync.run(repo, force=True)
     return 0
 
 
