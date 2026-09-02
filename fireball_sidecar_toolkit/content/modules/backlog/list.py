@@ -1,25 +1,108 @@
-"""`backlog.list` — list a repo's issues (defaults to the current repo).
+"""`backlog.list` — list issues for one repo (default: the current repo) or the whole family.
 
 uv run --no-sync python -m modules.toolkit.backlog.list [--repo vscode] [--type bug] [--label backlog]
+uv run --no-sync python -m modules.toolkit.backlog.list --all [--scope ai|dev_prd]
 """
 
 from __future__ import annotations
 
+import json
+
 from ..common import cli
 from ..common.utils import error
+from ..setup.properties import FAMILY_SCOPES, get_family_repos
 from .common import ISSUE_TYPES, gh, nwo, resolve_repo_or_current
+
+_JSON_FIELDS = "number,title,state,labels,url,createdAt,updatedAt"
+
+
+def _list_args(state: str, limit: int, issue_type: str, label_filter: str, mine: bool) -> list[str]:
+    """The shared `gh issue list` argv for one repo (sans `--repo` / `--json`)."""
+    args = ["issue", "list", "--state", state, "--limit", str(limit)]
+    if issue_type:
+        args += ["--search", f"type:{ISSUE_TYPES[issue_type]}"]
+    if label_filter:
+        args += ["--label", label_filter]
+    if mine:
+        args += ["--assignee", "@me"]
+    return args
+
+
+def _scope_suffix(issue_type: str, label_filter: str, mine: bool) -> str:
+    """`" (type:bug, label:backlog, assigned to you)"` for the header line — `""` when unfiltered."""
+    filters: list[str] = []
+    if issue_type:
+        filters.append(f"type:{issue_type}")
+    if label_filter:
+        filters.append(f"label:{label_filter}")
+    if mine:
+        filters.append("assigned to you")
+    return f" ({', '.join(filters)})" if filters else ""
+
+
+def _family_repos(scope: str) -> list:
+    """Every active family repo (self included, missing clones included), root-to-leaf."""
+    repos = get_family_repos(include_self=True, include_missing=True, scope=scope or None)
+    if not repos:
+        error("no repos: map in properties.yml — --all needs a family")
+    return repos
+
+
+def _list_one_repo(repo_nwo: str, args: list[str], state: str, suffix: str) -> None:
+    """Print a single repo's list: a header line then the rows, or an empty-state line."""
+    rows = gh(args, repo=repo_nwo).stdout.strip()
+    if not rows:
+        cli.echo(f"No {state} issues in {repo_nwo}{suffix}.")
+        return
+    cli.echo(f"{state.capitalize()} issues in {repo_nwo}{suffix}:")
+    cli.echo(rows)
+
+
+def _list_family(args: list[str], state: str, suffix: str, scope: str) -> None:
+    """Print every family repo's issues, grouped — empty repos collapse to one `none` line."""
+    repos = _family_repos(scope)
+    header = f"{state.capitalize()} issues across the family{suffix}"
+    if scope:
+        header += f" [scope: {scope}]"
+    cli.echo(f"{header}:\n")
+    total = 0
+    for repo in repos:
+        repo_nwo = nwo(repo)
+        lines = [line for line in gh(args, repo=repo_nwo).stdout.strip().splitlines() if line.strip()]
+        if not lines:
+            cli.echo(f"{repo_nwo} — none")
+            continue
+        total += len(lines)
+        cli.echo(f"{repo_nwo} — {len(lines)} {state}")
+        for line in lines:
+            cli.echo(f"  {line}")
+    cli.echo(f"\n{total} {state} issue(s) across {len(repos)} repos.")
+
+
+def _list_family_json(args: list[str], scope: str) -> None:
+    """Emit one JSON array for the whole family, each row tagged with its `repo` (`org/name`)."""
+    merged: list[dict] = []
+    for repo in _family_repos(scope):
+        repo_nwo = nwo(repo)
+        raw = gh([*args, "--json", _JSON_FIELDS], repo=repo_nwo).stdout.strip()
+        merged += [{"repo": repo_nwo, **row} for row in json.loads(raw or "[]")]
+    cli.echo(json.dumps(merged, indent=2))
 
 
 @cli.command()
 @cli.option("--repo", default="", help="Family repo (fuzzy name; default: this repo)")
+@cli.option("--all", "all_repos", is_flag=True, help="Every active family repo, grouped by repo")
+@cli.option("--scope", default="", help=f"With --all: limit to a family scope ({' | '.join(FAMILY_SCOPES)})")
 @cli.option("--type", "issue_type", default="", help="Filter by native issue Type: bug | feature | task")
 @cli.option("--label", "label_filter", default="", help="Filter by label (area or nature)")
 @cli.option("--state", default="open", type=cli.Choice(["open", "closed", "all"]), help="Issue state")
-@cli.option("--limit", default=30, type=int, help="Max issues to show")
+@cli.option("--limit", default=30, type=int, help="Max issues to show (per repo)")
 @cli.option("--mine", is_flag=True, help="Only issues assigned to you")
 @cli.option("--json", "as_json", is_flag=True, help="Emit the raw gh JSON array (for scripting)")
 def main(
     repo: str = "",
+    all_repos: bool = False,
+    scope: str = "",
     issue_type: str = "",
     label_filter: str = "",
     state: str = "open",
@@ -30,31 +113,24 @@ def main(
     """Print the issue list as gh's table, or the raw JSON with --json."""
     if issue_type and issue_type not in ISSUE_TYPES:
         error(f"--type must be one of {', '.join(ISSUE_TYPES)} (got {issue_type!r})")
-    repo_nwo = nwo(resolve_repo_or_current(repo))
-    args = ["issue", "list", "--state", state, "--limit", str(limit)]
-    filters: list[str] = []
-    if issue_type:
-        args += ["--search", f"type:{ISSUE_TYPES[issue_type]}"]
-        filters.append(f"type:{issue_type}")
-    if label_filter:
-        args += ["--label", label_filter]
-        filters.append(f"label:{label_filter}")
-    if mine:
-        args += ["--assignee", "@me"]
-        filters.append("assigned to you")
-    scope = f" ({', '.join(filters)})" if filters else ""
-    if as_json:
-        cli.echo(
-            gh([*args, "--json", "number,title,state,labels,url,createdAt,updatedAt"], repo=repo_nwo).stdout.strip()
-            or "[]"
-        )
-        return
-    rows = gh(args, repo=repo_nwo).stdout.strip()
-    if not rows:
-        cli.echo(f"No {state} issues in {repo_nwo}{scope}.")
-        return
-    cli.echo(f"{state.capitalize()} issues in {repo_nwo}{scope}:")
-    cli.echo(rows)
+    if all_repos and repo:
+        error("--all lists the whole family — drop --repo (or drop --all to scope to one repo)")
+    if scope and not all_repos:
+        error("--scope only applies with --all")
+    if scope and scope not in FAMILY_SCOPES:
+        error(f"--scope must be one of {', '.join(FAMILY_SCOPES)} (got {scope!r})")
+
+    args = _list_args(state, limit, issue_type, label_filter, mine)
+    suffix = _scope_suffix(issue_type, label_filter, mine)
+
+    if all_repos and as_json:
+        _list_family_json(args, scope)
+    elif all_repos:
+        _list_family(args, state, suffix, scope)
+    elif as_json:
+        cli.echo(gh([*args, "--json", _JSON_FIELDS], repo=nwo(resolve_repo_or_current(repo))).stdout.strip() or "[]")
+    else:
+        _list_one_repo(nwo(resolve_repo_or_current(repo)), args, state, suffix)
 
 
 if __name__ == "__main__":
