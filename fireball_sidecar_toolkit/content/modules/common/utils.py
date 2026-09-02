@@ -47,3 +47,19 @@ def info(message: str) -> None:
 def version_tuple(version: str) -> tuple[int, ...]:
     """Parse a dotted `x.y.z`-style version string into an int tuple for ordering comparisons."""
     return tuple(int(part) for part in version.split("."))
+
+
+_VERBATIM_OPEN = "<!--sidecar:verbatim-->"
+_VERBATIM_CLOSE = "<!--sidecar:/verbatim-->"
+
+
+def verbatim(markdown: str) -> str:
+    """Fence already-formatted Markdown in Sidecar verbatim markers.
+
+    The Sidecar chat client renders a fenced region as-is in the transcript instead of routing it
+    through the model for a paraphrase; a command whose frontmatter carries `commentary: skip` also
+    ends the turn with no cloud round once its block(s) are shown. The markers are HTML comments, so
+    any other consumer — a plain terminal, a Markdown renderer that does not know the convention —
+    just sees the formatted block. See `.ai/toolkit/instructions/ai_commands.md`.
+    """
+    return f"{_VERBATIM_OPEN}\n{markdown.strip()}\n{_VERBATIM_CLOSE}"

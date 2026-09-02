@@ -28,18 +28,20 @@ repo; every other verb needs `--repo`.
 ## Reading `list` output
 `list` already prints finished Markdown — a `### <repo> · <count>` heading and a `# / Title /
 Labels` table (issue numbers linked, titles truncated, the repo's own area label dropped from the
-Labels cell). **Relay it as-is; do not rebuild it into prose or a bullet list.** A bare
-`/backlog list` lists **this** repo — say which repo the heading names and offer `--repo <name>`
-for another. An empty result prints `*No <state> issues in <repo>.*` and is a real answer, not a
-failure — pass it through rather than reporting the exit code.
+Labels cell) — fenced in `<!--sidecar:verbatim-->` markers. The Sidecar chat client renders that
+block itself; if you ever do see it in a result, **relay it as-is — do not rebuild it into prose or
+a bullet list, and do not repeat a block the client has already shown.** A bare `/backlog list`
+lists **this** repo — say which repo the heading names and offer `--repo <name>` for another. An
+empty result prints `*No <state> issues in <repo>.*` and is a real answer, not a failure — pass it
+through rather than reporting the exit code.
 
 `list --all` aggregates every active family repo: a `## <State> issues — family` heading, a
 `**<total> ... across <N> repos**` line, then one `### <repo> · <count>` + table section per repo
 with issues, and a trailing `*<k> other repos: none*` for the empty ones (or `*No <state> issues
 in any family repo.*` when everything is empty). Use it for "the whole backlog" / "what's open
 anywhere"; narrow with `--scope ai|dev_prd`. The per-repo `--type` / `--label` / `--state` /
-`--mine` / `--limit` filters still apply. `--all` and `--repo` are mutually exclusive. Same rule:
-relay the Markdown verbatim.
+`--mine` / `--limit` filters still apply. `--all` and `--repo` are mutually exclusive. Same
+`<!--sidecar:verbatim-->` fencing — the client renders it; never rebuild or repeat it.
 
 ## Issue body format
 Written for an AI to pick up and work — err verbose, but lead with a human summary:
