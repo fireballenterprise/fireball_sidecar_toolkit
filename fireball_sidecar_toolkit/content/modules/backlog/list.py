@@ -4,7 +4,10 @@ uv run --no-sync python -m modules.toolkit.backlog.list [--repo vscode] [--type 
 uv run --no-sync python -m modules.toolkit.backlog.list --all [--scope ai|dev_prd]
 
 The human output is Markdown: a `### <repo> · <count>` heading per repo followed by a
-`# / Title / Labels` table (issue numbers linked, titles truncated). `--json` is unchanged.
+`# / Title / Labels` table (issue numbers linked, titles truncated), fenced in
+`<!--sidecar:verbatim-->` markers so the Sidecar chat client renders it as-is (see
+`common.utils.verbatim` and the `commentary: skip` note in `.ai/toolkit/commands/backlog.md`).
+`--json` is unchanged — never fenced.
 """
 
 from __future__ import annotations
@@ -12,7 +15,7 @@ from __future__ import annotations
 import json
 
 from ..common import cli
-from ..common.utils import error
+from ..common.utils import error, verbatim
 from ..setup.properties import FAMILY_SCOPES, FamilyRepo, get_family_repos
 from .common import ISSUE_TYPES, area_for_repo, gh, nwo, resolve_repo_or_current
 
@@ -93,13 +96,13 @@ def _list_one_repo(repo: FamilyRepo, args: list[str], state: str, note: str) -> 
     """Print one repo's issues: a `### <repo> · <n>` heading + table, or an italic empty-state line."""
     issues = _issues(nwo(repo), args)
     if not issues:
-        cli.echo(f"*No {state} issues in {repo.name}{f' ({note})' if note else ''}.*")
+        cli.echo(verbatim(f"*No {state} issues in {repo.name}{f' ({note})' if note else ''}.*"))
         return
     lines = [f"### {repo.name} · {len(issues)}"]
     if note:
         lines += ["", f"*filtered: {note}*"]
     lines += ["", *_table(issues, repo)]
-    cli.echo("\n".join(lines))
+    cli.echo(verbatim("\n".join(lines)))
 
 
 def _list_family(args: list[str], state: str, note: str, scope: str) -> None:
@@ -127,7 +130,7 @@ def _list_family(args: list[str], state: str, note: str, scope: str) -> None:
         lines += ["", f"*No {state} issues in any family repo.*"]
     elif empty:
         lines += ["", "", f"*{empty} other repo{'' if empty == 1 else 's'}: none*"]
-    cli.echo("\n".join(lines))
+    cli.echo(verbatim("\n".join(lines)))
 
 
 def _list_family_json(args: list[str], scope: str) -> None:
