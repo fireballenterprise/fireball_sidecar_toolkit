@@ -44,6 +44,25 @@ def test_download_alias_still_works(repo: Path):
     assert download is apply
 
 
+def test_cli_apply_renders_and_reports(repo: Path, capsys: pytest.CaptureFixture[str]):
+    from fireball_sidecar_toolkit.cli import main
+
+    assert main(["--repo", str(repo), "apply"]) == 0
+    assert "Rendered" in capsys.readouterr().out
+    assert (repo / "AGENTS.md").exists()
+
+
+def test_cli_sync_stops_on_dirty_shared_without_yes(repo: Path):
+    from fireball_sidecar_toolkit.cli import main
+
+    main(["--repo", str(repo), "apply"])
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "generated")
+    (repo / ".ai" / "toolkit" / "commands" / "fix.md").write_text("hand edit\n")
+    assert main(["--repo", str(repo), "sync"]) == 2  # refuses to clobber a local edit
+    assert main(["--repo", str(repo), "sync", "--yes"]) == 0  # --yes discards it
+
+
 def test_apply_clobbers_the_shared_python_and_scripts(repo: Path):
     apply(repo)
     assert (repo / "modules" / "toolkit" / "setup" / "properties.py").is_file()

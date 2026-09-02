@@ -43,7 +43,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"note: `{args.command}` is now `{command}`", file=sys.stderr)
 
     if command == "apply":
-        _apply(repo)
+        result = _apply(repo)
+        print(f"Rendered {result.by_count} files.")
     elif command == "contribute":
         print(_contribute.contribute(repo))
     elif command == "check":
@@ -53,7 +54,8 @@ def main(argv: list[str] | None = None) -> int:
         print(plan.message)
         if plan.dirty and not args.yes:
             return 2
-        _sync.run(repo, force=True)
+        result = _sync.run(repo, force=True)
+        print(f"Rendered {result.by_count} files.")
     return 0
 
 
