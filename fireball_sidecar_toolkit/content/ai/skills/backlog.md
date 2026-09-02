@@ -13,6 +13,8 @@ hints:
   - show the bugs
   - what's open in
   - any bugs in
+  - what's open anywhere
+  - show the whole backlog
   - work on issue
   - pick up issue
   - fix this bug
