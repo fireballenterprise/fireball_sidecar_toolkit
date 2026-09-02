@@ -58,12 +58,21 @@ def upgrade(context, force=False):
     Stops if .ai/toolkit/ has local hand-edits (pass --force to clobber them).
     """
     update(context)
-    plan = _sync.inspect(Path.cwd())
-    print(plan.message)
-    if plan.dirty and not force:
-        raise SystemExit(2)
-    result = _sync.run(Path.cwd(), force=True)
-    print(f"Rendered {result.by_count} files.")
+    # The render MUST run in a fresh interpreter. `update` just swapped the package on disk, but
+    # this process imported `_sync` (and its renderers/catalog) at startup and Python caches
+    # imports — calling `_sync.run()` here would re-render with the *old* code (live bug: a
+    # multi-version jump rendered stale `.sidecar/skills/*.md` stubs). Shelling out to the console
+    # script picks up the just-installed version. Same `sync` semantics: stop on local .ai/toolkit/
+    # edits unless --force.
+    result = context.run(
+        f"uv run --no-sync sidecar-toolkit sync{' --yes' if force else ''}",
+        warn=True,
+        pty=False,
+    )
+    if result.exited == 2:
+        raise SystemExit(2)  # .ai/toolkit/ has local edits — re-run with --force to clobber them
+    if result.exited != 0:
+        raise SystemExit(result.exited)
 
 
 @task
