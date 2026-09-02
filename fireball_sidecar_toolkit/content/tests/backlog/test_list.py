@@ -1,4 +1,4 @@
-"""modules.toolkit.backlog.list — single-repo and `--all` family aggregation."""
+"""modules.toolkit.backlog.list — the grouped-Markdown-table output and `--all` aggregation."""
 
 import json
 import subprocess
@@ -38,16 +38,30 @@ _RESOLVE = {
     "": "fireball_sidecar_toolkit",
 }
 
-#: `org/name` → the fake `gh issue list` stdout for that repo (one TSV row per issue).
-_ROWS = {
-    "fireballenterprise/fireball_sidecar_vscode": "12\tblank chat panel\tSidecar VSCode\topen\n",
-    "fireballenterprise/fireball_sidecar_toolkit": "52\tlist --all\tSidecar Toolkit\topen\n",
-    "fireballenterprise/fireball_orchestrator": "",
-}
-_JSON_ROWS = {
-    "fireballenterprise/fireball_sidecar_vscode": '[{"number":12,"title":"blank chat panel"}]',
-    "fireballenterprise/fireball_sidecar_toolkit": '[{"number":52,"title":"list --all"}]',
-    "fireballenterprise/fireball_orchestrator": "",
+
+def _issue(number, title, labels, repo):
+    return {
+        "number": number,
+        "title": title,
+        "url": f"https://github.com/fireballenterprise/{repo}/issues/{number}",
+        "labels": [{"name": name} for name in labels],
+    }
+
+
+#: `org/name` → that repo's `gh issue list --json` payload.
+_ISSUES = {
+    "fireballenterprise/fireball_sidecar_vscode": [
+        _issue(12, "blank chat panel on a piped | title", ["Sidecar VSCode", "UI"], "fireball_sidecar_vscode"),
+    ],
+    "fireballenterprise/fireball_sidecar_toolkit": [
+        _issue(
+            52,
+            "backlog list --all should aggregate every family repo into one grouped view",
+            ["Sidecar Toolkit", "backlog"],
+            "fireball_sidecar_toolkit",
+        ),
+    ],
+    "fireballenterprise/fireball_orchestrator": [],
 }
 
 
@@ -57,31 +71,62 @@ def _stub(monkeypatch):
     monkeypatch.setattr(backlog_list, "resolve_repo_or_current", lambda token: _repo(_RESOLVE[token]))
 
     def fake_gh(args, *, repo=None, check=True):
-        table = _JSON_ROWS if "--json" in args else _ROWS
-        return subprocess.CompletedProcess(args, 0, stdout=table.get(repo, ""), stderr="")
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(_ISSUES.get(repo, [])), stderr="")
 
     monkeypatch.setattr(backlog_list, "gh", fake_gh)
 
 
-def test_single_repo_header_and_rows(capsys):
+def test_single_repo_renders_a_heading_and_table(capsys):
     backlog_list.main(repo="toolkit")
     out = capsys.readouterr().out
-    assert "Open issues in fireballenterprise/fireball_sidecar_toolkit:" in out
-    assert "52\tlist --all" in out
+    assert "### fireball_sidecar_toolkit · 1" in out
+    assert "| # | Title | Labels |" in out
+    assert "| [#52](https://github.com/fireballenterprise/fireball_sidecar_toolkit/issues/52) |" in out
+    # area label stripped, finer label kept
+    assert "| backlog |" in out
+    assert "Sidecar Toolkit" not in out
+
+
+def test_title_is_truncated_with_an_ellipsis(capsys):
+    backlog_list.main(repo="toolkit")
+    out = capsys.readouterr().out
+    assert "…" in out
+    assert "aggregate every family repo into one grouped view" not in out
+
+
+def test_pipe_in_a_title_is_escaped(capsys):
+    backlog_list.main(all_repos=True)
+    out = capsys.readouterr().out
+    assert "piped \\| title" in out
 
 
 def test_single_repo_empty_state(capsys):
     backlog_list.main(repo="orchestrator")
-    assert "No open issues in fireballenterprise/fireball_orchestrator." in capsys.readouterr().out
+    assert capsys.readouterr().out.strip() == "*No open issues in fireball_orchestrator.*"
 
 
 def test_all_groups_by_repo_and_collapses_empty(capsys):
     backlog_list.main(all_repos=True)
     out = capsys.readouterr().out
-    assert "fireballenterprise/fireball_sidecar_vscode — 1 open" in out
-    assert "  12\tblank chat panel\tSidecar VSCode" in out
-    assert "fireballenterprise/fireball_orchestrator — none" in out
-    assert "2 open issue(s) across 3 repos." in out
+    assert "## Open issues — family" in out
+    assert "**2 open across 3 repos**" in out
+    assert "### fireball_sidecar_vscode · 1" in out
+    assert "### fireball_sidecar_toolkit · 1" in out
+    assert "fireball_orchestrator" not in out
+    assert "*1 other repo: none*" in out
+
+
+def test_all_empty_prints_the_all_empty_line(capsys, monkeypatch):
+    monkeypatch.setattr(backlog_list, "_issues", lambda *_a, **_k: [])
+    backlog_list.main(all_repos=True)
+    out = capsys.readouterr().out
+    assert "**0 open across 3 repos**" in out
+    assert "*No open issues in any family repo.*" in out
+
+
+def test_filter_note_shows_in_the_heading(capsys):
+    backlog_list.main(repo="toolkit", issue_type="bug", mine=True)
+    assert "*filtered: type:bug, assigned to you*" in capsys.readouterr().out
 
 
 def test_all_json_tags_each_row_with_repo(capsys):
@@ -92,6 +137,13 @@ def test_all_json_tags_each_row_with_repo(capsys):
         "fireballenterprise/fireball_sidecar_toolkit",
     }
     assert {row["number"] for row in payload} == {12, 52}
+
+
+def test_single_repo_json_is_the_raw_array(capsys):
+    backlog_list.main(repo="toolkit", as_json=True)
+    payload = json.loads(capsys.readouterr().out)
+    assert [row["number"] for row in payload] == [52]
+    assert "repo" not in payload[0]
 
 
 def test_all_and_repo_are_mutually_exclusive():
