@@ -55,14 +55,20 @@ uv run --no-sync invoke update                           # top-level alias for v
 ```
 
 ## Installs (`upgrade.py`) — `versioning.upgrade`
+`check` rewrites the locks/pins; `upgrade` does the actual installs — the **binaries** (uv,
+Python; the orchestrator fork adds cdk) **and** the libs (`uv sync --upgrade`) + the `.sdkmanrc`
+toolchain.
 ```sh
-uv run --no-sync invoke versioning.upgrade               # every applicable install
+uv run --no-sync invoke versioning.upgrade               # every applicable install (+ refresh uv)
+uv run --no-sync invoke versioning.upgrade uv            # just the uv binary (brew / uv self update)
 uv run --no-sync invoke versioning.upgrade python        # just Python + .venv rebuild
 uv run --no-sync invoke versioning.upgrade libs          # just `uv sync --upgrade`
 uv run --no-sync invoke versioning.upgrade sdkman        # just `sdk env install`
 uv run --no-sync invoke versioning.upgrade --sync        # `uv sync --upgrade`, no version check
 uv run --no-sync invoke upgrade                          # top-level alias
 ```
+The `uv` binary is **unpinned** (always latest) — so `check` never touches it; only `upgrade`
+refreshes it.
 `/update [<repo>] [sub-check]` walks through applying the checks; `/upgrade [<repo>] [toolchain]`
 runs the installs. Both take a leading `[<repo>]` or `--repo <name|path>`.
 
