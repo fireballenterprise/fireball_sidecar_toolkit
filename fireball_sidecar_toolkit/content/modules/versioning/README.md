@@ -12,7 +12,7 @@ gets `libs` + `python`, a repo with `.github/workflows/` gets `workflows`, a rep
 ## Usage
 ```sh
 uv run --no-sync invoke versioning.check                 # every applicable check (was ver.update)
-uv run --no-sync invoke versioning.check libs            # just the dependency-lock check
+uv run --no-sync invoke versioning.check --only libs            # just the dependency-lock check
 uv run --no-sync invoke versioning.check --repo ../app   # run the applicable checks in another checkout
 uv run --no-sync invoke versioning.check --dry-run       # preview only, never writes
 uv run --no-sync invoke versioning.check --yes           # skip confirmation prompts
@@ -20,8 +20,8 @@ uv run --no-sync invoke update                           # top-level alias for v
 uv run --no-sync invoke ver.check                        # short alias for versioning.*
 
 uv run --no-sync invoke versioning.upgrade               # install every applicable upgrade (+ refresh uv)
-uv run --no-sync invoke versioning.upgrade uv            # just the uv binary
-uv run --no-sync invoke versioning.upgrade python        # just Python + .venv rebuild
+uv run --no-sync invoke versioning.upgrade --only uv            # just the uv binary
+uv run --no-sync invoke versioning.upgrade --only python        # just Python + .venv rebuild
 uv run --no-sync invoke versioning.upgrade --sync        # just `uv sync --upgrade`
 uv run --no-sync invoke upgrade                          # top-level alias for versioning.upgrade
 
