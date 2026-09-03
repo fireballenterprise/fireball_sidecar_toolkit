@@ -38,14 +38,21 @@ def main(only: str | None, fix: bool) -> None:
         cli.echo(f"Unknown linter {only!r} — pick one of: {', '.join(_LINTERS)}", err=True)
         raise SystemExit(2)
 
-    names = [only] if only else [name for name, module in _LINTERS.items() if module.applies(root)]
+    if only:
+        names = [only]
+    else:
+        names = [name for name, module in _LINTERS.items() if module.applies(root)]
+        # `--fix` with no target = "apply autofixes" — run only the tools that can fix (ruff,
+        # ktlint), not the check-only linters (that's `tests.style` / `invoke test`).
+        if fix:
+            names = [name for name in names if hasattr(_LINTERS[name], "fix")]
     if not names:
-        cli.echo("No linters apply to this repo.")
+        cli.echo("Nothing to do." if fix else "No linters apply to this repo.")
         return
     if not only:
         skipped = [name for name in _LINTERS if name not in names]
         if skipped:
-            info(f"Skipping (toolchain not present): {', '.join(skipped)}")
+            info(f"Skipping ({'no autofix' if fix else 'toolchain not present'}): {', '.join(skipped)}")
 
     results = []
     for name in names:
