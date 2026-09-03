@@ -3,6 +3,9 @@
 All logic is in the module; these only translate invoke kwargs to CLI flags and route ``--repo``
 to another checkout. Registered by consumers as both ``versioning.*`` and the short alias
 ``ver.*``, plus top-level ``update`` (= ``versioning.check``) and ``upgrade`` (= ``versioning.upgrade``).
+
+The sub-arg is ``--only`` here (invoke can't have an *optional* positional); the slash commands
+(``/update libs``) take it as a bare positional via ``versioning/route.py``.
 """
 
 from invoke import Collection, task
@@ -25,15 +28,15 @@ def _flags(dry_run: bool, yes: bool) -> list[str]:
 
 @task(
     help={
-        "which": "Force one sub-check: libs | python | workflows | sdkman (default: every applicable one)",
+        "only": "Force one sub-check: libs | python | workflows | sdkman (default: every applicable one)",
         "repo": "Run against another checkout — a family-repo name or a path",
         "dry-run": "Preview only, never write",
         "yes": "Skip confirmation prompts",
     }
 )
-def check(context, which=None, repo=None, dry_run=False, yes=False):
+def check(context, only=None, repo=None, dry_run=False, yes=False):
     """Run the applicable version checks (toolchain-aware). Was ``ver.libs`` / ``ver.update``."""
-    args = (["--only", which] if which else []) + _flags(dry_run, yes)
+    args = (["--only", only] if only else []) + _flags(dry_run, yes)
     if with_target(repo, _CHECK, args):
         return
     context.run("python -m modules.toolkit.setup.properties")
@@ -44,17 +47,17 @@ def check(context, which=None, repo=None, dry_run=False, yes=False):
 
 @task(
     help={
-        "which": "Force one: uv | python | libs | sdkman (default: every applicable one)",
+        "only": "Force one: uv | python | libs | sdkman (default: every applicable one)",
         "sync": "Just `uv sync --upgrade` — no version checks",
         "repo": "Run against another checkout — a family-repo name or a path",
         "yes": "Skip confirmation prompts",
     }
 )
-def upgrade(context, which=None, sync=False, repo=None, yes=False):
+def upgrade(context, only=None, sync=False, repo=None, yes=False):
     """Install the upgrades reviewed by ``check`` — uv + Python binaries, .venv, libs, SDKMAN."""
     args: list[str] = []
-    if which:
-        args += ["--only", which]
+    if only:
+        args += ["--only", only]
     if sync:
         args.append("--sync")
     if yes:
