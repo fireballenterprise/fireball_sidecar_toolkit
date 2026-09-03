@@ -47,12 +47,14 @@ toolchains enable (via `modules/toolkit/common/toolchains.py`) — a Python libr
 
 ```sh
 uv run --no-sync invoke versioning.check                 # every applicable check
-uv run --no-sync invoke versioning.check libs            # just one
+uv run --no-sync invoke versioning.check --only libs            # just one
 uv run --no-sync invoke versioning.check --repo ../app   # against another checkout
 uv run --no-sync invoke versioning.check --dry-run       # preview only
 uv run --no-sync invoke versioning.check --yes           # skip prompts
 uv run --no-sync invoke update                           # top-level alias for versioning.check
 ```
+(`invoke` needs `--only <sub>` — an invoke positional can't be optional. The slash commands take
+it bare: `/update libs`, via `versioning/route.py`.)
 
 ## Installs (`upgrade.py`) — `versioning.upgrade`
 `check` rewrites the locks/pins; `upgrade` does the actual installs — the **binaries** (uv,
@@ -60,10 +62,10 @@ Python; the orchestrator fork adds cdk) **and** the libs (`uv sync --upgrade`) +
 toolchain.
 ```sh
 uv run --no-sync invoke versioning.upgrade               # every applicable install (+ refresh uv)
-uv run --no-sync invoke versioning.upgrade uv            # just the uv binary (brew / uv self update)
-uv run --no-sync invoke versioning.upgrade python        # just Python + .venv rebuild
-uv run --no-sync invoke versioning.upgrade libs          # just `uv sync --upgrade`
-uv run --no-sync invoke versioning.upgrade sdkman        # just `sdk env install`
+uv run --no-sync invoke versioning.upgrade --only uv            # just the uv binary (brew / uv self update)
+uv run --no-sync invoke versioning.upgrade --only python        # just Python + .venv rebuild
+uv run --no-sync invoke versioning.upgrade --only libs          # just `uv sync --upgrade`
+uv run --no-sync invoke versioning.upgrade --only sdkman        # just `sdk env install`
 uv run --no-sync invoke versioning.upgrade --sync        # `uv sync --upgrade`, no version check
 uv run --no-sync invoke upgrade                          # top-level alias
 ```
