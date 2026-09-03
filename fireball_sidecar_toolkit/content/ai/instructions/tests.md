@@ -24,18 +24,23 @@ uv run --no-sync invoke test
 uv run --no-sync invoke fix
 uv run --no-sync invoke test
 
-# Targeted test tasks
-uv run --no-sync invoke tests.actionlint
-uv run --no-sync invoke tests.pylint
-uv run --no-sync invoke tests.rufflint
-uv run --no-sync invoke tests.yamllint
+# Targeted
+uv run --no-sync invoke tests.style              # every applicable linter/formatter
+uv run --no-sync invoke tests.style ruff         # just one (ruff | pylint | yamllint | actionlint | ktlint | detekt | android-lint)
+uv run --no-sync invoke tests.style --fix        # apply autofixes
+uv run --no-sync invoke tests.unit               # every applicable unit runner
+uv run --no-sync invoke tests.unit --scope versioning   # pytest marker subset
 
-# Targeted formatting/fix tasks
-uv run --no-sync invoke ruff.fix
-uv run --no-sync invoke ruff.format
+# Another checkout
+uv run --no-sync invoke test --repo ../other_repo
 ```
 
 Do not run `uv run invoke ...` without `--no-sync`.
+
+`tests.style` / `tests.unit` are **toolchain-aware** — they run only the tools the repo's
+toolchains enable (Python repo → ruff/pylint/yamllint/actionlint/pytest; Kotlin/Gradle repo →
+ktlint/detekt/android-lint/gradle-unit). A tool that isn't installed is reported **skipped**, not
+failed. All logic is in `modules/toolkit/tests/`; the tasks are thin wrappers.
 
 ## When to Run Tests
 Run tests if you modified:
@@ -45,11 +50,13 @@ Run tests if you modified:
 
 Skip tests for: `*.md`, config files, `*.toml`, `*.json`
 
-## What Gets Tested
-1. **actionlint** — GitHub Actions workflow validation
-2. **pylint** — Python code quality
-3. **ruff** — Python linting and formatting
-4. **yamllint** — YAML file validation
+## What Gets Tested (whatever the repo's toolchains enable)
+- **ruff** / **pylint** — Python lint + format + code quality (Python repo)
+- **yamllint** — YAML validation
+- **actionlint** — GitHub Actions workflow validation
+- **pytest** — the unit suite (must score 10/10)
+- **ktlint** / **detekt** / **android-lint** / **gradle-unit** — Kotlin/Gradle repo
+- **toolkit drift gate** + **mdfix** — run by `invoke test` in the current repo only
 
 ## Fix Issues — Never Disable Warnings
 ```python

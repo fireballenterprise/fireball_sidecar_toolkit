@@ -1,8 +1,8 @@
 ---
 name: rebase
 description: Rebase current branch onto the remote default branch. Optionally runs squash first before rebasing.
-argument-hint: no arguments required
+argument-hint: "[--repo <name|path>]"
 agent: agent
 ---
 
-!`uv run --no-sync invoke repo.rebase`
+!`uv run --no-sync invoke repo.rebase $ARGUMENTS`

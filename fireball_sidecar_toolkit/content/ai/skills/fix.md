@@ -1,6 +1,6 @@
 ---
 name: fix
-description: Use for auto-fix requests — run ruff check --fix and ruff format. Equivalent to /fix.
+description: Use for auto-fix requests — every applicable autofixer (ruff --fix + format; ktlint format for Kotlin). Takes --repo <name|path>. Equivalent to /fix.
 hints:
   - fix
 instructions:

@@ -38,6 +38,12 @@ def get_repo_root() -> Path:
     Raises:
         FileNotFoundError: If properties.yml cannot be found.
     """
+    # A wrapper targeting another checkout (see common.target_repo.delegate) sets this — honour it
+    # before any file search so `get_properties()` and every `topics/` path resolve there too.
+    override = os.environ.get(REPO_ROOT_ENV)
+    if override:
+        return Path(override).resolve()
+
     # Start from current file location
     current = Path(__file__).resolve()
 

@@ -263,6 +263,12 @@ def main(dry_run: bool, no_confirm: bool) -> None:
 
     repo_path = get_repo_local()
 
+    # No pyproject.toml → not a Python repo (e.g. a `--repo` target that's a Kotlin app). Exit 3,
+    # the "nothing to do" convention the check orchestrator tolerates.
+    if not (repo_path / "pyproject.toml").exists():
+        success(f"No pyproject.toml in {repo_path} — skipping Python version check")
+        raise SystemExit(3)
+
     # Get versions
     current_major, current_minor = get_current_python_version(repo_path)
     latest_major, latest_minor, latest_patch = get_latest_stable_python()

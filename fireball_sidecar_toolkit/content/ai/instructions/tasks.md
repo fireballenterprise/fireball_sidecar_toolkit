@@ -4,30 +4,37 @@ applyTo: "tasks/**"
 ---
 # Tasks Instructions
 Invoke is the task runner for CI/CD-style automation (fix, test, upgrade, version checks). Tasks
-live in `tasks/` and run via `uv run --no-sync invoke <task>` (always `--no-sync`). Never put
-business logic in a task — that lives in `modules/`. Unlike command bodies (which capture AI/human
-judgment — see `.ai/toolkit/instructions/logic.md`), invoke tasks are deterministic: no judgment calls, no
-AI-specific behavior.
+live in `tasks/` and run via `uv run --no-sync invoke <task>` (always `--no-sync`). **Never put
+business logic in a task — that lives in `modules/`.** An invoke task is a thin wrapper that
+translates kwargs to CLI flags and shells to `python -m modules.toolkit.<pkg>.<verb>`; anything
+with branching, discovery, or I/O belongs in the module. `tasks/toolkit/` is one file per
+`modules/toolkit/<pkg>` package, same name (`versioning.py`, `tests.py`, `repo.py`, …).
 
 ## Most-Used
 ```bash
-uv run --no-sync invoke fix    # ruff fix + format (+ changelog sync where present)
-uv run --no-sync invoke test   # actionlint + pylint + pytest + rufflint + yamllint + toolkit drift check
+uv run --no-sync invoke fix    # every applicable autofixer (ruff --fix + format, ktlint format, …)
+uv run --no-sync invoke test   # every applicable lint + unit check + toolkit drift gate
 ```
+
+## `--repo <name|path>` (target another checkout)
+`versioning.*`, `tests.*`, `fix`, `test`, `repo.{pull,push,cleanup,rebase,squash}`, and
+`setup.properties` take `--repo <name|path>` — a `properties.yml` family-repo name, or a path to
+any git checkout. Default (omitted) = the current repo, unchanged. Only works where a
+`repos:`/`repos_local:` map exists (fireball_orchestrator) for the *name* form; the *path* form
+works anywhere. Implemented in `modules/toolkit/common/target_repo.py` (fresh subprocess in the
+target — never in-process).
 
 ## Task Groups
 | Group | Tasks |
 |---|---|
-| `tests.*` | `actionlint`, `pylint`, `pytest`, `rufflint`, `yamllint` (repo-specific extras like `cfnlint` where applicable) |
-| `ruff.*` | `fix`, `format` |
-| `upgrade.*` | `libs`, `python`, `sync`, `upgrade` (Python + all deps) |
+| `tests.*` | `style` (every applicable linter/formatter; `--fix`, `--only`), `unit` (pytest / gradle-unit; `--scope`) |
 | `uv.*` | `upgrade_bin` (`brew upgrade uv`), `upgrade_libs` (`uv sync`) |
-| `ver.*` | `update` (libs+python+workflows checks), `libs`, `python`, `workflows`, `upgrade` (alias), `project_bump_{patch,minor,major,build}` |
+| `versioning.*` (alias `ver.*`) | `check [libs\|python\|workflows\|sdkman]` (toolchain-aware; was `ver.update` / `ver.libs` / …), `upgrade [python\|libs\|sdkman]` / `--sync` (was top-level `upgrade`), `bump {patch\|minor\|major\|build}` (was `ver.project_bump_*`) |
+| top-level | `fix`, `test`, `update` (= `versioning.check`), `upgrade` (= `versioning.upgrade`) |
 | `sidecar.toolkit.*` | `update`, `apply`, `upgrade`, `sync`, `contribute`, `check` — shipped by the `fireball_sidecar_toolkit` package (see below) |
 
-Version checks (`ver.libs/python/workflows`) only rewrite the locks in `pyproject.toml` /
-`.github/workflows/` — they don't install; `upgrade.*` does that. `--dry-run` / `--yes` on the
-`ver.*` checks.
+`versioning.check` only rewrites locks (`pyproject.toml`, `.github/workflows/`, `.sdkmanrc`) —
+it doesn't install; `versioning.upgrade` does. `--dry-run` / `--yes` on `check`.
 
 ## AI Provider Sync (`sidecar.toolkit.*`)
 Shared commands / instructions / skills come from `fireball_sidecar_toolkit`. The tasks are shipped

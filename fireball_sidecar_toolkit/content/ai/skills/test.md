@@ -1,6 +1,6 @@
 ---
 name: test
-description: Use for running all tests and linters — ruff, pylint, yamllint, actionlint, toolkit drift check. Equivalent to /test.
+description: Use for running every lint + unit check the repo's toolchains enable — ruff, pylint, yamllint, actionlint, pytest (ktlint / detekt / gradle for Kotlin), plus the toolkit drift gate. Takes --repo <name|path>. Equivalent to /test.
 hints:
   - test
 instructions:

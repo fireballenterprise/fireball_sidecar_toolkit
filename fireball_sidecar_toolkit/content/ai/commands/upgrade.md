@@ -1,58 +1,30 @@
 ---
 name: upgrade
-description: Upgrade Python and/or Dependencies
-argument-hint: [python | libs]
+description: Install the version upgrades reviewed via /update — new Python + .venv rebuild, uv sync --upgrade, and the .sdkmanrc toolchain.
+argument-hint: "[<repo>] [python | libs | sdkman] [--repo <name|path>]"
 agent: agent
 ---
 
-# upgrade - Upgrade Python and/or Dependencies
-Executes upgrades to Python and/or package dependencies after you've reviewed changes via `/update`.
+# upgrade — install the upgrades reviewed via /update
+Performs the actual installs after you've reviewed the config changes with `/update`.
 
 ## Usage
-Upgrade everything (interactive):
-!`uv run --no-sync invoke upgrade`
+Every applicable upgrade (interactive):
+!`uv run --no-sync python -m modules.toolkit.versioning.route "upgrade $ARGUMENTS"`
 
-Upgrade only Python:
-!`uv run --no-sync invoke upgrade.python`
+`$ARGUMENTS` may name one toolchain (`python` / `libs` / `sdkman`), and/or start with a repo
+selector — a family-repo name or a path, or `--repo <name|path>` (same as `/update`). Add `--sync`
+for just `uv sync --upgrade` with no version check.
 
-Upgrade only libs:
-!`uv run --no-sync invoke upgrade.libs`
-
-Sync dependencies without checking for updates:
-!`uv run --no-sync invoke upgrade.sync`
-
-## Description
-The upgrade command performs actual installations and syncs:
-- Downloads and installs new Python versions (if updated)
-- Rebuilds virtual environment (if Python changed)
-- Runs `uv sync --upgrade` to install updated dependencies
+## What it does (only for the toolchains the repo has)
+- Python: install the pinned version, rebuild `.venv`
+- libs: `uv sync --upgrade`
+- sdkman: `sdk env install` (installs whatever `.sdkmanrc` pins)
 
 ## Workflow
-Best practice:
-1. Run `/update` to review and update config files
-2. Check `git diff` to see what changed
-3. If satisfied, run `/upgrade` to execute the upgrades
-4. If not satisfied, run `git restore` and adjust
+1. `/update` — review + rewrite config files
+2. `git diff` — check what changed
+3. `/upgrade` — install
 
-## Examples
-```bash
-# Full workflow
-/update                    # Review and update all configs
-git diff                    # Review changes
-/upgrade                    # Execute upgrades
-
-# Python-only workflow
-/update python             # Review and update Python configs
-git diff                    # Review changes
-/upgrade python             # Execute Python upgrade
-
-# Libs-only workflow
-/update libs               # Review and update lib versions in pyproject.toml
-git diff                    # Review changes
-/upgrade libs               # Execute libs upgrade
-```
-
-## Exit Codes
-- 0: Success (upgrades completed or nothing needed)
-- 1: Error occurred
-- 2: Cancelled by user
+## Exit codes
+- 0: success (or nothing needed) · 1: error · 2: cancelled

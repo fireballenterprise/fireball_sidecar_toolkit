@@ -30,3 +30,31 @@ def find_repo_root() -> Path:
 def build_env(_repo_root: Path) -> dict[str, str]:
     """Build the subprocess environment for a routed command."""
     return os.environ.copy()
+
+
+def peel_repo(args: list[str]) -> tuple[list[str], str | None]:
+    """Pull a ``--repo <x>`` / ``--repo=<x>`` target selector out of ``args`` (any position).
+
+    Returns ``(remaining_args, token_or_None)``. A router / task hands ``token`` to
+    ``common.target_repo.resolve_target_repo`` and, when that returns a path, delegates the rest of
+    ``remaining_args`` into the target checkout instead of running in-process.
+    """
+    out: list[str] = []
+    token: str | None = None
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--repo":
+            if index + 1 < len(args):
+                token = args[index + 1]
+                index += 2
+                continue
+            index += 1
+            continue
+        if arg.startswith("--repo="):
+            token = arg.split("=", 1)[1]
+            index += 1
+            continue
+        out.append(arg)
+        index += 1
+    return out, token
