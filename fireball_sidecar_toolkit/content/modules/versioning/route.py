@@ -26,7 +26,7 @@ from ..common.target_repo import delegate, resolve_target_repo
 #: verb → (module suffix under the toolkit package, recognised sub-args)
 _VERBS: dict[str, tuple[str, set[str]]] = {
     "check": ("versioning.check", {"libs", "python", "workflows", "sdkman"}),
-    "upgrade": ("versioning.upgrade", {"python", "libs", "sdkman"}),
+    "upgrade": ("versioning.upgrade", {"uv", "python", "libs", "sdkman"}),
     "bump": ("versioning.project", {"patch", "minor", "major", "build"}),
 }
 
