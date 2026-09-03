@@ -28,7 +28,6 @@ target — never in-process).
 | Group | Tasks |
 |---|---|
 | `tests.*` | `style` (every applicable linter/formatter; `--fix`, `--only`), `unit` (pytest / gradle-unit; `--scope`) |
-| `uv.*` | `upgrade_bin` (`brew upgrade uv`), `upgrade_libs` (`uv sync`) |
 | `versioning.*` (alias `ver.*`) | `check [libs\|python\|workflows\|sdkman]` (toolchain-aware; was `ver.update` / `ver.libs` / …), `upgrade [python\|libs\|sdkman]` / `--sync` (was top-level `upgrade`), `bump {patch\|minor\|major\|build}` (was `ver.project_bump_*`) |
 | top-level | `fix`, `test`, `update` (= `versioning.check`), `upgrade` (= `versioning.upgrade`) |
 | `sidecar.toolkit.*` | `update`, `apply`, `upgrade`, `sync`, `contribute`, `check` — shipped by the `fireball_sidecar_toolkit` package (see below) |
