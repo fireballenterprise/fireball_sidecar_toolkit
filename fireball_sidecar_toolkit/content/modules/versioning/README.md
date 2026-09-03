@@ -19,7 +19,8 @@ uv run --no-sync invoke versioning.check --yes           # skip confirmation pro
 uv run --no-sync invoke update                           # top-level alias for versioning.check
 uv run --no-sync invoke ver.check                        # short alias for versioning.*
 
-uv run --no-sync invoke versioning.upgrade               # install every applicable upgrade (was `upgrade`)
+uv run --no-sync invoke versioning.upgrade               # install every applicable upgrade (+ refresh uv)
+uv run --no-sync invoke versioning.upgrade uv            # just the uv binary
 uv run --no-sync invoke versioning.upgrade python        # just Python + .venv rebuild
 uv run --no-sync invoke versioning.upgrade --sync        # just `uv sync --upgrade`
 uv run --no-sync invoke upgrade                          # top-level alias for versioning.upgrade
@@ -48,7 +49,9 @@ uv run --no-sync invoke versioning.bump build            # feature-branch build 
   published major tag (`git ls-remote`, no API token), rewrites the pins in place
 - `sdkman.py` — checks `.sdkmanrc` toolchain pins (JDK/Gradle/Kotlin) against `sdk list`, rewrites
   `.sdkmanrc` + the Gradle wrapper (exits `3` when there's no `.sdkmanrc`)
-- `upgrade.py` — the installs behind `/upgrade` (`--only python|libs|sdkman`, `--sync`)
+- `upgrade.py` — the installs behind `/upgrade`: the `uv` binary (`brew upgrade uv` / `uv self
+  update` — unpinned), the pinned Python + `.venv` rebuild, `uv sync --upgrade`, `sdk env install`.
+  `--only uv|python|libs|sdkman`, `--sync`
 - `project.py` — bumps the root `VERSION` file. Has its **own** `get_repo_root()` (keyed on
   `pyproject.toml` + `VERSION`, **not** `properties.yml`) so it works in CI. Does not commit,
   push, or trigger any workflow.

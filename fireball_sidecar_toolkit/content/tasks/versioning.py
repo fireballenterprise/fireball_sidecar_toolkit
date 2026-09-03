@@ -44,14 +44,14 @@ def check(context, which=None, repo=None, dry_run=False, yes=False):
 
 @task(
     help={
-        "which": "Force one: python | libs | sdkman (default: every applicable one)",
+        "which": "Force one: uv | python | libs | sdkman (default: every applicable one)",
         "sync": "Just `uv sync --upgrade` — no version checks",
         "repo": "Run against another checkout — a family-repo name or a path",
         "yes": "Skip confirmation prompts",
     }
 )
 def upgrade(context, which=None, sync=False, repo=None, yes=False):
-    """Install the upgrades reviewed by ``check`` (Python + .venv, libs, SDKMAN toolchain)."""
+    """Install the upgrades reviewed by ``check`` — uv + Python binaries, .venv, libs, SDKMAN."""
     args: list[str] = []
     if which:
         args += ["--only", which]
