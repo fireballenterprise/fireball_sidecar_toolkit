@@ -49,6 +49,10 @@ def test_exit_3_from_a_subcheck_is_tolerated(monkeypatch, tmp_path):
     check.main()  # no SystemExit
 
 
+class _FakeProc:
+    returncode = 0
+
+
 @pytest.mark.parametrize(
     ("argv", "expect_repo", "expect_only"),
     [
@@ -61,16 +65,21 @@ def test_exit_3_from_a_subcheck_is_tolerated(monkeypatch, tmp_path):
 )
 def test_route_peels_repo_and_subarg(monkeypatch, argv, expect_repo, expect_only):
     seen = {}
-    monkeypatch.setattr(route, "resolve_target_repo", lambda tok: seen.setdefault("repo", tok) or None)
-    monkeypatch.setattr(
-        route.subprocess,
-        "run",
-        lambda cmd, **kw: seen.setdefault("cmd", cmd) or type("P", (), {"returncode": 0})(),
-    )
+
+    def fake_resolve(tok):
+        seen["repo"] = tok
+
+    def fake_run(cmd, **_kw):
+        seen["cmd"] = cmd
+        return _FakeProc()
+
+    monkeypatch.setattr(route, "resolve_target_repo", fake_resolve)
+    monkeypatch.setattr(route.subprocess, "run", fake_run)
     monkeypatch.setattr("sys.argv", ["route", *argv])
     route.main()
-    assert seen.get("repo") == expect_repo
+
+    assert seen["repo"] == expect_repo
     if expect_only:
-        assert "--only" in seen["cmd"] and seen["cmd"][seen["cmd"].index("--only") + 1] == expect_only
+        assert seen["cmd"][seen["cmd"].index("--only") + 1] == expect_only
     else:
         assert "--only" not in seen["cmd"]
