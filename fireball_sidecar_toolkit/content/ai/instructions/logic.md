@@ -33,6 +33,20 @@ person is driving it.
   and makes some of the same judgment calls a human operator would (which options to pick, when
   to ask, when to stop). See below for where that judgment is captured.
 
+## Running a Command
+- Always prefix with **`uv run --no-sync`**: `uv run --no-sync invoke <task>` for an invoke task,
+  `uv run --no-sync python -m modules.<x>.route "<args>"` for a slash-command module. `--no-sync`
+  uses the project's `.venv` and does **not** re-resolve or update dependencies.
+- **Never** run a bare `python3 -m ...`, `pip install --user` / `--break-system-packages`, or edit
+  `PATH` to reach a task. That runs against the system interpreter, misses the `.venv`, and leaves
+  packages installed outside the project. If `uv` itself isn't found, say so — don't work around it.
+- A **`/slash-command`** (`/repo`, `/push`, `/backlog`, …) is not an executable — never type one
+  into a terminal. Its behaviour is the `.ai/toolkit/commands/<name>.md` (or `.ai/<repo>/commands/`)
+  body; the `` !`…` `` line there is the real command to run (the part *inside* the backticks, no
+  leading `!`). Read that file, or run the underlying `route.py` / `invoke` directly.
+- Pass a multi-word argument as **one quoted string**: `... repo.route "pull all"`, not
+  `... repo.route pull all`.
+
 ## AI Is an Automated User, Not a Fourth Layer
 The stack above is the entire runtime. An AI tool operates the CLI exactly the way a human would
 type it at a terminal — there is no hidden AI-only code path, and no logic lives inside the AI
