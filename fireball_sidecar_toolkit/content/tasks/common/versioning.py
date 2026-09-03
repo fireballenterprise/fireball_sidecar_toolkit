@@ -60,11 +60,19 @@ def workflows(context, dry_run=False, yes=False):
 
 
 @task
+def sdkman(context, dry_run=False, yes=False):
+    """Check .sdkmanrc toolchain pins (JDK/Gradle/Kotlin/…) against SDKMAN and rewrite them.
+    No-op (exits cleanly) in a repo without a .sdkmanrc."""
+    _run_module(context, "modules.toolkit.versioning.sdkman", dry_run, yes)
+
+
+@task
 def update(context, dry_run=False, yes=False):
     """Backfill properties.yml from the tier fragments, then run every version check (libs, python,
-    workflows) — each runs even if an earlier one exits early."""
+    workflows, sdkman) — each runs even if an earlier one exits early. `sdkman` is skipped silently
+    in a repo without a .sdkmanrc."""
     context.run("python -m modules.toolkit.setup.properties")
-    for check in (libs, python, workflows):
+    for check in (libs, python, workflows, sdkman):
         try:
             check(context, dry_run=dry_run, yes=yes)
         except SystemExit:  # noqa: PERF203
