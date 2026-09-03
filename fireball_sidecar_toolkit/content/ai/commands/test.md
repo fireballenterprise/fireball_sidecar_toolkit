@@ -1,15 +1,18 @@
 ---
 name: test
-description: Run all tests and linters. Use when you want to run ruff, pylint, yamllint, and actionlint.
-argument-hint: no arguments required
+description: Run every lint / unit check that applies to the repo (ruff, pylint, yamllint, actionlint, pytest; ktlint / detekt / gradle for Kotlin).
+argument-hint: "[--repo <name|path>]"
 agent: agent
 ---
 
-Run all tests:
+Run all checks:
 
-!`uv run --no-sync invoke test`
+!`uv run --no-sync invoke test $ARGUMENTS`
 
-If all tests pass, report success and stop.
+`--repo <name|path>` runs the checks against another managed checkout. A tool that isn't installed
+is reported *skipped*, not failed.
+
+If all checks pass, report success and stop.
 
 If any tests fail:
 - For Ruff offenses: attempt to auto-fix by running `uv run --no-sync invoke fix`, then re-run `uv run --no-sync invoke test` to confirm. If offenses remain after auto-fix, show the remaining failures and ask the user how they would like to proceed.
