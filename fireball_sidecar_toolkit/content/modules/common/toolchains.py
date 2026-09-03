@@ -129,7 +129,8 @@ def detect(root: Path) -> set[str]:
     gradle_markers = ("settings.gradle", "settings.gradle.kts", "build.gradle", "build.gradle.kts")
     if any((root / marker).is_file() for marker in gradle_markers):
         tokens.add("gradle")
-        if _iter_sources(root, (".kt", ".kts")):
+        # `.kt` only — `.gradle.kts` build scripts are Gradle config, not Kotlin app source.
+        if _iter_sources(root, (".kt",)):
             tokens.add("kotlin")
         if has_agp(root):
             tokens.add("agp")
