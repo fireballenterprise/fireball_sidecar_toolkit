@@ -76,7 +76,8 @@ _SUBCOMMAND_MODULES = {"start": "modules.toolkit.<module>.start", "end": "module
 
 
 def main() -> int:
-    args = shlex.split(sys.argv[1] if len(sys.argv) > 1 else "")
+    raw = sys.argv[1:]
+    args = shlex.split(raw[0]) if len(raw) == 1 else list(raw)  # accept "a b" or a b
     module = _SUBCOMMAND_MODULES.get(args[0]) if args else None
     if module is None:
         sys.stderr.write("Unknown subcommand\n")
@@ -89,6 +90,25 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 ```
+
+### Retargeting to another repo (`--repo`)
+A router for a verb that can act on *another* managed checkout (see `repo/route.py`,
+`versioning/route.py`) adds a preamble right after `args = …`:
+
+```python
+from modules.toolkit.common.route_utils import peel_repo
+from modules.toolkit.common.target_repo import delegate, resolve_target_repo
+
+args, repo_token = peel_repo(args)
+target = resolve_target_repo(repo_token)  # None / path / fuzzy family name
+if target is not None:
+    return delegate(target, f"<module>.{verb}", rest, caller_root=Path.cwd())
+```
+
+`resolve_target_repo` / `delegate` / `toolchains` are all in `modules/toolkit/common/` and stay
+**stdlib-only at import** (CI-safe — `versioning.bump` runs in CI where `properties.yml` is
+absent). Never switch repos in-process: `setup.properties` caches the repo root for the life of
+the process, so `delegate` always spawns a fresh subprocess (`cwd` + `$SIDECAR_REPO_ROOT`).
 
 ## AI Provider Files
 Commands, instructions, and skills are authored in `.ai/toolkit/` (via `fireball_sidecar_toolkit`'s

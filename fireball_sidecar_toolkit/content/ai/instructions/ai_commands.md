@@ -83,6 +83,27 @@ slash command's entire successful output is verbatim block(s) it also ends the t
 round (zero tokens, no hallucination surface). Never fence `--json` / machine output. `backlog.list`
 is the reference example.
 
+## Targeting another repo (`--repo <name|path>`)
+`fireball_orchestrator` runs the shared tooling against sibling repos it manages. `versioning.*`,
+`tests.*`, `fix`, `test`, and `repo.{pull,push,cleanup,rebase,squash}` accept a target selector:
+
+- **`--repo <name|path>`** anywhere in `$ARGUMENTS` — a `properties.yml` family-repo name, or a
+  path to any git checkout (`--repo ../../levonbecker/dotfiles`).
+- **`/update` and `/upgrade` also take a bare leading token** as the repo
+  (`/update fireball_sidecar_android`) — resolved as a path when it looks like one (contains `/`
+  or starts with `.` / `~` / `/`), else a family-repo name.
+- Omitted → the current repo, behaviour unchanged.
+
+A **name** only resolves where `properties.yml` has a `repos:` + `repos_local:` map (the
+orchestrator); a **path** works anywhere; neither touches `properties.yml` in CI. Selection is
+**entirely Python-side** — the VS Code extension just string-substitutes `$ARGUMENTS` into the
+exec line and runs it in the open workspace, so the exec line stays `… route.py "$ARGUMENTS"` /
+`invoke <task> $ARGUMENTS` and the router / task peels the selector. The work then runs as a
+**fresh subprocess** in the target checkout (`cwd` + `$SIDECAR_REPO_ROOT`) —
+`modules/toolkit/common/target_repo.py` — never in-process (the properties cache pins one process
+to one repo). A check that's meaningless for the target (e.g. a Python-version check on a Kotlin
+app) self-skips with a note (`modules/toolkit/common/toolchains.py`).
+
 ## uv --no-sync flag
 Every `uv run` call in a command MUST use `--no-sync`:
 

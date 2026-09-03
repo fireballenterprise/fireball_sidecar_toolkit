@@ -114,11 +114,70 @@ def sdkman_env_install(repo_path: Path) -> None:
         success("SDKMAN toolchain installed")
 
 
+def _print_summary(
+    *,
+    upgrade_python: bool,
+    upgrade_libs: bool,
+    upgrade_sdkman: bool,
+    python_only: bool,
+    libs_only: bool,
+    python_current: str,
+    python_latest: str,
+    libs_count: int,
+) -> list[str]:
+    """Print the "what will change" block; return the list of items to be upgraded."""
+    cli.echo("\n" + "=" * 60)
+    cli.echo("🚀 UPGRADE SUMMARY")
+    cli.echo("=" * 60)
+
+    will_upgrade: list[str] = []
+    if upgrade_python:
+        cli.echo(f"\n🐍 Python: {python_current} → {python_latest}")
+        cli.echo("   Actions:\n   - Install new Python version\n   - Rebuild .venv")
+        will_upgrade.append("Python")
+    elif python_only:
+        cli.echo(f"\n🐍 Python: {python_current} (already up to date)")
+
+    if upgrade_libs:
+        cli.echo(f"\n📦 Libraries: {libs_count} updates available")
+        cli.echo("   Actions:\n   - Run uv sync --upgrade")
+        will_upgrade.append(f"{libs_count} libraries")
+    elif libs_only:
+        cli.echo("\n📦 Libraries: Already up to date")
+
+    if upgrade_sdkman:
+        cli.echo("\n☕ SDKMAN toolchain: .sdkmanrc present")
+        cli.echo("   Actions:\n   - Run sdk env install (installs whatever .sdkmanrc pins)")
+        will_upgrade.append("SDKMAN toolchain")
+
+    return will_upgrade
+
+
+def _print_final(
+    *,
+    upgrade_python: bool,
+    upgrade_libs: bool,
+    upgrade_sdkman: bool,
+    python_latest: str,
+    libs_count: int,
+) -> None:
+    """Print the closing "done" block."""
+    cli.echo("\n" + "=" * 60)
+    success("Upgrade complete!")
+    if upgrade_python:
+        cli.echo(f"\n✅ Python upgraded to {python_latest}\n✅ Virtual environment rebuilt")
+    if upgrade_libs:
+        cli.echo(f"\n✅ {libs_count} libraries updated")
+    if upgrade_sdkman:
+        cli.echo("\n✅ SDKMAN toolchain installed (`sdk env` to activate in a shell)")
+    cli.echo("\n💡 Changes installed and ready to use\n")
+
+
 @cli.command()
+@cli.option("--only", help="Upgrade just one toolchain: python | libs | sdkman")
+@cli.option("--sync", "sync_only", is_flag=True, help="Only run `uv sync --upgrade` (no version checks)")
 @cli.option("--yes", "-y", "no_confirm", is_flag=True, help="Skip confirmation")
-@cli.option("--python-only", is_flag=True, help="Only upgrade Python")
-@cli.option("--libs-only", is_flag=True, help="Only upgrade libraries")
-def main(no_confirm: bool, python_only: bool, libs_only: bool) -> None:
+def main(only: str | None, sync_only: bool, no_confirm: bool) -> None:
     """
     Execute upgrades for Python and/or dependencies.
 
@@ -130,20 +189,41 @@ def main(no_confirm: bool, python_only: bool, libs_only: bool) -> None:
     IMPORTANT: Run /update first to update config files before upgrading.
 
     Examples:
-        /upgrade                  # Upgrade everything
-        /upgrade --python-only    # Only Python
-        /upgrade --libs-only      # Only libraries
+        /upgrade                  # Upgrade every detected toolchain
+        /upgrade python           # Only Python
+        /upgrade libs             # Only libraries
+        /upgrade sdkman           # Only the .sdkmanrc toolchain
+        /upgrade --sync           # Just `uv sync --upgrade`
         /upgrade --yes            # Skip confirmation
     """
     repo_path = get_repo_local()
 
+    if sync_only:
+        run_uv_sync()
+        return
+
+    if only and only not in ("python", "libs", "sdkman"):
+        cli.echo(f"Unknown target {only!r} — pick one of: python, libs, sdkman", err=True)
+        raise SystemExit(2)
+    python_only = only == "python"
+    libs_only = only == "libs"
+    sdkman_only = only == "sdkman"
+
+    # No pyproject.toml → not a Python repo (e.g. a `--repo` target that's a Kotlin app). The
+    # Python / libs branches don't apply; only a `.sdkmanrc` toolchain install might.
+    has_pyproject = (repo_path / "pyproject.toml").exists()
+
     # Determine what to upgrade
-    upgrade_python = not libs_only
-    upgrade_libs = not python_only
+    upgrade_python = not libs_only and not sdkman_only and has_pyproject
+    upgrade_libs = not python_only and not sdkman_only and has_pyproject
 
     # Check what needs upgrading
-    python_needs_upgrade, python_current, python_latest = check_python_needs_upgrade(repo_path)
-    libs_need_upgrade, libs_count = check_libs_need_upgrade(repo_path)
+    if has_pyproject:
+        python_needs_upgrade, python_current, python_latest = check_python_needs_upgrade(repo_path)
+        libs_need_upgrade, libs_count = check_libs_need_upgrade(repo_path)
+    else:
+        python_needs_upgrade, python_current, python_latest = (False, "", "")
+        libs_need_upgrade, libs_count = (False, 0)
     # SDKMAN toolchain — only the full `upgrade` touches it, and only when a `.sdkmanrc` exists.
     # `/update` has already rewritten the pins by now; this just installs them.
     upgrade_sdkman = not python_only and not libs_only and bool(read_sdkmanrc(repo_path))
@@ -155,34 +235,16 @@ def main(no_confirm: bool, python_only: bool, libs_only: bool) -> None:
         upgrade_libs = False
 
     # === Display Summary ===
-    cli.echo("\n" + "=" * 60)
-    cli.echo("🚀 UPGRADE SUMMARY")
-    cli.echo("=" * 60)
-
-    will_upgrade = []
-
-    if upgrade_python:
-        cli.echo(f"\n🐍 Python: {python_current} → {python_latest}")
-        cli.echo("   Actions:")
-        cli.echo("   - Install new Python version")
-        cli.echo("   - Rebuild .venv")
-        will_upgrade.append("Python")
-    elif python_only:
-        cli.echo(f"\n🐍 Python: {python_current} (already up to date)")
-
-    if upgrade_libs:
-        cli.echo(f"\n📦 Libraries: {libs_count} updates available")
-        cli.echo("   Actions:")
-        cli.echo("   - Run uv sync --upgrade")
-        will_upgrade.append(f"{libs_count} libraries")
-    elif libs_only:
-        cli.echo("\n📦 Libraries: Already up to date")
-
-    if upgrade_sdkman:
-        cli.echo("\n☕ SDKMAN toolchain: .sdkmanrc present")
-        cli.echo("   Actions:")
-        cli.echo("   - Run sdk env install (installs whatever .sdkmanrc pins)")
-        will_upgrade.append("SDKMAN toolchain")
+    will_upgrade = _print_summary(
+        upgrade_python=upgrade_python,
+        upgrade_libs=upgrade_libs,
+        upgrade_sdkman=upgrade_sdkman,
+        python_only=python_only,
+        libs_only=libs_only,
+        python_current=python_current,
+        python_latest=python_latest,
+        libs_count=libs_count,
+    )
 
     if not will_upgrade:
         cli.echo("\n" + "=" * 60)
@@ -218,22 +280,13 @@ def main(no_confirm: bool, python_only: bool, libs_only: bool) -> None:
         cli.echo("\n☕ Installing SDKMAN toolchain...")
         sdkman_env_install(repo_path)
 
-    # === Final Message ===
-    cli.echo("\n" + "=" * 60)
-    success("Upgrade complete!")
-
-    if upgrade_python:
-        cli.echo(f"\n✅ Python upgraded to {python_latest}")
-        cli.echo("✅ Virtual environment rebuilt")
-
-    if upgrade_libs:
-        cli.echo(f"\n✅ {libs_count} libraries updated")
-
-    if upgrade_sdkman:
-        cli.echo("\n✅ SDKMAN toolchain installed (`sdk env` to activate in a shell)")
-
-    cli.echo("\n💡 Changes installed and ready to use")
-    cli.echo()
+    _print_final(
+        upgrade_python=upgrade_python,
+        upgrade_libs=upgrade_libs,
+        upgrade_sdkman=upgrade_sdkman,
+        python_latest=python_latest,
+        libs_count=libs_count,
+    )
 
 
 if __name__ == "__main__":

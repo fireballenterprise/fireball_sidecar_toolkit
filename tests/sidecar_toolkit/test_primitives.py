@@ -66,7 +66,8 @@ def test_cli_sync_stops_on_dirty_shared_without_yes(repo: Path):
 def test_apply_clobbers_the_shared_python_and_scripts(repo: Path):
     apply(repo)
     assert (repo / "modules" / "toolkit" / "setup" / "properties.py").is_file()
-    assert (repo / "tasks" / "toolkit" / "common" / "main.py").is_file()
+    assert (repo / "tasks" / "toolkit" / "main.py").is_file()
+    assert (repo / "tasks" / "toolkit" / "versioning.py").is_file()
     assert (repo / "tests" / "toolkit").is_dir()
     setup = repo / "setup.sh"
     assert setup.is_file() and setup.stat().st_mode & 0o111  # executable
