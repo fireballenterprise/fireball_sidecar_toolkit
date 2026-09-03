@@ -32,14 +32,19 @@ keyed on `pyproject.toml` + `VERSION` — not `modules.toolkit.setup.properties.
 searches for the git-ignored `properties.yml` and fails in CI where `version.yml`/`release.yml`
 runs these tasks.
 
-## Dependency/Action Version Checks (`libs.py`, `python.py`, `workflows.py`)
-Three checks against external sources of truth, plus the installs that follow (`upgrade.py`):
+## Dependency/Action Version Checks (`libs.py`, `python.py`, `workflows.py`, `sdkman.py`)
+Four checks against external sources of truth, plus the installs that follow (`upgrade.py`):
 - `ver.libs` — compares `pyproject.toml`'s `[project.dependencies]` against the latest
   published package releases (via `uv pip list [--outdated]`), and rewrites just the version locks
 - `ver.python` — compares the pinned Python version against the latest stable 3.x release, and
   rewrites the config file references (does not install)
 - `ver.workflows` — compares `.github/workflows/*.yml`'s `uses: owner/repo@vN` refs against
   the latest major tag published on GitHub for that action, and rewrites just the ref pins
+- `ver.sdkman` — **only in a repo with a `.sdkmanrc`** (no-op elsewhere). Compares each toolchain
+  pin (`java`, `gradle`, `kotlin`, …) against `sdk list <candidate>`, rewrites `.sdkmanrc` + the
+  Gradle wrapper to the newest same-channel, non-pre-release id. Known-bad ids are skipped via
+  `# sdkman-skip: <candidate> <id>` lines in `.sdkmanrc` (seeded with `gradle 9.7.1`, corrupt via
+  SDKMAN). Does not install — `/upgrade` runs `sdk env install` afterward.
 
 See `modules/toolkit/versioning/README.md` for full behavior/data-flow details on each.
 
@@ -47,14 +52,16 @@ See `modules/toolkit/versioning/README.md` for full behavior/data-flow details o
 uv run --no-sync invoke ver.libs        # check + prompt to update pyproject.toml locks
 uv run --no-sync invoke ver.python      # check + prompt to update the pinned Python version
 uv run --no-sync invoke ver.workflows    # check + prompt to update workflow action refs
-uv run --no-sync invoke ver.update       # libs + python + workflows together (same as top-level `update`)
+uv run --no-sync invoke ver.sdkman       # check + prompt to update .sdkmanrc toolchain pins (if any)
+uv run --no-sync invoke ver.update       # libs + python + workflows + sdkman together (same as top-level `update`)
 uv run --no-sync invoke ver.libs --dry-run   # preview only, never writes (also on python/workflows/update)
 uv run --no-sync invoke ver.libs --yes       # skip the confirmation prompt (also on python/workflows/update)
 
 uv run --no-sync invoke ver.upgrade      # install the upgrades reviewed above (same as top-level `upgrade`)
 ```
-`/update [libs | python | workflows]` runs all three checks and walks through applying them;
-`/upgrade` executes the actual installs afterward.
+`/update [libs | python | workflows | sdkman]` runs every check and walks through applying them;
+`/upgrade` executes the actual installs afterward (`uv sync --upgrade`, venv rebuild, `sdk env
+install`).
 
 ### Relationship to Other Workflows
 - `ver.libs` only edits `pyproject.toml` — run `uv run --no-sync invoke upgrade.libs`

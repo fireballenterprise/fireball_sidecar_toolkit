@@ -12,6 +12,7 @@ from ..setup.properties import get_binary_version, get_repo_local
 # Import check functions
 from .libs import get_declared_dependency_names, get_outdated_packages, load_pyproject
 from .python import get_runtime_python_version
+from .sdkman import read_sdkmanrc
 
 LOGGER = logging.getLogger(__name__)
 
@@ -97,6 +98,22 @@ def check_libs_need_upgrade(repo_path: Path) -> tuple[bool, int]:
     return (len(relevant_outdated) > 0, len(relevant_outdated))
 
 
+def sdkman_env_install(repo_path: Path) -> None:
+    """`sdk env install` in `repo_path` — installs whatever `.sdkmanrc` pins (the pins are set by
+    `/update`, i.e. `python -m modules.toolkit.versioning.sdkman`). `sdk` is a shell function, so
+    this goes through a login shell that sources sdkman-init.sh."""
+    info("Installing .sdkmanrc toolchain via SDKMAN...")
+    result = subprocess.run(
+        ["bash", "-lc", 'source "$HOME/.sdkman/bin/sdkman-init.sh" && sdk env install'],
+        cwd=repo_path,
+        check=False,
+    )
+    if result.returncode != 0:
+        warning("sdk env install completed with warnings — check `sdk env` output")
+    else:
+        success("SDKMAN toolchain installed")
+
+
 @cli.command()
 @cli.option("--yes", "-y", "no_confirm", is_flag=True, help="Skip confirmation")
 @cli.option("--python-only", is_flag=True, help="Only upgrade Python")
@@ -127,6 +144,9 @@ def main(no_confirm: bool, python_only: bool, libs_only: bool) -> None:
     # Check what needs upgrading
     python_needs_upgrade, python_current, python_latest = check_python_needs_upgrade(repo_path)
     libs_need_upgrade, libs_count = check_libs_need_upgrade(repo_path)
+    # SDKMAN toolchain — only the full `upgrade` touches it, and only when a `.sdkmanrc` exists.
+    # `/update` has already rewritten the pins by now; this just installs them.
+    upgrade_sdkman = not python_only and not libs_only and bool(read_sdkmanrc(repo_path))
 
     # Filter based on flags
     if upgrade_python and not python_needs_upgrade:
@@ -158,6 +178,12 @@ def main(no_confirm: bool, python_only: bool, libs_only: bool) -> None:
     elif libs_only:
         cli.echo("\n📦 Libraries: Already up to date")
 
+    if upgrade_sdkman:
+        cli.echo("\n☕ SDKMAN toolchain: .sdkmanrc present")
+        cli.echo("   Actions:")
+        cli.echo("   - Run sdk env install (installs whatever .sdkmanrc pins)")
+        will_upgrade.append("SDKMAN toolchain")
+
     if not will_upgrade:
         cli.echo("\n" + "=" * 60)
         success("Everything is already up to date!")
@@ -188,6 +214,10 @@ def main(no_confirm: bool, python_only: bool, libs_only: bool) -> None:
         cli.echo("\n📦 Syncing dependencies...")
         run_uv_sync()
 
+    if upgrade_sdkman:
+        cli.echo("\n☕ Installing SDKMAN toolchain...")
+        sdkman_env_install(repo_path)
+
     # === Final Message ===
     cli.echo("\n" + "=" * 60)
     success("Upgrade complete!")
@@ -198,6 +228,9 @@ def main(no_confirm: bool, python_only: bool, libs_only: bool) -> None:
 
     if upgrade_libs:
         cli.echo(f"\n✅ {libs_count} libraries updated")
+
+    if upgrade_sdkman:
+        cli.echo("\n✅ SDKMAN toolchain installed (`sdk env` to activate in a shell)")
 
     cli.echo("\n💡 Changes installed and ready to use")
     cli.echo()
