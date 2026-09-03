@@ -1,7 +1,7 @@
 ---
 name: cleanup
 description: Clean up a merged feature branch (switch to default, pull, delete it), then sweep local build/cache trash. A scope (all|ai|dev_prd) does it across that slice of the family.
-argument-hint: "[all|ai|dev_prd]"
+argument-hint: "[all|ai|dev_prd] [--repo <name|path>]"
 agent: agent
 ---
 
@@ -18,4 +18,5 @@ Two phases, in order:
    everything and asks before deleting. Never touches `topics/` or `tmp/`.
 
 `/cleanup all` (or `ai` / `dev_prd`) runs both phases in each repo of that scope of
-`properties.yml`'s `repos:` family.
+`properties.yml`'s `repos:` family. `/cleanup --repo <name|path>` runs them in one other managed
+checkout (mutually exclusive with a scope).
