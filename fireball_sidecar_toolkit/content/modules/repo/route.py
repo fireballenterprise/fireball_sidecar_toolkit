@@ -74,7 +74,12 @@ def _usage(*, err: bool = False) -> int:
 
 
 def main() -> int:
-    args = shlex.split(sys.argv[1] if len(sys.argv) > 1 else "")
+    # Both call shapes must work: `route "pull all"` — one quoted arg, how the slash-command's
+    # `!` exec line passes `$ARGUMENTS` — and `route pull all` — separate argv entries, how a
+    # human or an agent types it in a shell. Only the first was handled before, so `route pull all`
+    # silently dropped `all` and pulled just the current repo.
+    raw = sys.argv[1:]
+    args = shlex.split(raw[0]) if len(raw) == 1 else raw
 
     if not args or args[0] in ("help", "-h", "--help"):
         return _usage()
