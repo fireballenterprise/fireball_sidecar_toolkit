@@ -269,6 +269,12 @@ def main(dry_run: bool, no_confirm: bool) -> None:
     # Get repository path
     repo_path = get_repo_local()
 
+    # No pyproject.toml → not a Python repo (e.g. a `--repo` target that's a Kotlin app). Exit 3,
+    # the "nothing to do" convention the check orchestrator tolerates.
+    if not (repo_path / "pyproject.toml").exists():
+        success(f"No pyproject.toml in {repo_path} — skipping dependency check")
+        raise SystemExit(3)
+
     # Get installed and outdated packages
     installed_packages = get_installed_packages()
     outdated_packages = get_outdated_packages()

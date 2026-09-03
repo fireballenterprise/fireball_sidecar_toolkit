@@ -1,40 +1,38 @@
 ---
 name: update
-description: Check pyproject.toml dependencies, the pinned Python version, and .github/workflows/ action refs against their latest published releases and update version locks. Does not install or run anything.
-argument-hint: "[libs | python | workflows | update]"
+description: Check pyproject.toml dependencies, the pinned Python version, .github/workflows/ action refs, and .sdkmanrc toolchain pins against their latest published releases and update the locks. Does not install or run anything.
+argument-hint: "[<repo>] [libs | python | workflows | sdkman] [--repo <name|path>]"
 agent: agent
 ---
 
 Check for available version updates (read-only, makes no changes):
 
-!`uv run --no-sync invoke ver.update --dry-run`
+!`uv run --no-sync python -m modules.toolkit.versioning.route "check $ARGUMENTS --dry-run"`
 
-The output has three sections: a `pyproject.toml` dependency table (from `ver.libs`), a Python
-version table (from `ver.python`), and a `.github/workflows/` action-ref table (from
-`ver.workflows`). Any section may say everything is already up to date — treat that section as
-done and move on.
+The check is **toolchain-aware** — it runs only the sub-checks the repo actually has: a Python
+library gets the `pyproject.toml` dependency table and the Python-version table; a repo with
+`.github/workflows/` gets the action-ref table; a repo with a `.sdkmanrc` gets the toolchain
+table. Any section may say it's already up to date — treat that section as done.
+
+## Targeting another repo
+`$ARGUMENTS` may start with a repo selector — a family-repo name (`/update fireball_sidecar_android`)
+or a path (`/update ../../levonbecker/dotfiles`), or `--repo <name|path>` anywhere. With one, the
+check runs against that checkout instead of the current one. No selector → the current repo.
 
 ## Which section(s) to act on
-- `$ARGUMENTS` is `libs` → only act on the `pyproject.toml` section; ignore the others.
-- `$ARGUMENTS` is `python` → only act on the Python version section; ignore the others.
-- `$ARGUMENTS` is `workflows` → only act on the workflows section; ignore the others.
-- `$ARGUMENTS` is `update`, or no arguments at all → walk through all three sections (this matches
-  `uv run --no-sync invoke ver.update`, which is what the check above already ran).
+- a sub-check name (`libs` / `python` / `workflows` / `sdkman`) → act only on that section.
+- no sub-check name → walk through every section the check printed.
 
 ## Applying an update
-Show the user the relevant table exactly as printed, then ask whether to apply it.
+Show the user the relevant table exactly as printed, then ask whether to apply it. On yes, re-run
+the same command **without `--dry-run` and with `--yes`**, scoped to that section — e.g.
 
-- `pyproject.toml`: this only rewrites version constraints — it does NOT install anything. If the
-  user says yes, run `uv run --no-sync invoke ver.libs --yes`, then tell them the locks were
-  updated and that `uv run --no-sync invoke upgrade` will install them (do not run that yourself —
-  installing is a separate, explicit step).
-- Python version: this only rewrites config file references (`pyproject.toml`, `.python-version`,
-  `.pylintrc`, `setup.sh`, `.github/actions/setup_uv/action.yml`) — it does NOT install a new
-  Python or rebuild `.venv`. If the user says yes, run `uv run --no-sync invoke ver.python --yes`,
-  then tell them the references were updated and that `uv run --no-sync invoke upgrade` will
-  install the new version and rebuild `.venv`.
-- `.github/workflows/`: this only rewrites `@ref` pins in the workflow files — it does NOT run any
-  workflow. If the user says yes, run `uv run --no-sync invoke ver.workflows --yes`, then tell
-  them the workflow files were updated and suggest reviewing the diff before committing.
+!`uv run --no-sync python -m modules.toolkit.versioning.route "check libs --yes"`
 
-If the user declines a section, make no changes for that section.
+then tell them what was rewritten:
+- `libs` — only version constraints in `pyproject.toml`; `/upgrade libs` installs them.
+- `python` — only config references; `/upgrade python` installs the new Python + rebuilds `.venv`.
+- `workflows` — only `@ref` pins; suggest reviewing the diff before committing.
+- `sdkman` — only `.sdkmanrc` + the Gradle wrapper; `/upgrade sdkman` runs `sdk env install`.
+
+If the user declines a section, make no changes for it.

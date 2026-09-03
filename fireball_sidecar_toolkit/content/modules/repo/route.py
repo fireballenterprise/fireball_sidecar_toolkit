@@ -12,8 +12,10 @@ from __future__ import annotations
 import shlex
 import subprocess
 import sys
+from pathlib import Path
 
-from ..common.route_utils import build_env, find_repo_root
+from ..common.route_utils import build_env, find_repo_root, peel_repo
+from ..common.target_repo import delegate, resolve_target_repo
 from ..setup.properties import FAMILY_SCOPES
 from . import family
 
@@ -57,6 +59,24 @@ Cross-repo apply is agent-driven. Follow the Cross-Repo Change Workflow in
 """
 
 
+def _run_against(target: Path, args: list[str]) -> int:
+    """`/repo <verb> --repo <name|path>` — run one verb against another checkout (never a family
+    scope; that's `--repo`-incompatible)."""
+    if not args:
+        sys.stderr.write("--repo needs a verb (pull | push | cleanup | rebase | squash | pr_*)\n")
+        return 1
+    verb, rest = args[0], args[1:]
+    if any(token in _SCOPE_TOKENS for token in rest):
+        sys.stderr.write("--repo and a family scope (all | ai | dev_prd) are mutually exclusive\n")
+        return 1
+    module = _SUBCOMMAND_MODULES.get(verb)
+    if module is None:
+        sys.stderr.write(f"/repo {verb!r} cannot target another repo with --repo\n")
+        return 1
+    suffix = module.removeprefix(f"{_PREFIX}.")
+    return delegate(target, f"repo.{suffix}", rest, caller_root=Path.cwd())
+
+
 def _run(module: str, args: list[str]) -> int:
     repo_root = find_repo_root()
     completed = subprocess.run(
@@ -79,10 +99,16 @@ def main() -> int:
     # human or an agent types it in a shell. Only the first was handled before, so `route pull all`
     # silently dropped `all` and pulled just the current repo.
     raw = sys.argv[1:]
-    args = shlex.split(raw[0]) if len(raw) == 1 else raw
+    args = shlex.split(raw[0]) if len(raw) == 1 else list(raw)
 
     if not args or args[0] in ("help", "-h", "--help"):
         return _usage()
+
+    args, repo_token = peel_repo(args)
+    if repo_token:
+        target = resolve_target_repo(repo_token)
+        if target is not None:
+            return _run_against(target, args)
 
     first, rest = args[0], args[1:]
 

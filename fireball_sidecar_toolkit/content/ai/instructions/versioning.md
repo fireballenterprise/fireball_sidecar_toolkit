@@ -1,79 +1,78 @@
 ---
-description: "Use when working with the modules/toolkit/versioning/ package — bumping the repo's VERSION file for releases, or checking/updating dependency version locks and GitHub Actions action-ref pins."
+description: "Use when working with the modules/toolkit/versioning/ package — bumping the repo's VERSION file for releases, or checking/updating dependency version locks, GitHub Actions action-ref pins, and .sdkmanrc toolchain pins."
 applyTo: "modules/toolkit/versioning/**"
 ---
 # Versioning Instructions
-## Project VERSION Bumps (`project.py`)
+Everything lives under one namespace: **`versioning.*`** (short alias **`ver.*`** — `ver.check`
+== `versioning.check`). The old names (`ver.libs`, `ver.update`, `ver.project_bump_*`, top-level
+`upgrade`, `upgrade.python`) no longer exist.
+
+## Project VERSION Bumps (`project.py`) — `versioning.bump`
 The root `VERSION` file is the **single source of truth** for this repo's version — plain
 `Major.Minor.Patch`, no build suffix, on `development` and `main`. `pyproject.toml` reads it via
 `[tool.setuptools.dynamic]` (`version = { file = "VERSION" }`); never hand-write a `version =` in
-`[project]`. This is separate from this directory's `libs.py`/`workflows.py` checks (dependency
-locks and Action ref pins — see below).
+`[project]`.
 
-**Scheme (family-wide, 2026-08-28):**
-- **Every merge to `development`** → `ver.project_bump_patch` (`0.2.0` → `0.2.1`). In dev→`main`
-  repos with CI this is automatic (`version.yml`); elsewhere it's a manual step.
-- **A release** just **promotes `development` → `main` and tags the current `VERSION`** — no bump.
-  Force a milestone with the release workflow's `bump` input: `ver.project_bump_minor`
-  (`0.2.7` → `0.3.0`) or `ver.project_bump_major` (the eventual official `1.0.0`).
-- **Feature branches** may use `ver.project_bump_build` (`0.2.1` → `0.2.1-001` → `-002`) as a local
-  build counter. A build suffix is **never** merged to `development` or published.
+**Scheme (family-wide):**
+- **Every merge to `development`** → `versioning.bump patch` (`0.2.0` → `0.2.1`). Automatic in
+  dev→`main` CI repos (`version.yml`); a manual step elsewhere.
+- **A release** just promotes `development` → `main` and tags the current `VERSION`. Force a
+  milestone with the release workflow's `bump` input → `versioning.bump minor` / `major`.
+- **Feature branches** may use `versioning.bump build` (`0.2.1` → `-001` → `-002`) as a local
+  build counter — never merged or published.
 
 ```sh
-uv run --no-sync invoke ver.project_bump_patch      # every merge to development
-uv run --no-sync invoke ver.project_bump_minor      # milestone release (release workflow bump=minor)
-uv run --no-sync invoke ver.project_bump_major      # major release (release workflow bump=major)
-uv run --no-sync invoke ver.project_bump_build      # feature-branch build counter only, never published
+uv run --no-sync invoke versioning.bump patch      # every merge to development
+uv run --no-sync invoke versioning.bump minor      # milestone release
+uv run --no-sync invoke versioning.bump major      # major release
+uv run --no-sync invoke versioning.bump build      # feature-branch build counter, never published
 ```
 All four only rewrite `VERSION` — no commit, branch, push, tag, or workflow trigger. `project.py`
-exposes `bump_patch()`/`bump_minor()`/`bump_major()`/`bump_build()` and a `python -m
-modules.toolkit.versioning.project [patch|minor|major|build]` CLI. It has its **own** `get_repo_root()`
-keyed on `pyproject.toml` + `VERSION` — not `modules.toolkit.setup.properties.get_repo_root()`, which
-searches for the git-ignored `properties.yml` and fails in CI where `version.yml`/`release.yml`
-runs these tasks.
+has its **own** `get_repo_root()` keyed on `pyproject.toml` + `VERSION` — **not**
+`setup.properties.get_repo_root()`, which searches for the git-ignored `properties.yml` (absent in
+CI, where `version.yml` / `release.yml` run this). `setup.properties.get_repo_root()` also now
+honours `$SIDECAR_REPO_ROOT`; `project.py`'s does not, deliberately.
 
-## Dependency/Action Version Checks (`libs.py`, `python.py`, `workflows.py`, `sdkman.py`)
-Four checks against external sources of truth, plus the installs that follow (`upgrade.py`):
-- `ver.libs` — compares `pyproject.toml`'s `[project.dependencies]` against the latest
-  published package releases (via `uv pip list [--outdated]`), and rewrites just the version locks
-- `ver.python` — compares the pinned Python version against the latest stable 3.x release, and
-  rewrites the config file references (does not install)
-- `ver.workflows` — compares `.github/workflows/*.yml`'s `uses: owner/repo@vN` refs against
-  the latest major tag published on GitHub for that action, and rewrites just the ref pins
-- `ver.sdkman` — **only in a repo with a `.sdkmanrc`** (no-op elsewhere). Compares each toolchain
-  pin (`java`, `gradle`, `kotlin`, …) against `sdk list <candidate>`, rewrites `.sdkmanrc` + the
-  Gradle wrapper to the newest same-channel, non-pre-release id. Known-bad ids are skipped via
-  `# sdkman-skip: <candidate> <id>` lines in `.sdkmanrc` (seeded with `gradle 9.7.1`, corrupt via
-  SDKMAN). Does not install — `/upgrade` runs `sdk env install` afterward.
+## Version Checks (`check.py` → `libs.py`, `python.py`, `workflows.py`, `sdkman.py`)
+`versioning.check` is **toolchain-aware**: with no sub-arg it runs only the checks the repo's
+toolchains enable (via `modules/toolkit/common/toolchains.py`) — a Python library gets `libs` +
+`python`, a repo with `.github/workflows/` gets `workflows`, a repo with a `.sdkmanrc` gets
+`sdkman`. Name one to force just it. Each sub-check runs as its own subprocess; one exiting `3`
+("nothing to do", including "no pyproject.toml") never stops the others.
 
-See `modules/toolkit/versioning/README.md` for full behavior/data-flow details on each.
+- `libs` — `pyproject.toml` `[project.dependencies]` vs latest releases (`uv pip list --outdated`)
+- `python` — pinned Python vs latest stable 3.x; rewrites config references (does not install)
+- `workflows` — `.github/workflows/*.yml` `uses: owner/repo@vN` vs latest major tag on GitHub
+- `sdkman` — `.sdkmanrc` toolchain pins vs `sdk list`; rewrites `.sdkmanrc` + the Gradle wrapper
 
 ```sh
-uv run --no-sync invoke ver.libs        # check + prompt to update pyproject.toml locks
-uv run --no-sync invoke ver.python      # check + prompt to update the pinned Python version
-uv run --no-sync invoke ver.workflows    # check + prompt to update workflow action refs
-uv run --no-sync invoke ver.sdkman       # check + prompt to update .sdkmanrc toolchain pins (if any)
-uv run --no-sync invoke ver.update       # libs + python + workflows + sdkman together (same as top-level `update`)
-uv run --no-sync invoke ver.libs --dry-run   # preview only, never writes (also on python/workflows/update)
-uv run --no-sync invoke ver.libs --yes       # skip the confirmation prompt (also on python/workflows/update)
-
-uv run --no-sync invoke ver.upgrade      # install the upgrades reviewed above (same as top-level `upgrade`)
+uv run --no-sync invoke versioning.check                 # every applicable check
+uv run --no-sync invoke versioning.check libs            # just one
+uv run --no-sync invoke versioning.check --repo ../app   # against another checkout
+uv run --no-sync invoke versioning.check --dry-run       # preview only
+uv run --no-sync invoke versioning.check --yes           # skip prompts
+uv run --no-sync invoke update                           # top-level alias for versioning.check
 ```
-`/update [libs | python | workflows | sdkman]` runs every check and walks through applying them;
-`/upgrade` executes the actual installs afterward (`uv sync --upgrade`, venv rebuild, `sdk env
-install`).
 
-### Relationship to Other Workflows
-- `ver.libs` only edits `pyproject.toml` — run `uv run --no-sync invoke upgrade.libs`
-  (`uv sync --upgrade`) afterward to actually install the new versions
-- `ver.python` only edits config file references — run `uv run --no-sync invoke upgrade.python`
-  afterward to install the new Python and rebuild `.venv`
-- `ver.workflows` only edits `.github/workflows/*.yml` — run
-  `uv run --no-sync invoke tests.actionlint` afterward to confirm nothing broke
+## Installs (`upgrade.py`) — `versioning.upgrade`
+```sh
+uv run --no-sync invoke versioning.upgrade               # every applicable install
+uv run --no-sync invoke versioning.upgrade python        # just Python + .venv rebuild
+uv run --no-sync invoke versioning.upgrade libs          # just `uv sync --upgrade`
+uv run --no-sync invoke versioning.upgrade sdkman        # just `sdk env install`
+uv run --no-sync invoke versioning.upgrade --sync        # `uv sync --upgrade`, no version check
+uv run --no-sync invoke upgrade                          # top-level alias
+```
+`/update [<repo>] [sub-check]` walks through applying the checks; `/upgrade [<repo>] [toolchain]`
+runs the installs. Both take a leading `[<repo>]` or `--repo <name|path>`.
 
-`libs.py`/`python.py`/`workflows.py` use `@click.command()` with `--dry-run`/`--yes` options.
+## `--repo` targeting
+`versioning.check` / `.upgrade` take `--repo <name|path>` — a `properties.yml` family-repo name
+(fireball_orchestrator only) or a path to any git checkout. The work runs as a fresh subprocess in
+that checkout (`modules/toolkit/common/target_repo.py`). A check that's meaningless for the target
+(e.g. `python` for a Kotlin app) self-skips with a note. `versioning.bump` takes only a path (a
+bump is repo-local by definition) and is never given `--repo` in CI.
 
 ## Module Conventions
-Same conventions as `.ai/toolkit/instructions/modules.md` and
-`.ai/toolkit/instructions/python.md` — `main()`-style entry points, subprocess/`print()`/
-type-hint rules — not restated here.
+Same as `.ai/toolkit/instructions/modules.md` / `python.md`. See
+`modules/toolkit/versioning/README.md` for per-file data-flow.
