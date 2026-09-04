@@ -29,8 +29,9 @@ Before creating the PR, look for the issue this work closes:
    - **Several plausible matches, or none** — show the candidates as `#N — title` and ask the
      user which this PR tracks. Offer: pick one, file a new issue now for tracking (ask type +
      confirm title/body per `.ai/toolkit/instructions/backlog.md`, then
-     `uv run --no-sync python -m modules.toolkit.backlog.route "add <bug|feature|task> --title \"...\" --body \"...\""`
-     and note the returned issue number), or skip linking.
+     `uv run --no-sync python -m modules.toolkit.backlog.route "add <bug|feature|task> --title \"...\" --body \"...\" --label \"In Progress\""`
+     — label it `In Progress` right away since a PR is being opened for it in this same breath,
+     unlike a normal backlog filing — and note the returned issue number), or skip linking.
 3. Carry the resolved issue number (if any) into the PR create step below as `--issue <N>`.
 
 ## Create the pull request
