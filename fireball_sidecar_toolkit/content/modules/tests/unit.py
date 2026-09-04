@@ -7,8 +7,8 @@ Python repo → pytest (``--scope`` passes a marker expression through); Kotlin/
 from __future__ import annotations
 
 from ..common import cli
+from ..common.route_utils import find_repo_root
 from ..common.utils import info
-from ..setup.properties import get_repo_root
 from . import gradle_unit
 from . import pytest as pytest_runner
 from .common import summarise
@@ -23,7 +23,7 @@ _RUNNERS = {
 @cli.option("--only", help="Run just this runner (pytest | gradle-unit)")
 @cli.option("--scope", help="pytest marker expression, e.g. 'versioning' or 'not style' (pytest only)")
 def main(only: str | None, scope: str | None) -> None:
-    root = get_repo_root()
+    root = find_repo_root()
 
     if only and only not in _RUNNERS:
         cli.echo(f"Unknown runner {only!r} — pick one of: {', '.join(_RUNNERS)}", err=True)

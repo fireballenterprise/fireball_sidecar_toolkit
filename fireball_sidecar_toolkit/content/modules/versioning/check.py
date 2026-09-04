@@ -16,9 +16,9 @@ from __future__ import annotations
 import subprocess
 
 from ..common import cli
+from ..common.route_utils import find_repo_root
 from ..common.toolchains import capabilities
 from ..common.utils import info, success
-from ..setup.properties import get_repo_root
 
 #: Sub-checks in run order, mapped to the capability string that turns each on.
 _CHECKS: dict[str, str] = {
@@ -53,7 +53,7 @@ def main(only: str | None, dry_run: bool, no_confirm: bool) -> None:
     if only:
         selected = [only]
     else:
-        caps = capabilities(get_repo_root())
+        caps = capabilities(find_repo_root())
         selected = [name for name, cap in _CHECKS.items() if cap in caps]
         skipped = [name for name in _CHECKS if name not in selected]
         if skipped:
