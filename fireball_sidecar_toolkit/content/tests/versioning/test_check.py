@@ -8,7 +8,7 @@ pytestmark = pytest.mark.versioning
 
 def _run_check(monkeypatch, tmp_path, argv):
     ran = []
-    monkeypatch.setattr(check, "get_repo_root", lambda: tmp_path)
+    monkeypatch.setattr(check, "find_repo_root", lambda: tmp_path)
     monkeypatch.setattr(check, "_run_one", lambda name, flags: ran.append((name, tuple(flags))) or 0)
     monkeypatch.setattr("sys.argv", ["check", *argv])
     try:
@@ -33,7 +33,7 @@ def test_only_forces_one_even_if_toolchain_absent(monkeypatch, tmp_path):
 
 def test_one_failing_subcheck_fails_overall(monkeypatch, tmp_path):
     (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
-    monkeypatch.setattr(check, "get_repo_root", lambda: tmp_path)
+    monkeypatch.setattr(check, "find_repo_root", lambda: tmp_path)
     monkeypatch.setattr(check, "_run_one", lambda name, flags: 1 if name == "libs" else 0)
     monkeypatch.setattr("sys.argv", ["check"])
     with pytest.raises(SystemExit) as exc:
@@ -43,7 +43,7 @@ def test_one_failing_subcheck_fails_overall(monkeypatch, tmp_path):
 
 def test_exit_3_from_a_subcheck_is_tolerated(monkeypatch, tmp_path):
     (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
-    monkeypatch.setattr(check, "get_repo_root", lambda: tmp_path)
+    monkeypatch.setattr(check, "find_repo_root", lambda: tmp_path)
     monkeypatch.setattr(check, "_run_one", lambda name, flags: 3)
     monkeypatch.setattr("sys.argv", ["check"])
     check.main()  # no SystemExit

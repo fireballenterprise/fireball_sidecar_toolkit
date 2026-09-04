@@ -9,8 +9,8 @@ installed is reported as skipped, never a failure.
 from __future__ import annotations
 
 from ..common import cli
+from ..common.route_utils import find_repo_root
 from ..common.utils import info
-from ..setup.properties import get_repo_root
 from . import actionlint, android_lint, detekt, ktlint, pylint, ruff, yamllint
 from .common import summarise
 
@@ -32,7 +32,7 @@ _LINTERS = {
 )
 @cli.option("--fix", is_flag=True, help="Apply autofixes where the tool supports it")
 def main(only: str | None, fix: bool) -> None:
-    root = get_repo_root()
+    root = find_repo_root()
 
     if only and only not in _LINTERS:
         cli.echo(f"Unknown linter {only!r} — pick one of: {', '.join(_LINTERS)}", err=True)
