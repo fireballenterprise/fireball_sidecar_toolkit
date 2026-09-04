@@ -63,6 +63,17 @@ invisible to every `/repo` command — that's how a retired local-only clone is 
 > (`modules/setup/templates/properties/*.yml` → `modules/setup/properties.py`) still emits the
 > legacy shape on a fresh `inv setup.properties`; reconciling that is pending.
 
+## New repo checklist
+When creating a new family repo (or first time touching an existing one's GitHub settings):
+
+- **Add its `repos:` row** — all six keys, no omissions. Pick a `parent`.
+- **Enable "Automatically delete head branches"** so merged PR branches don't pile up:
+  `gh api -X PATCH repos/<org>/<repo> -F delete_branch_on_merge=true`
+  (check with `gh api repos/<org>/<repo> --jq .delete_branch_on_merge`). Every family repo should
+  have this `true`.
+- If `ai: true` — add `fireball_sidecar_toolkit` to `pyproject.toml` and run
+  `invoke sidecar.toolkit.apply`.
+
 ## "Related Repos" Trigger
 When the user says **"related repos"**, **"the repos"**, **"other repos"**, **"all of the repos"**,
 **"pull all repos"**, **"pull the repos"**, or similar about this vault's repo family — not generic
