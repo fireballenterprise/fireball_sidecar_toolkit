@@ -86,3 +86,8 @@ unclear, and offering to file a new issue on the spot for tracking. `pr_create -
 soft-links the two: a `Tracks #<N>` line in the PR body plus a `PR: <url>` comment on the issue,
 both directions, no auto-close. That's separate from `backlog.close --pr <N>`, which is the actual
 "Fixed in #<pr>" + close once the fix has shipped.
+
+An issue **filed by that flow** (rather than found already open) gets the `In Progress` nature
+label at creation — a PR is being opened for it in the same breath, so unlike a normal backlog
+filing it's never in the plain "not started yet" state. A normal `/backlog add` never adds this
+label on its own.
