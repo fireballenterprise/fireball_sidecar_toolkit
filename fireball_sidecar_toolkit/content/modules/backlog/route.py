@@ -14,7 +14,12 @@ _SUBCOMMANDS = ("add", "close", "comment", "list", "start", "view")
 
 def main() -> int:
     args = shlex.split(sys.argv[1] if len(sys.argv) > 1 else "")
-    if not args or args[0] not in _SUBCOMMANDS:
+    # Bare `/backlog` (the skill firing with no subcommand appended) → the whole-family open
+    # backlog, matching the "backlog" / "what's open anywhere" trigger words. A real typo
+    # (`args[0]` present but unknown) still gets the usage error.
+    if not args:
+        args = ["list", "--all"]
+    elif args[0] not in _SUBCOMMANDS:
         sys.stderr.write(f"usage: backlog {{{'|'.join(_SUBCOMMANDS)}}} [options]\n")
         return 1
 

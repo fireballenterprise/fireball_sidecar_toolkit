@@ -12,11 +12,13 @@ batch confirmation, per-repo ship rules) live in `.ai/toolkit/instructions/backl
 before any `add` / `comment`. `--repo` is a fuzzy token (name, unique substring, or a word from
 the repo's `purpose`); an ambiguous token makes the CLI print candidates — ask the user which,
 don't guess. `list` defaults to the current repo (or `--all` for every family repo grouped by
-repo); every other verb needs `--repo`.
+repo); every other verb needs `--repo`. A **bare `/backlog`** with no subcommand runs
+`list --all` — the whole-family open backlog.
 
 ## Recognition — what the user says maps to what to run
 | user says | do |
 |---|---|
+| bare "backlog" / `/backlog` with nothing after it | `backlog.list --all` (the route does this automatically for the no-arg form) — the whole-family open backlog; same verbatim fencing, **client-rendered, don't rebuild or repeat it** |
 | "file/log/track a bug in sidecar vscode: X", "feature request for the toolkit: Y", "add a task for chat: Z" | resolve the repo; craft a clean title + a body in the **issue format** below (ask if the report is thin). If an image was pasted, **read it and transcribe the relevant content into the body** — error text as fenced quotes, UI state as prose; note it came from a screenshot. Work out `--area` (affected module/component/topic, from the "Where it likely lives" analysis) and any `--label` nature; **confirm title + Type + area + labels with the user**, then `backlog.add --repo <t> --type <bug\|feature\|task> --title "..." --body "..." [--area <m>] [--label <nature>]` |
 | "list / show the issues \| open bugs \| backlog for X", "what's left \| still open in X" | `backlog.list --repo <t>` (`--type bug` for bugs, `--label <area>` to scope to a module/topic; `--state open` by default). Output is a finished `### <repo> · <n>` heading + Markdown table, `<!--sidecar:verbatim-->`-fenced — the client renders it; **don't rebuild or repeat it** |
 | "show the whole backlog", "what's open anywhere \| across the family", "any bugs open in any repo" | `backlog.list --all` (a `## … — family` heading, then one `### <repo> · <n>` + table per non-empty repo, then `*<k> other repos: none*`; `--scope ai\|dev_prd` to narrow, same `--type` / `--label` / `--mine` filters apply per repo). Same verbatim fencing — **client-rendered, don't rebuild or repeat it** |
