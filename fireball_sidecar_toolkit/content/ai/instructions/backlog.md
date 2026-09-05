@@ -23,7 +23,8 @@ verb-to-CLI mapping.
 ## `--repo` resolution
 Fuzzy token — a name, a unique substring, or a word from the repo's `purpose`. An ambiguous token
 makes the CLI print candidates: ask the user which, don't guess. `list` defaults to the current
-repo; every other verb needs `--repo`.
+repo; every other verb needs `--repo`. A **bare `/backlog`** (no subcommand at all) is routed to
+`list --all` — `list` with any argument still defaults to the current repo.
 
 ## Reading `list` output
 `list` already prints finished Markdown — a `### <repo> · <count>` heading and a `# / Title /
@@ -41,7 +42,8 @@ with issues, and a trailing `*<k> other repos: none*` for the empty ones (or `*N
 in any family repo.*` when everything is empty). Use it for "the whole backlog" / "what's open
 anywhere"; narrow with `--scope ai|dev_prd`. The per-repo `--type` / `--label` / `--state` /
 `--mine` / `--limit` filters still apply. `--all` and `--repo` are mutually exclusive. Same
-`<!--sidecar:verbatim-->` fencing — the client renders it; never rebuild or repeat it.
+`<!--sidecar:verbatim-->` fencing — the client renders it; never rebuild or repeat it. This is
+also what a bare `/backlog` resolves to.
 
 ## Issue body format
 Written for an AI to pick up and work — err verbose, but lead with a human summary:
