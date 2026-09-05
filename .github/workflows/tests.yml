@@ -2,121 +2,27 @@
 name: Tests
 run-name: "Tests (${{ github.head_ref || github.ref_name }})"
 
+# Thin caller — logic lives in fireballenterprise/workflows_common (floating major tag @v1).
+# Each `checks` entry is one matrix leg (isolated check-run).
+
 on:
   pull_request:
     branches:
-      - development  # Trigger on PRs targeting development
-      - main         # Trigger on PRs targeting main
+      - development
+      - main
   push:
     branches:
-      - main         # Keep the status badge current after every merge
+      - main  # keep the status badge current after every merge
 
 jobs:
-  # https://github.com/rhysd/actionlint
-  action_lint:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check Out Code
-        uses: actions/checkout@v7
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v8.3.2
-        with:
-          python-version: "3.14"
-
-      - name: Install Dependencies
-        run: uv sync
-
-      - name: Action Lint
-        run: |
-            uv run --no-sync invoke debug.env
-            uv run --no-sync invoke tests.actionlint
-
-  pylint:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check Out Code
-        uses: actions/checkout@v7
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v8.3.2
-        with:
-          python-version: "3.14"
-          enable-cache: true
-
-      - name: Install Dependencies
-        run: uv sync
-
-      - name: Pylint
-        run: |
-          uv run --no-sync invoke debug.env
-          uv run --no-sync invoke tests.pylint
-
-  pytest:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check Out Code
-        uses: actions/checkout@v7
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v8.3.2
-        with:
-          python-version: "3.14"
-          enable-cache: true
-
-      - name: Install Dependencies
-        run: uv sync
-
-      - name: Pytest
-        run: |
-          uv run --no-sync invoke debug.env
-          uv run --no-sync invoke tests.pytest
-
-  ruff_lint:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check Out Code
-        uses: actions/checkout@v7
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v8.3.2
-        with:
-          python-version: "3.14"
-          enable-cache: true
-
-      - name: Install Dependencies
-        run: uv sync
-
-      - name: Ruff Lint
-        run: |
-          uv run --no-sync invoke debug.env
-          uv run --no-sync invoke tests.rufflint
-
-  yaml_lint:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check Out Code
-        uses: actions/checkout@v7
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v8.3.2
-        with:
-          python-version: "3.14"
-
-      - name: Install Dependencies
-        run: uv sync
-
-      - name: Yaml Lint
-        run: |
-            uv run --no-sync invoke debug.env
-            uv run --no-sync invoke tests.yamllint
+  tests:
+    uses: fireballenterprise/workflows_common/.github/workflows/python_tests.yml@v1
+    with:
+      checks: >-
+        [
+          {"name": "action_lint", "invoke": "tests.actionlint"},
+          {"name": "pylint", "invoke": "tests.pylint"},
+          {"name": "pytest", "invoke": "tests.pytest"},
+          {"name": "ruff_lint", "invoke": "tests.rufflint"},
+          {"name": "yaml_lint", "invoke": "tests.yamllint"}
+        ]
