@@ -9,13 +9,14 @@ during file generation, so they are enforced mechanically instead:
 
 Both rules skip fenced code blocks (```` ``` ```` / ``~~~``) and rule 2 skips the leading
 frontmatter block. :func:`fix_tree` walks ``**/*.md`` under a repo (skipping ``.ai/toolkit/``, any
-``exclude`` segment, and every file carrying the generated-provider ``DO NOT EDIT`` marker);
-``write=False`` is the read-only gate for ``invoke test`` / CI.
+``exclude`` segment, every git-ignored path, and every file carrying the generated-provider
+``DO NOT EDIT`` marker); ``write=False`` is the read-only gate for ``invoke test`` / CI.
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 _HEADER = re.compile(r"^#{1,6} \S")
@@ -88,8 +89,28 @@ def _is_instruction_file(path: Path) -> bool:
     return "instructions" in path.parts
 
 
+def _git_ignored(root: Path, paths: list[Path]) -> set[Path]:
+    """The subset of ``paths`` git ignores under ``root`` — scratch dirs (``tmp/``, build output)
+    that a repo keeps out of version control shouldn't be held to the house style. A non-git tree
+    (or no git binary) ignores nothing."""
+    if not paths:
+        return set()
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "check-ignore", "--stdin"],
+            input="\n".join(str(p) for p in paths),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return set()
+    return {Path(line) for line in proc.stdout.splitlines() if line}
+
+
 def _iter_markdown(root: Path, exclude: tuple[str, ...]):
     excluded = {e.strip("/") for e in exclude}
+    candidates: list[Path] = []
     for path in sorted(root.rglob("*.md")):
         parts = path.relative_to(root).parts
         if not _SKIP_DIRS.isdisjoint(parts):
@@ -98,7 +119,11 @@ def _iter_markdown(root: Path, exclude: tuple[str, ...]):
             continue
         if not excluded.isdisjoint(parts):  # caller-supplied opt-outs (e.g. a generated tree)
             continue
-        yield path
+        candidates.append(path)
+    ignored = _git_ignored(root, candidates)
+    for path in candidates:
+        if path not in ignored:
+            yield path
 
 
 def fix_tree(root: Path, *, write: bool = True, exclude: tuple[str, ...] = ()) -> list[Path]:
