@@ -59,8 +59,10 @@ jobs:
       - name: Bump VERSION patch
         id: bump
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Commit as the repo owner, not github-actions[bot] — these automated bumps
+          # shouldn't add a bot to the contributor list (the App token still does the push).
+          git config user.name "Levon Becker"
+          git config user.email "LevonBecker@users.noreply.github.com"
           uv run --no-sync invoke ver.project_bump_patch
           new_version="$(cat VERSION)"
           echo "version=$new_version" >> "$GITHUB_OUTPUT"

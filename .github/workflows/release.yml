@@ -64,8 +64,10 @@ jobs:
       - name: Resolve VERSION (${{ inputs.bump }})
         id: bump
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Commit as the repo owner, not github-actions[bot] — these automated release
+          # commits shouldn't add a bot to the contributor list (the App token still pushes).
+          git config user.name "Levon Becker"
+          git config user.email "LevonBecker@users.noreply.github.com"
           if [ "${{ inputs.bump }}" != "none" ]; then
             uv run --no-sync invoke "ver.project_bump_${{ inputs.bump }}"
           fi
@@ -113,8 +115,8 @@ jobs:
 
       - name: Merge development to main
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "Levon Becker"
+          git config user.email "LevonBecker@users.noreply.github.com"
           git fetch origin main
           git checkout main
           # -X theirs: development is the source of truth; on conflict its side wins
@@ -146,8 +148,8 @@ jobs:
         run: |
           version="${{ needs.version.outputs.version }}"
           major="${version%%.*}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "Levon Becker"
+          git config user.email "LevonBecker@users.noreply.github.com"
           if git ls-remote --exit-code --tags origin "refs/tags/$version" >/dev/null 2>&1; then
             echo "Tag $version already exists — skipping" >> "$GITHUB_STEP_SUMMARY"
             exit 0
